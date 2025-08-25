@@ -3,7 +3,7 @@ using Synaptic.NET.Domain.Metrics;
 
 namespace Synaptic.NET.Domain.Providers;
 
-public sealed class MetricsCollectorProvider : IDisposable
+public sealed class MetricsCollectorProvider : IMetricsCollectorProvider, IDisposable
 {
     public const string ServiceName = "mneme-api";
 

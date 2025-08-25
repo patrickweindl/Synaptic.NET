@@ -4,4 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -36,7 +36,7 @@
     <PackageReference Include="Tiktoken" />
   </ItemGroup>
 
-  <ItemGroup Condition="!$(ProjectName.Contains('Api'))">
+  <ItemGroup Condition="!($(ProjectName.Contains('Api')) or $(ProjectName.Contains('Authentication')))">
     <PackageReference Include="Microsoft.Extensions.Configuration" />
   </ItemGroup>
 
@@ -46,7 +46,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(ProjectName.Contains('Api'))">
+  <ItemGroup Condition="$(ProjectName.Contains('Api')) or $(ProjectName.Contains('Authentication'))">
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.HealthChecks" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
@@ -56,7 +56,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(ProjectName.Contains('Api'))">
+  <ItemGroup Condition="$(ProjectName.Contains('Api')) or $(ProjectName.Contains('Authentication'))">
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Swashbuckle.AspNetCore.Filters" />
     <PackageReference Include="Swashbuckle.AspnetCore.Annotations" />

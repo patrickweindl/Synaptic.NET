@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synaptic.NET.Domain", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synaptic.NET.Qdrant", "src\Synaptic.NET.Qdrant\Synaptic.NET.Qdrant.csproj", "{8C76D844-481B-4CEA-8A0F-B072C00FA681}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synaptic.NET.Authentication", "src\Synaptic.NET.Authentication\Synaptic.NET.Authentication.csproj", "{76603992-1C48-4E6E-8CCF-65D5559AE90A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -107,6 +109,18 @@ Global
 		{8C76D844-481B-4CEA-8A0F-B072C00FA681}.Release|x64.Build.0 = Release|Any CPU
 		{8C76D844-481B-4CEA-8A0F-B072C00FA681}.Release|x86.ActiveCfg = Release|Any CPU
 		{8C76D844-481B-4CEA-8A0F-B072C00FA681}.Release|x86.Build.0 = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|x64.Build.0 = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Debug|x86.Build.0 = Debug|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|x64.ActiveCfg = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|x64.Build.0 = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|x86.ActiveCfg = Release|Any CPU
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -118,5 +132,6 @@ Global
 		{93A471FC-F96B-44E9-9EE9-D277B38BD687} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{60B97E39-958A-4CA0-B8CC-85358E23F893} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{8C76D844-481B-4CEA-8A0F-B072C00FA681} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{76603992-1C48-4E6E-8CCF-65D5559AE90A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal
