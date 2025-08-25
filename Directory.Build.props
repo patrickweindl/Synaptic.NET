@@ -46,7 +46,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(ProjectName.Contains('ServiceDefaults'))">
+  <ItemGroup Condition="$(ProjectName.Contains('Api'))">
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.HealthChecks" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
