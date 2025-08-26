@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Content Update="wwwroot\auth.css">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Components\Layout\EmptyLayout.razor" />
+      <AdditionalFiles Include="Components\Layout\MainLayout.razor" />
+      <AdditionalFiles Include="Components\Pages\Auth.razor" />
+      <AdditionalFiles Include="Components\Pages\NotFound.razor" />
+      <AdditionalFiles Include="Components\Pages\OAuthSelect.razor" />
+      <AdditionalFiles Include="Components\RedirectToLogin.razor" />
+      <AdditionalFiles Include="Components\Routes.razor" />
+      <AdditionalFiles Include="Components\_Imports.razor" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Synaptic.NET.Authentication\Synaptic.NET.Authentication.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+    </ItemGroup>
+
+</Project>
