@@ -1,11 +1,15 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.IdentityModel.Tokens;
+using mneme.Core.Handlers;
 using Synaptic.NET.Authentication.Components;
 using Synaptic.NET.Authentication.Controllers;
+using Synaptic.NET.Authentication.Handlers;
 using Synaptic.NET.Authentication.Middlewares;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Services;
@@ -41,6 +45,12 @@ public static class AuthenticationServices
         app.Services.AddAuthenticationCore();
         app.Services.AddCascadingAuthenticationState();
         app.Services.AddDataProtection();
+
+        app.Services.AddSingleton<ISymLinkUserService, SymLinkUserService>();
+        app.Services.AddSingleton<RedirectUriProvider>();
+        app.Services.AddSingleton<CodeBasedAuthProvider>();
+        app.Services.AddSingleton<ISecurityTokenHandler, JwtTokenHandler>();
+        app.Services.AddSingleton<IRefreshTokenHandler, RefreshTokenHandler>();
 
         app.Services.AddScoped<AuthenticationStateProvider, CookieAuthenticationStateProvider>();
         app.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -79,22 +89,22 @@ public static class AuthenticationServices
                         return Task.CompletedTask;
                     }
                 };
+            }).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+            {
+                options.LoginPath = "/account/login";
+                options.LogoutPath = "/account/logout";
+                options.SlidingExpiration = true;
+                options.ExpireTimeSpan = TimeSpan.FromHours(8);
             });
         app.Services.AddAuthorization();
 
-        app.Services.AddControllers().ConfigureApplicationPartManager(manager =>
+        app.Services.AddControllersWithViews().ConfigureApplicationPartManager(manager =>
         {
             var authAssembly = typeof(AccountController).Assembly;
             manager.ApplicationParts.Clear();
             manager.ApplicationParts.Add(new AssemblyPart(authAssembly));
 
             manager.FeatureProviders.Add(new AuthControllerFeatureProvider());
-        });
-
-        app.Services.AddRazorPages().ConfigureApplicationPartManager(manager =>
-        {
-            manager.ApplicationParts.Clear();
-            manager.ApplicationParts.Add(new AssemblyPart(typeof(AuthenticationApp).Assembly));
         });
 
         return app;
@@ -111,7 +121,8 @@ public static class AuthenticationServices
         app.UseAuthorization();
         app.UseAntiforgery();
         app.MapControllers();
-        app.MapRazorPages();
+        app.MapRazorComponents<AuthenticationApp>().AddInteractiveServerRenderMode();
+        app.MapStaticAssets();
         return app;
     }
 }

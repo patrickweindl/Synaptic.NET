@@ -29,13 +29,6 @@ public class AuthController : ControllerBase
         _codeBasedAuthProvider = codeBasedAuthProvider;
     }
 
-    [HttpHead("/")]
-    [AllowAnonymous]
-    public IActionResult GetHead()
-    {
-        return Ok();
-    }
-
     [HttpPost("register")]
     [AllowAnonymous]
     public IActionResult Registration([FromBody] object? body)

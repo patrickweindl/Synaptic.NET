@@ -60,7 +60,7 @@ public class SynapticServerSettings
     public bool TrustInternalRequests => !string.IsNullOrEmpty(_configuration?["Security:TrustInternal"]) && bool.Parse(_configuration["Security:TrustInternal"] ?? "False");
     public bool EnableBackup => !string.IsNullOrEmpty(_configuration?["Backup:Enable"]) && bool.Parse(_configuration["Backup:Enable"] ?? "False");
     public string BackupPath => _configuration?["Backup:Path"] ?? string.Empty;
-    public string ServerUrl => _configuration?["Servers:CustomGpt"] ?? "127.0.0.1";
+    public string ServerUrl => _configuration?["Servers:Url"] ?? "127.0.0.1";
     public List<string> KnownProxies { get; }
     public int ServerPort => string.IsNullOrEmpty(_configuration?["Servers:Port"]) ? 8000 : int.Parse(_configuration["Servers:Port"]!);
     public List<string> AdminIdentifiers => string.IsNullOrEmpty(_configuration?["Security:Admins"]) ? new List<string>() : _configuration["Security:Admins"]?.Split(',').ToList() ?? new();

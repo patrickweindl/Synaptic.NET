@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Events;
 using Synaptic.NET.Authentication;
@@ -25,22 +22,21 @@ public class SynapticAppHost
             ContentRootPath = AppContext.BaseDirectory
         });
 
+        builder.ConfigureDomainServices(out var synapticSettings);
+        builder.ConfigureCoreServices();
+
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddAuthenticationStateSerialization(o => o.SerializeAllClaims = true);
         builder.WebHost.UseStaticWebAssets();
 
-        builder.ConfigureDomainServices(out var synapticSettings);
-        builder.ConfigureCoreServices();
         builder.ConfigureAuthenticationAndAuthorization(synapticSettings);
 
         var app = builder.Build();
-        app.MapStaticAssets();
 
+        app.MapStaticAssets();
         app.ConfigureCoreApplication(synapticSettings);
         app.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
-
-
         app.Run();
     }
 }

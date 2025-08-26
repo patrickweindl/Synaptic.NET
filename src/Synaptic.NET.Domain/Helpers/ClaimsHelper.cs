@@ -4,6 +4,8 @@ namespace Synaptic.NET.Domain.Helpers;
 
 public static class ClaimsHelper
 {
+
+
     public static string ToUserIdentifier(this ClaimsIdentity? claimsIdentity)
     {
         if (claimsIdentity is null)

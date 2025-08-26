@@ -1,5 +1,4 @@
 @page "/oauth-select"
-@using Synaptic.NET.Authentication.Components.Layout
 @using Synaptic.NET.Authentication.Providers
 @using Synaptic.NET.Authentication.Resources
 @using Synaptic.NET.Domain
@@ -65,7 +64,6 @@
 
     <div class="footer">
         <p>Secure authentication via OAuth 2.0</p>
-        <p><a href="/web/privacy" target="_blank" style="color: #764ba2; text-decoration: none; font-weight: 500;">Privacy Policy</a></p>
     </div>
 </div>
 
@@ -90,11 +88,11 @@
                 _queryParams.Add(kvp.Key, kvp.Value.First()!);
             }
         }
-        Log.Information("[Authorization] OAuth selection by user.");
     }
 
     private void RedirectToProvider(string provider)
     {
+        Log.Information("[Authorization] OAuth selection by user.");
         var config = GetProviderConfig(provider);
         if (config == null)
         {
