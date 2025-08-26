@@ -10,7 +10,7 @@ public static class RestServices
         return builder;
     }
 
-    public static WebApplication ConfigureRestApplication(this WebApplication app)
+    public static WebApplication ConfigureRestServicesWithAuthorization(this WebApplication app)
     {
         return app;
     }

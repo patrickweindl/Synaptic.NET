@@ -28,7 +28,7 @@ public static class McpServices
         return builder;
     }
 
-    public static WebApplication ConfigureMcpApplication(this WebApplication app)
+    public static WebApplication ConfigureMcpApplicationWithAuthorization(this WebApplication app)
     {
         app.MapMcp("/mcp").RequireAuthorization();
         return app;

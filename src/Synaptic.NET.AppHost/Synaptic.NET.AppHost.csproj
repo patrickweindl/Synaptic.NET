@@ -14,6 +14,7 @@
       <ProjectReference Include="..\Synaptic.NET.Authentication\Synaptic.NET.Authentication.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Mcp\Synaptic.NET.Mcp.csproj" />
       <ProjectReference Include="..\Synaptic.NET.OpenAI\Synaptic.NET.OpenAI.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Qdrant\Synaptic.NET.Qdrant.csproj" />
       <ProjectReference Include="..\Synaptic.NET.RestApi\Synaptic.NET.RestApi.csproj" />

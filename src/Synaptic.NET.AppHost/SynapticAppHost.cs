@@ -3,6 +3,8 @@ using Serilog.Events;
 using Synaptic.NET.Authentication;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
+using Synaptic.NET.Mcp;
+using Synaptic.NET.RestApi;
 using Synaptic.NET.Web;
 
 namespace Synaptic.NET.AppHost;
@@ -31,6 +33,8 @@ public class SynapticAppHost
             .AddAuthenticationStateSerialization(o => o.SerializeAllClaims = true);
         builder.Services.AddRazorPages();
         builder.Services.AddServerSideBlazor();
+        builder.ConfigureMcpServices();
+        builder.ConfigureRestServices();
 
         builder.ConfigureAuthenticationAndAuthorization(synapticSettings);
 
@@ -40,6 +44,8 @@ public class SynapticAppHost
         app.ConfigureCoreApplication(synapticSettings);
         app.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
         app.MapRazorComponents<SynapticWebApp>().AddInteractiveServerRenderMode();
+        app.ConfigureMcpApplicationWithAuthorization();
+        app.ConfigureRestServicesWithAuthorization();
         app.Run();
     }
 }

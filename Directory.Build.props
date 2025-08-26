@@ -70,7 +70,7 @@
   </ItemGroup>
 
   <!-- MCP Packages -->
-  <ItemGroup Condition="$(ProjectName.Contains('Mcp'))">
+  <ItemGroup Condition="$(ProjectName.Contains('Mcp')) or $(ProjectName.Contains('Example'))">
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
