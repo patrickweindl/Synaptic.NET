@@ -1,5 +1,7 @@
-﻿<CascadingAuthenticationState>
-    <Router AppAssembly="typeof(AuthenticationServices).Assembly" NotFoundPage="typeof(NotFound)">
+﻿@using Synaptic.NET.Web.Components.Layout
+@using Synaptic.NET.Web.Components.Pages
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(WebServices).Assembly" NotFoundPage="typeof(NotFound)">
         <Found Context="routeData">
             <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
             <FocusOnNavigate RouteData="routeData" Selector="h1" />

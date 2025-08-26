@@ -1,13 +1,10 @@
 using System.Text;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.IdentityModel.Tokens;
 using mneme.Core.Handlers;
-using Synaptic.NET.Authentication.Components;
 using Synaptic.NET.Authentication.Controllers;
 using Synaptic.NET.Authentication.Handlers;
 using Synaptic.NET.Authentication.Middlewares;
@@ -121,8 +118,6 @@ public static class AuthenticationServices
         app.UseAuthorization();
         app.UseAntiforgery();
         app.MapControllers();
-        app.MapRazorComponents<AuthenticationApp>().AddInteractiveServerRenderMode();
-        app.MapStaticAssets();
         return app;
     }
 }

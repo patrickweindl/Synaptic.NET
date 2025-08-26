@@ -1,18 +1,22 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Synaptic.NET.Web.Components
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/auth" />
+    <base href="/home" />
+    <link rel="stylesheet" href="@Assets["auth.css"]" />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <ImportMap />
     <HeadOutlet />
-    <title>Synaptic.NET Authentication</title>
+    <title>Synaptic.NET</title>
 </head>
 
 <body>
     <Routes/>
+    <ReconnectModal/>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 
