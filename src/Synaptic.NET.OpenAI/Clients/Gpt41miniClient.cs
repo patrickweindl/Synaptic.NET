@@ -1,4 +1,3 @@
-using mneme.OpenAi.Clients;
 using Synaptic.NET.OpenAI.Resources;
 
 namespace Synaptic.NET.OpenAI.Clients;

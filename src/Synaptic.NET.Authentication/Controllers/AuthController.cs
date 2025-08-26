@@ -1,26 +1,32 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Synaptic.NET.Authentication.Providers;
+using Synaptic.NET.Authentication.Resources;
+using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Helpers;
 
 namespace Synaptic.NET.Authentication.Controllers;
 
 public class AuthController : ControllerBase
 {
-    private readonly MnemeServerSettings _settings;
+    private readonly SynapticServerSettings _settings;
     private readonly ISecurityTokenHandler _tokenHandler;
-    private readonly IRefreshTokenProvider _refreshTokenProvider;
-    private readonly IStorageServiceFactory _storageServiceFactory;
-    private readonly UserNotificationServiceFactory _notificationServiceFactory;
-    private readonly IUserManager _userManager;
-
-    public AuthController(MnemeServerSettings settings, ISecurityTokenHandler tokenHandler, IRefreshTokenProvider refreshTokenProvider, IUserManager userManager, IStorageServiceFactory storageServiceFactory, UserNotificationServiceFactory notificationServiceFactory)
+    private readonly IRefreshTokenHandler _refreshTokenHandler;
+    private readonly RedirectUriProvider _redirectUriProvider;
+    private readonly CodeBasedAuthProvider _codeBasedAuthProvider;
+    public AuthController(
+        SynapticServerSettings settings,
+        ISecurityTokenHandler tokenHandler,
+        IRefreshTokenHandler refreshTokenHandler,
+        RedirectUriProvider redirectUriProvider,
+        CodeBasedAuthProvider codeBasedAuthProvider)
     {
         _settings = settings;
         _tokenHandler = tokenHandler;
-        _refreshTokenProvider = refreshTokenProvider;
-        _storageServiceFactory = storageServiceFactory;
-        _notificationServiceFactory = notificationServiceFactory;
-        _userManager = userManager;
+        _refreshTokenHandler = refreshTokenHandler;
+        _redirectUriProvider = redirectUriProvider;
+        _codeBasedAuthProvider = codeBasedAuthProvider;
     }
 
     [HttpHead("/")]
@@ -67,6 +73,7 @@ public class AuthController : ControllerBase
         string queryString = string.Empty;
         if (inputQuery != null)
         {
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             queryString = string.Join("&", inputQuery.Where(k => k.Key != null && k.Value != null).Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
             Log.Information($"[Authorization] Received authorize GET with query {queryString}.");
         }
@@ -91,7 +98,7 @@ public class AuthController : ControllerBase
             Log.Error("[Authorization] OAuth callback received without state.");
             return BadRequest("Missing state parameter.");
         }
-        if (!StateRedirectUris.Remove(state, out RedirectSettings? redirectUri))
+        if (!_redirectUriProvider.GetRedirectUri(state, out RedirectSettings redirectUri))
         {
             Log.Error($"[Authorization] OAuth callback received with unknown state: {state}.");
             return BadRequest("Unknown state parameter.");
@@ -102,20 +109,11 @@ public class AuthController : ControllerBase
             Log.Error("[Authorization] OAuth callback received without code.");
             return BadRequest("Missing code parameter.");
         }
-        CodeIdentityProviders.Add(code, redirectUri.Provider);
+        _codeBasedAuthProvider.AddCodeIdentityProvider(code, redirectUri.Provider);
 
         Log.Information($"[Authorization] OAuth callback received with state: {state}, redirecting to {redirectUri}.");
         return Redirect($"{redirectUri.Uri}?state={state}&code={code}");
     }
-
-    public class RedirectSettings
-    {
-        public required string Uri { get; set; }
-        public required string Provider { get; set; }
-    }
-    public static Dictionary<string, RedirectSettings> StateRedirectUris { get; } = new();
-
-    public static Dictionary<string, string> CodeIdentityProviders { get; } = new();
 
     [HttpPost("token")]
     [AllowAnonymous]
@@ -145,24 +143,23 @@ public class AuthController : ControllerBase
 
         if (grantType.ToLowerInvariant().Contains("refresh") && !string.IsNullOrEmpty(refreshToken))
         {
-            if (!_refreshTokenProvider.ValidateRefreshToken(refreshToken, out string userId, out string userName))
+            if (!_refreshTokenHandler.ValidateRefreshToken(refreshToken, out var claimsIdentity))
             {
                 Log.Error("Invalid refresh token");
                 return StatusCode(401, "Invalid refresh token");
             }
 
-            if (!_refreshTokenProvider.ValidateRefreshTokenExpiry(refreshToken))
+            if (!_refreshTokenHandler.ValidateRefreshTokenExpiry(refreshToken))
             {
                 Log.Error("Expired refresh token");
                 return StatusCode(401, "The refresh token expired");
             }
 
-            _refreshTokenProvider.InvalidateRefreshToken(refreshToken);
-            return Ok(_tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime,
-                userId, userName));
+            _refreshTokenHandler.InvalidateRefreshToken(refreshToken);
+            return Ok(_tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
 
         }
-        if (!CodeIdentityProviders.Remove(code, out string? provider))
+        if (!_codeBasedAuthProvider.GetIdentityProviderByCode(code, out string? provider))
         {
             if (!redirectUri.Contains("localhost"))
             {
@@ -170,7 +167,6 @@ public class AuthController : ControllerBase
                 return StatusCode(401, "Invalid code");
             }
             provider = "github";
-
         }
 
         clientId = provider switch
@@ -209,12 +205,9 @@ public class AuthController : ControllerBase
             return StatusCode(500, "Invalid user data received from OAuth provider.");
         }
 
-        string userIdentifier = $"{validationResult.UserName}__{validationResult.UserId}";
-        bool createdUser = _userManager.GetOrCreateUser(userIdentifier, out var user);
-        _storageServiceFactory.GetStorageService(_userManager, userIdentifier);
-        _notificationServiceFactory.GetNotificationService(userIdentifier);
+        var identity = ClaimsHelper.FromUserNameAndId(validationResult.UserName, validationResult.UserId);
 
-        AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, validationResult.UserId, validationResult.UserName);
+        AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, identity);
         return Ok(token);
     }
 }

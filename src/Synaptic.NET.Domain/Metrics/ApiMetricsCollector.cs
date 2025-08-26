@@ -17,7 +17,7 @@ public class ApiMetricsCollector : IMetricsCollector<TimeSpan>
         _benchmarkMeter = Meter.CreateHistogram<double>("BenchmarkCounter", "ms");
     }
 
-    public string MeterName => "Mneme.Api.ApiMetrics";
+    public string MeterName => "Synaptic.Api.BenchmarkMeter";
     public Meter Meter { get; }
 
     public InMemoryMeter<TimeSpan> InMemoryMeter

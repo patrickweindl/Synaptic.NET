@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -10,5 +10,15 @@
       <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
     </ItemGroup>
+
+  <ItemGroup>
+    <UpToDateCheckInput Remove="Pages\Browser\Index.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**\**">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

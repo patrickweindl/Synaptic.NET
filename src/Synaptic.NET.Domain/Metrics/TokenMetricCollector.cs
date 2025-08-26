@@ -20,7 +20,7 @@ public class TokenMetricCollector : IMetricsCollector<long>
         _outputTokenCounter = Meter.CreateHistogram<long>("OutputTokenHistogram", "tokens");
     }
 
-    public string MeterName => "Mneme.Api.Tokens";
+    public string MeterName => "Synaptic.Api.TokenMeter";
     public Meter Meter { get; }
 
     public InMemoryMeter<long> InMemoryMeter

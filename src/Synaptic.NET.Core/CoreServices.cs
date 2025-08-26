@@ -6,19 +6,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Synaptic.NET.Core.Extensions;
+using Synaptic.NET.Domain;
 
-namespace Synaptic.NET.Api.Extensions;
+namespace Synaptic.NET.Core;
 
-public static class ServiceDefaultExtensions
+public static class CoreServices
 {
-    public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
-    {
-        builder.ConfigureOpenTelemetry();
-        builder.AddDefaultHealthChecks();
-        return builder;
-    }
-
-    public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
+    public static IHostApplicationBuilder ConfigureCoreServices(this IHostApplicationBuilder builder)
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {
@@ -32,7 +27,8 @@ public static class ServiceDefaultExtensions
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddMeter("Synaptic.NET.Api");
+                    .AddMeter("Synaptic.Api.TokenMeter")
+                    .AddMeter("Synaptic.Api.BenchmarkMeter");
             })
             .WithTracing(tracing =>
             {
@@ -40,25 +36,20 @@ public static class ServiceDefaultExtensions
                     .AddHttpClientInstrumentation();
             });
 
-        return builder;
-    }
-
-    public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
-    {
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
 
         return builder;
     }
 
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    public static WebApplication ConfigureCoreApplication(this WebApplication app, SynapticServerSettings configuration)
     {
+        app.ConfigureHeaderForwarding(configuration);
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/alive", new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("live")
         });
-
         return app;
     }
 }

@@ -1,0 +1,112 @@
+
+
+#toggleSidebar{
+    background-color: #555;
+}
+
+#stores {
+    width: 250px;
+    border-right: 1px solid #444;
+    padding: 10px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    background: #222;
+    color: #ccc;
+    transition: width .3s
+}
+
+#stores.collapsed {
+    width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden
+}
+
+#stores h2 {
+    margin-top: 0
+}
+
+#memories {
+    flex: 1;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto
+}
+
+#storeList {
+    list-style: none;
+    padding: 0;
+    margin: 0
+}
+
+#storeList li {
+    padding: 8px;
+    cursor: pointer
+}
+
+#storeList li.active {
+    background: rgba(255, 255, 255, .1)
+}
+
+.memory {
+    border-bottom: 1px solid #444;
+    padding: 10px 0;
+    color: #ccc
+}
+
+.memory textarea {
+    width: 100%;
+    height: 80px;
+    margin-top: 5px;
+    background: #3a3a3a;
+    color: #ccc;
+    border: 1px solid #444
+}
+
+.memory button {
+    margin-top: 5px;
+    background: #c1c1c1;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #000
+}
+
+.memory button:hover {
+    background: #d5d5d5
+}
+
+#recreateForm {
+    text-align: center;
+    margin-bottom: 10px
+}
+
+#recreateForm button {
+    background: #c1c1c1;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #000
+}
+
+#recreateForm button:hover {
+    background: #d5d5d5
+}
+
+.memory .meta {
+    margin-bottom: 5px
+}
+
+details {
+    margin-bottom: 15px;
+    border: 1px solid #444;
+    padding: 10px;
+    background: #2a2a2a
+}
+
+details summary {
+    cursor: pointer;
+    font-weight: bold
+}

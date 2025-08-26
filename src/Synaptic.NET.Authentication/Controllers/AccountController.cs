@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Domain;
 
 namespace Synaptic.NET.Authentication.Controllers;
@@ -11,10 +12,11 @@ namespace Synaptic.NET.Authentication.Controllers;
 public class AccountController : Controller
 {
     private readonly SynapticServerSettings _configuration;
-
-    public AccountController(SynapticServerSettings synapticServerSettings)
+    private readonly RedirectUriProvider _redirectUriProvider;
+    public AccountController(SynapticServerSettings synapticServerSettings, RedirectUriProvider redirectUriProvider)
     {
         _configuration = synapticServerSettings;
+        _redirectUriProvider = redirectUriProvider;
     }
 
     [HttpGet("/account/login")]
@@ -119,7 +121,7 @@ public class AccountController : Controller
     private string GetClientIdFromState(string? state)
     {
         if (string.IsNullOrEmpty(state) ||
-            !AuthController.StateRedirectUris.Remove(state, out var redirectSettings))
+            !_redirectUriProvider.GetRedirectUri(state, out var redirectSettings))
         {
             return _configuration.GitHubOAuthSettings.ClientId;
         }
@@ -136,7 +138,7 @@ public class AccountController : Controller
     private string GetClientSecretFromState(string? state)
     {
         if (string.IsNullOrEmpty(state) ||
-            !AuthController.StateRedirectUris.Remove(state, out var redirectSettings))
+            !_redirectUriProvider.GetRedirectUri(state, out var redirectSettings))
         {
             return _configuration.GitHubOAuthSettings.ClientSecret;
         }

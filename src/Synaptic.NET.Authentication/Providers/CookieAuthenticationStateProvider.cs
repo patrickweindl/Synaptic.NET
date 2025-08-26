@@ -4,9 +4,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 
-namespace Synaptic.NET.Authentication.Controllers;
+namespace Synaptic.NET.Authentication.Providers;
 
 public class CookieAuthenticationStateProvider : AuthenticationStateProvider
 {
@@ -52,7 +51,7 @@ public class CookieAuthenticationStateProvider : AuthenticationStateProvider
             }
             catch (Exception ex)
             {
-                Log.Logger.Error(ex, "Failed to parse cookie.");
+                Log.Logger.Error(ex, "[Cookie Authentication] Failed to parse cookie.");
             }
         }
 
@@ -79,9 +78,9 @@ public class CookieAuthenticationStateProvider : AuthenticationStateProvider
                 result = ticket.Principal;
             }
         }
-        catch
+        catch (Exception e)
         {
-            // Cookie ist ungültig oder abgelaufen
+            Log.Logger.Error(e, "[Cookie Authentication] Failed to parse cookie, it may have expired or been tampered with.");
         }
 
         return Task.FromResult(result);
