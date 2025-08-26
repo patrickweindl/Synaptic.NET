@@ -15,7 +15,6 @@
     <ItemGroup>
       <AdditionalFiles Include="Components\Layout\EmptyLayout.razor" />
       <AdditionalFiles Include="Components\Layout\MainLayout.razor" />
-      <AdditionalFiles Include="Components\Pages\Auth.razor" />
       <AdditionalFiles Include="Components\Pages\NotFound.razor" />
       <AdditionalFiles Include="Components\Pages\OAuthSelect.razor" />
       <AdditionalFiles Include="Components\RedirectToLogin.razor" />
