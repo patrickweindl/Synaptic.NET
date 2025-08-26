@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <EnableDefaultContentItems>True</EnableDefaultContentItems>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <IsAspireSharedProject>true</IsAspireSharedProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Synaptic.NET.Augmentation\Synaptic.NET.Augmentation.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Authentication\Synaptic.NET.Authentication.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.OpenAI\Synaptic.NET.OpenAI.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.Qdrant\Synaptic.NET.Qdrant.csproj" />
+      <ProjectReference Include="..\Synaptic.NET.RestApi\Synaptic.NET.RestApi.csproj" />
+    </ItemGroup>
+
+    <Target Name="CopyAppSettingsIfMissing" AfterTargets="Build">
+      <Copy SourceFiles="$(MSBuildThisFileDirectory)appsettings.json"
+            DestinationFolder="$(OutputPath)"
+            SkipUnchangedFiles="true"
+            Condition="!Exists('$(OutputPath)appsettings.json') and Exists('$(MSBuildThisFileDirectory)appsettings.json')" />
+    </Target>
+</Project>
