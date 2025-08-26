@@ -100,7 +100,7 @@ public class AccountController : Controller
             Log.Logger.Information("[Web Authentication] Authentication processed. Logging in {identity}.", identity.Name);
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-            var returnUrl = TempData["ReturnUrl"] as string ?? "/auth";
+            var returnUrl = TempData["ReturnUrl"] as string ?? "/home";
             return LocalRedirect(returnUrl);
         }
         catch (Exception ex)
@@ -115,7 +115,7 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return LocalRedirect("/");
+        return LocalRedirect("/home");
     }
 
     private string GetClientIdFromState(string? state)

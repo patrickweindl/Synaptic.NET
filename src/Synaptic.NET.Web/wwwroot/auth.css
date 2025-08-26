@@ -118,3 +118,70 @@ h1:focus {
     border-radius: 50%;
     object-fit: cover;
 }
+
+/* MainLayout Styles */
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #1b6ec2 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.top-row-left {
+    display: flex;
+    align-items: center;
+}
+
+.top-row-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo-link {
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    font-size: 1.5rem;
+    transition: opacity 0.3s ease;
+}
+
+.logo-link:hover {
+    opacity: 0.8;
+    color: white;
+    text-decoration: none;
+}
+
+.logo-text {
+    display: inline-block;
+}
+
+.top-row a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.top-row a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-decoration: none;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
