@@ -38,6 +38,7 @@
 
   <!-- Augmentation/AI Packages -->
   <ItemGroup Condition="
+                    $(ProjectName.Contains('Domain')) or
                     $(ProjectName.Contains('Augmentation')) or
                     $(ProjectName.Contains('AI')) or
                     $(ProjectName.Contains('Qdrant'))">
@@ -47,6 +48,7 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Memory" />
     <PackageReference Include="PdfPig" />
     <PackageReference Include="OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />
   </ItemGroup>
 
   <!-- Authentication Packages -->
@@ -66,7 +68,6 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="Tiktoken" />
-    <PackageReference Include="OpenAI" />
   </ItemGroup>
 
   <!-- MCP Packages -->

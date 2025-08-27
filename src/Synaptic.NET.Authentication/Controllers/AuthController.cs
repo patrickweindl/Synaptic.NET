@@ -198,7 +198,7 @@ public class AuthController : ControllerBase
             return StatusCode(500, "Invalid user data received from OAuth provider.");
         }
 
-        var identity = ClaimsHelper.FromUserNameAndId(validationResult.UserName, validationResult.UserId);
+        var identity = ClaimsHelper.ClaimsIdentityFromUserNameAndId(validationResult.UserName, validationResult.UserId);
 
         AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, identity);
         return Ok(token);

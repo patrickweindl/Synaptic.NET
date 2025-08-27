@@ -21,8 +21,18 @@ public static class ClaimsHelper
 
     public static string ToUserId(this ClaimsIdentity? claimsIdentity) => claimsIdentity?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "default";
 
-    public static ClaimsIdentity FromUserNameAndId(string userName, string userId)
+    public static ClaimsIdentity ClaimsIdentityFromUserNameAndId(string userName, string userId)
     {
+        var identity = new ClaimsIdentity();
+        identity.AddClaim(new Claim(ClaimTypes.Name, userName));
+        identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, userId));
+        return identity;
+    }
+
+    public static ClaimsIdentity ToClaimsIdentity(this string userIdentifier)
+    {
+        var userName = userIdentifier.Split("__")[0];
+        var userId = userIdentifier.Split("__")[1];
         var identity = new ClaimsIdentity();
         identity.AddClaim(new Claim(ClaimTypes.Name, userName));
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, userId));

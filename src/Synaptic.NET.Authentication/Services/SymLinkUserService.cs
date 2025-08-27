@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Synaptic.NET.Authentication.Resources;
+using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
 
@@ -69,7 +70,7 @@ public class SymLinkUserService : ISymLinkUserService
             {
                 string userName = symLinkUser.Split("__").First();
                 string userId = symLinkUser.Split("__").Last();
-                identities.Add(ClaimsHelper.FromUserNameAndId(userName, userId));
+                identities.Add(ClaimsHelper.ClaimsIdentityFromUserNameAndId(userName, userId));
             }
             return identities.Concat([claimsIdentity]).ToList();
         }
@@ -83,7 +84,7 @@ public class SymLinkUserService : ISymLinkUserService
         if (_symLinkUsers.FirstOrDefault(u =>
                 u.MainUserIdentifier == storageId || u.SymLinkUserIdentifiers.Any(s => s == storageId)) is { } symLink)
         {
-            return ClaimsHelper.FromUserNameAndId(symLink.MainUserIdentifier.Split("__").First(), symLink.MainUserIdentifier.Split("__").Last());
+            return ClaimsHelper.ClaimsIdentityFromUserNameAndId(symLink.MainUserIdentifier.Split("__").First(), symLink.MainUserIdentifier.Split("__").Last());
         }
         return claimsIdentity;
     }
