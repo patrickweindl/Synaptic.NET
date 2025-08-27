@@ -1,0 +1,2 @@
+Query: {Query}
+Stores: {Stores}

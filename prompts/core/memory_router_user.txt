@@ -1,0 +1,3 @@
+New Memory Identifier: {Identifier}
+New Memory Content: {Content}
+Stores: {Stores}

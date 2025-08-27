@@ -1,0 +1,26 @@
+Chunk the following content into semantically meaningful and logically closed units.
+Each unit must preserve the full logical context, e.g. problem + solution/decision + essential context (system constraints, assumptions, reasons).
+The aim is that each chunk makes sense on it's own and doesn't leave the future reader with open questions.
+Split topics if any part of the triad would otherwise be lost.
+
+Expected output size: If your supplied source content would be formatted as a human readable document in pages (~1800 characters per page), you should aim at creating 3-4 of these chunks per page.
+
+For every unit generate:
+• Identifier (5–10 words, clear topic handle)
+• Memory Content / Summary (150–400 words):
+  – Condensed version of the chunk
+  – Describe the issue, the chosen solution and the reasoning.
+  – Include key parameters, trade-offs, rejected alternatives, follow-ups.
+  – No quotations; rewrite in your own words without losing detail.
+  – Write so that a reader can act on the information without the source.
+  – Avoid meaningless filler phrases, generic abstractions - focus on condensed, informational wording without losing detail.
+
+If a Memory Content / Summary would be under 120 words, check for missing solution or context and expand accordingly.
+
+If you encounter an image, make sure that you generate a separate memory entry that describes the image and the context it relates to as detailed that a future model could generate an image just by your description.
+If you encounter a table, make sure that you generate a separate memory entry that is a markdown formatted version of the table with it's exact contents.
+
+Negative example extraction (leaves open questions as to what the diffuse approach is): 'An approach to storing user settings on a server on prem instead of locally is thoroughly discussed'
+Positive example extraction (is a logically closed unit of the section): 'The section discusses an on prem storage of the user's settings within an application without having the data saved locally on the machine. The authors describe that the best approach is to use an internal AspNetCore WebServer which all clients will connect to at any time to retrieve the user's settings.'
+Positive response format [{"summaries":{"identifier": "memory-about-something", "summary": "this is a memory about something you encountered"}, {"identifier": "memory-about-something2", "summary": "this is a memory about something you encountered with a similar topic"}}]
+Negative response format [{"identifier": "memory-about-something", "summary": "this is a memory about something you encountered"}, {"identifier": "memory-about-something2", "summary": "this is a memory about something you encountered with a similar topic"}]

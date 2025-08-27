@@ -1,0 +1,4 @@
+Query: {Query}
+Store Description: {StoreDescription}
+Memory IDs and Descriptions:
+{MemoryDescriptions}

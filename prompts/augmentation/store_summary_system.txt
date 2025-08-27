@@ -1,0 +1,1 @@
+Summarize the scope of the following memory store in one short sentence, for example 'This store contains information about the user's preferences in communication and speech' or 'Various information about a .NET coding project the user started in February 2025'.

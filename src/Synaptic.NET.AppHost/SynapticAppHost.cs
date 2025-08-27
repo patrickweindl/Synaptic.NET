@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using Synaptic.NET.Augmentation;
 using Synaptic.NET.Authentication;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
@@ -27,6 +28,7 @@ public class SynapticAppHost
 
         builder.ConfigureDomainServices(out var synapticSettings);
         builder.ConfigureCoreServices();
+        builder.ConfigureAugmentationServices();
 
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
