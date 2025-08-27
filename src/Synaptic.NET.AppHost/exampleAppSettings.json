@@ -1,0 +1,57 @@
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning"
+        }
+    },
+    "hostEnvironment": "Development",
+    "OpenAi": {
+        "EmbeddingModel": "text-embedding-3-small",
+        "TaskAugmentationModel": "gpt-4o",
+        "MemoryRoutingModel": "gpt-5-mini",
+        "MemoryAugmentationModel": "gpt-5-mini",
+        "RagCreationModel": "gpt-5-mini",
+        "ApiKey": "sk-"
+    },
+    "OAuth": {
+        "GitHub": {
+            "Enable": "false",
+            "ClientId": "your-github-client-id",
+            "ClientSecret": "your-github-client-secret"
+        },
+        "Google": {
+            "Enable": "false",
+            "ClientId": "your-google-client-id.apps.googleusercontent.com",
+            "ClientSecret": "your-google-client-secret"
+        },
+        "Microsoft": {
+            "Enable": "false",
+            "ClientId": "your-microsoft-client-id",
+            "ClientSecret": "your-microsoft-client-secret"
+        }
+    },
+    "Jwt": {
+        "Key": "a-properly-long-and-safe-jwt-key-that-should-be-stored-in-env",
+        "Issuer": "https://localhost:8001"
+    },
+    "Encryption": {
+        "MasterKey": "a-key-for-encryption-that-is-longer-than-16-characters"
+    },
+    "Security": {
+        "TokenLifetime": "08:00:00",
+        "TrustInternal": "True",
+        "Admins": "comma-separated-list-of-admin-overrides"
+    },
+    "Backup": {
+        "Enable": "false",
+        "Path": "backup-path"
+    },
+    "Servers": {
+        "Url": "https://localhost:8001",
+        "KnownProxies": "127.0.0.1,192.168.178.2",
+        "Port": "8001",
+        "Qdrant": "http://localhost:6333"
+    },
+    "AllowedHosts": "*"
+}
