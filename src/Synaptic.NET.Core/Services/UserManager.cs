@@ -88,6 +88,12 @@ public class UserManager : IUserManager
         }
     }
 
+    public User GetCurrentUser(ICurrentUserService currentUserService)
+    {
+        var currentClaim = currentUserService.GetUserClaimIdentity();
+        return (this as IUserManager).GetOrCreateUser(currentClaim);
+    }
+
     public List<User> GetUsers()
     {
         return _users.ToList();

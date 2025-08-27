@@ -1,10 +1,305 @@
 @page "/home"
 @rendermode InteractiveServer
-@layout MainLayout
 
-<h3>Home</h3>
+<PageTitle>Mneme - AI Memory Enhancement Server</PageTitle>
 
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Synaptic.NET</h1>
+        <p class="hero-subtitle">Memory Enhancement Server</p>
+        <p class="hero-description">
+            Enhance your AI interactions with persistent memory, intelligent retrieval, and seamless integration
+        </p>
+        <div class="hero-actions">
+            <a href="/account/login" class="btn btn-primary">Get Started</a>
+            <a href="/get-started" class="btn btn-secondary">Learn More</a>
+        </div>
+    </div>
+</div>
 
-@code {
+<div class="features-section">
+    <div class="container">
+        <h2>What is Synaptic.NET?</h2>
+        <p class="section-description">
+            Synaptic.NET is a server system that natively integrates with CustomGPTs and Claude (via MCP)
+            to extend AI models with memory storage, retrieval capabilities, and notification systems.
+        </p>
 
-}
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <h3>Memory Enhancement</h3>
+                <p>Provide AI models with persistent memory storage and intelligent retrieval of past conversations and context.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <h3>RAG Integration</h3>
+                <p>Upload files that are automatically integrated into a RAG system, making them queryable by AI models through simple requests.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+                    </svg>
+                </div>
+                <h3>Native Integration</h3>
+                <p>Seamlessly works with CustomGPTs and Claude through MCP, requiring minimal setup for maximum functionality.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="integration-section">
+    <div class="container">
+        <h2>How to Connect</h2>
+        <div class="integration-grid">
+            <div class="integration-card">
+                <h3>CustomGPT</h3>
+                <p>Connect through CustomGPT links (available on invitation)</p>
+                <div class="integration-status">On Invitation</div>
+            </div>
+
+            <div class="integration-card">
+                <h3>Claude MCP</h3>
+                <p>Add https://mneme.weindl.org as MCP Server in Claude Desktop</p>
+                <div class="integration-status">Available Now</div>
+            </div>
+
+            <div class="integration-card">
+                <h3>Direct Access</h3>
+                <p>Use the web interface to manage your memory and files</p>
+                <div class="integration-status">Available Now</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #1b6ec2 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 20px;
+        text-align: center;
+        margin: -32px -32px 40px -32px;
+    }
+
+    .hero-content h1 {
+        font-size: 3.5rem;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+        color: white;
+    }
+
+    .hero-subtitle {
+        font-size: 1.5rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+
+    .hero-description {
+        font-size: 1.2rem;
+        opacity: 0.8;
+        margin-bottom: 2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background: transparent;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .features-section {
+        padding: 60px 20px;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .features-section h2 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .section-description {
+        text-align: center;
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 3rem;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
+
+    .feature-card {
+        padding: 2rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    }
+
+    .feature-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, #1b6ec2 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .feature-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .feature-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .feature-card p {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    .integration-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 60px 20px;
+        margin: 40px -32px -32px -32px;
+    }
+
+    .integration-section h2 {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 3rem;
+        color: #333;
+    }
+
+    .integration-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .integration-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .integration-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    }
+
+    .integration-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .integration-card p {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .integration-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        color: white;
+    }
+
+    @@media (max-width: 768px) {
+        .hero-content h1 {
+            font-size: 2.5rem;
+        }
+
+        .hero-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn {
+            width: 200px;
+        }
+    }
+</style>

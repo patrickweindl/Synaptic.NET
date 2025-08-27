@@ -7,6 +7,8 @@ namespace Synaptic.NET.Core;
 
 public interface IUserManager
 {
+    User GetCurrentUser(ICurrentUserService currentUserService);
+
     User GetOrCreateUser(ClaimsIdentity user, UserRole role = UserRole.User)
     {
         return GetOrCreateUser(user.ToUserIdentifier(), role);
@@ -32,7 +34,7 @@ public interface IUserManager
     void AddUserToGroup(User currentUser, User targetUser, string group);
 
     void RemoveUserFromGroup(User currentUser, User targetUser, string group);
-    
+
     string ReadableGroupNameToUserGroupIdentifier(string groupName);
 
     string GroupIdentifierToReadableName(string groupIdentifier);

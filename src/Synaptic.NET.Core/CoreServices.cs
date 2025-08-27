@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Synaptic.NET.Core.Extensions;
+using Synaptic.NET.Core.Services;
 using Synaptic.NET.Domain;
 
 namespace Synaptic.NET.Core;
@@ -39,6 +40,11 @@ public static class CoreServices
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
 
+        builder.Services.AddScoped<IUserManager, UserManager>();
+        builder.Services.AddScoped<IEncryptionService, ClaimsBasedEncryptionService>();
+        builder.Services.AddScoped<IArchiveService, ArchiveService>();
+        /*builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+        builder.Services.AddHostedService<BackgroundTaskService>();*/
         return builder;
     }
 

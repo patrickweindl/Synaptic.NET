@@ -23,13 +23,24 @@ public class SymLinkUserService : ISymLinkUserService
         if (File.Exists(Path.Join(_settings.BaseDataPath, "symLinkUsers.json")))
         {
             var content = File.ReadAllText(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"));
-            var existingSymLinks = JsonSerializer.Deserialize<List<SymLinkUserInfo>>(content) ?? new List<SymLinkUserInfo>();
-            _symLinkUsers.AddRange(existingSymLinks);
+            try
+            {
+                var existingSymLinks = JsonSerializer.Deserialize<List<SymLinkUserInfo>>(content) ?? new List<SymLinkUserInfo>();
+                _symLinkUsers.AddRange(existingSymLinks);
+            }
+            catch (JsonException e)
+            {
+                Log.Logger.Error(e, "Malformed symLinkUsers.json file, deleting and recreating.");
+                File.Delete(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"));
+                File.Create(Path.Join(_settings.BaseDataPath, "symLinkUsers.json")).Close();
+                File.WriteAllText(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"), JsonSerializer.Serialize(new List<SymLinkUserInfo>(), new JsonSerializerOptions() { WriteIndented = true}));
+            }
+
         }
         else
         {
             File.Create(Path.Join(_settings.BaseDataPath, "symLinkUsers.json")).Close();
-            File.WriteAllText(JsonSerializer.Serialize(_symLinkUsers, JsonSerializerOptions.Default), Path.Join(_settings.BaseDataPath, "symLinkUsers.json"));
+            File.WriteAllText(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"), JsonSerializer.Serialize(_symLinkUsers, JsonSerializerOptions.Default));
         }
     }
 

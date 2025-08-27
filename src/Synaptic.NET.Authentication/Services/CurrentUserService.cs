@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Core;
 
@@ -8,17 +9,17 @@ public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor? _accessor;
     private readonly ISymLinkUserService _symlinkUserService;
-    private readonly CookieAuthenticationStateProvider? _cookieAuthenticationStateProvider;
-    public CurrentUserService(ISymLinkUserService symlinkUserService, CookieAuthenticationStateProvider? cookieAuthenticationStateProvider = null, IHttpContextAccessor? accessor = null)
+    private readonly AuthenticationStateProvider? _authenticationStateProvider;
+    public CurrentUserService(ISymLinkUserService symlinkUserService, AuthenticationStateProvider? authenticationStateProvider = null, IHttpContextAccessor? accessor = null)
     {
         _accessor = accessor;
         _symlinkUserService = symlinkUserService;
-        _cookieAuthenticationStateProvider = cookieAuthenticationStateProvider;
+        _authenticationStateProvider = authenticationStateProvider;
     }
 
     public ClaimsIdentity GetUserClaimIdentity()
     {
-        var cookieState = _cookieAuthenticationStateProvider?.GetAuthenticationStateAsync().Result;
+        var cookieState = _authenticationStateProvider?.GetAuthenticationStateAsync().Result;
 
         if (cookieState?.User is { Identity: { IsAuthenticated: true } } &&
             cookieState.User.FindFirst(ClaimTypes.NameIdentifier) is { } nameIdentifier &&

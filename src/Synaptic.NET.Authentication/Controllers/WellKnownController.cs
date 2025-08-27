@@ -13,6 +13,13 @@ public class WellKnownController : ControllerBase
         _settings = settings;
     }
 
+    [HttpGet("/")]
+    [AllowAnonymous]
+    public IActionResult Index()
+    {
+        return LocalRedirect("/home");
+    }
+
     [HttpGet("/.well-known/microsoft-identity-association.json")]
     [AllowAnonymous]
     public IActionResult GetMicrosoftIdentityAssociation()

@@ -15,6 +15,35 @@ public interface IMemoryProvider
     Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync();
 
     /// <summary>
+    /// Retrieves a list of all available memory stores, each representing a collection of related memories grouped by a common topic.
+    /// </summary>
+    /// <returns>A task representing the operation, returning a list of memory stores.</returns>
+    Task<List<MemoryStore>> GetStoresAsync();
+
+    /// <summary>
+    /// Retrieves a memory store by its unique identifier.
+    /// </summary>
+    /// <param name="collectionIdentifier">The unique identifier of the memory store to retrieve.</param>
+    /// <returns>A task representing the operation, returning the memory store if found; otherwise, null.</returns>
+    Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier);
+
+    /// <summary>
+    /// Retrieves a memory collection based on the provided collection title.
+    /// </summary>
+    /// <param name="collectionTitle">The title of the memory collection to retrieve.</param>
+    /// <returns>A task representing the asynchronous operation, returning the memory collection associated with the specified title, or null if not found.</returns>
+    Task<MemoryStore?> GetCollectionAsync(string collectionTitle);
+
+    /// <summary>
+    /// Executes a search query across memory collections based on specified criteria.
+    /// </summary>
+    /// <param name="query">The search query string used to match memory entries.</param>
+    /// <param name="limit">The maximum number of search results to return. Defaults to 10.</param>
+    /// <param name="relevanceThreshold">The minimum relevance score required for a result to be included. Defaults to 0.5.</param>
+    /// <returns>A task representing the operation, returning a collection of memory search results that meet the specified criteria.</returns>
+    Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5);
+
+    /// <summary>
     /// Creates a new memory collection with the provided title.
     /// </summary>
     /// <param name="collectionTitle">The title of the collection to create.</param>

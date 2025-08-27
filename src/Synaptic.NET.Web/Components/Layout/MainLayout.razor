@@ -1,3 +1,7 @@
+@inject IUserManager UserManager
+@inject ICurrentUserService CurrentUserService
+@using Synaptic.NET.Core
+@using Synaptic.NET.Domain.Enums
 @inherits LayoutComponentBase
 
 <div class="page">
@@ -10,9 +14,13 @@
         <AuthorizeView>
             <Authorized>
                 <div class="top-row-right">
+                @if (UserManager.GetCurrentUser(CurrentUserService).Role >= UserRole.Admin)
+                {
+                    <a href="/admin">Admin</a>
+                }
+                    <a href="/account">My Account</a>
                     <a href="/account/logout">Logout</a>
-                </div>
-
+                </div >
             </Authorized>
             <NotAuthorized>
                 <div class="top-row-right">

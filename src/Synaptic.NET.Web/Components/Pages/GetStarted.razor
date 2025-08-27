@@ -1,0 +1,441 @@
+@page "/get-started"
+@using Synaptic.NET.Domain
+@rendermode InteractiveServer
+@inject SynapticServerSettings Settings
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Get Started - Mneme</PageTitle>
+
+<div class="get-started-header">
+    <div class="container">
+        <h1>Getting Started with Synaptic.NET</h1>
+        <p>Follow these simple steps to enhance your AI interactions with persistent memory and intelligent retrieval</p>
+    </div>
+</div>
+
+<div class="setup-steps">
+    <div class="container">
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h2>Choose Your Integration Method</h2>
+                <p>Synaptic.NET works with multiple AI platforms. Choose the one that best fits your workflow:</p>
+
+                <div class="integration-options">
+                    <div class="option-card">
+                        <h3>🤖 CustomGPT</h3>
+                        <p>Use specially configured CustomGPT links that automatically connect to Mneme.</p>
+                        <div class="option-status">Available on invitation</div>
+                        <p class="option-note">Contact us for access to CustomGPT integration links.</p>
+                    </div>
+
+                    <div class="option-card">
+                        <h3>🔗 Claude MCP</h3>
+                        <p>Connect Claude Desktop directly to Synaptic.NET using the Model Context Protocol.</p>
+                        <div class="option-status available">Available now</div>
+                        <p class="option-note">Recommended for most users - provides full feature access.</p>
+                    </div>
+
+                    <div class="option-card">
+                        <h3>🌐 Web Interface</h3>
+                        <p>Access Synaptic.NET memories directly through your web browser for manual management.</p>
+                        <div class="option-status available">Available now</div>
+                        <p class="option-note">Perfect for file uploads and memory management.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h2>Create Your Account</h2>
+                <p>It is recommended that before using any integration method, you authenticate with Synaptic.NET to setup a few basics on your profile:</p>
+
+                <div class="auth-flow">
+                    <div class="auth-step">
+                        <h4>Web Interface</h4>
+                        <p>Go to <strong>Account</strong> and click <strong>Login</strong>, then choose your OAuth provider.</p>
+                    </div>
+
+                    <div class="auth-step">
+                        <h4>Claude/CustomGPT</h4>
+                        <p>When the AI model first tries to interact with the Synaptic.NET server, you'll be prompted to login.</p>
+                    </div>
+
+                    <div class="auth-important">
+                        <strong>Important:</strong> Always use the same OAuth provider (GitHub, Google, or Microsoft) for all interactions.
+                        Different OAuth identities can only be linked on request.
+                    </div>
+                </div>
+
+                <div class="cta-section">
+                    <a href="/account/login" class="btn btn-primary">Create Account Now</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h2>Setup Claude MCP Integration</h2>
+                <p>For the best experience, connect Claude Desktop to Mneme using MCP:</p>
+
+                <div class="claude-setup">
+                    <h4>1. Add MCP Server</h4>
+                    <p>In Claude Desktop, go to Settings → Developer → Model Context Protocol and add:</p>
+                    <div class="code-block">
+                        <code>@(Settings.ServerUrl)/mcp</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h2>Start Using Synaptic.NET</h2>
+                <p>Once set up, you can immediately start benefiting from Synaptic.NET's features:</p>
+
+                <div class="features-list">
+                    <div class="feature-item">
+                        <h4>🧠 Memory Storage</h4>
+                        <p>Your conversations and important information are automatically stored and can be retrieved by AI models.</p>
+                    </div>
+
+                    <div class="feature-item">
+                        <h4>📁 File Integration</h4>
+                        <p>Upload documents through the web interface - they'll be automatically integrated into the RAG system.</p>
+                    </div>
+
+                    <div class="feature-item">
+                        <h4>🔍 Smart Retrieval</h4>
+                        <p>Ask AI models to search through your memories and uploaded files using natural language.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="troubleshooting">
+    <div class="container">
+        <h2>Need Help?</h2>
+        <div class="help-grid">
+            <div class="help-card">
+                <h4>Authentication Issues</h4>
+                <p>Make sure you're using the same OAuth provider for both signup and subsequent logins.</p>
+            </div>
+
+            <div class="help-card">
+                <h4>Claude MCP Not Working</h4>
+                <p>Verify the server URL is correct and that you've enabled the connector.</p>
+            </div>
+
+            <div class="help-card">
+                <h4>File Upload Problems</h4>
+                <p>Ensure you're logged in and that your files are in supported formats (.PDF, .TXT, .MD, .RTF).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .get-started-header {
+        background: linear-gradient(135deg, #1b6ec2 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 20px;
+        text-align: center;
+        margin: -32px -32px 40px -32px;
+    }
+
+    .get-started-header h1 {
+        font-size: 3.5rem;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+        color: white;
+    }
+
+    .get-started-header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .setup-steps {
+        padding: 40px 0;
+    }
+
+    .step {
+        display: flex;
+        margin-bottom: 4rem;
+        gap: 2rem;
+        align-items: flex-start;
+    }
+
+    .step-number {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .step-content {
+        flex: 1;
+    }
+
+    .step-content h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .step-content p {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .integration-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .option-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #764ba2;
+    }
+
+    .option-card h3 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .option-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: #f8f9fa;
+        color: #6c757d;
+        margin: 0.5rem 0;
+    }
+
+    .option-status.available {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .option-note {
+        font-size: 0.9rem;
+        color: #888;
+        margin-top: 0.5rem;
+    }
+
+    .auth-flow {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+    }
+
+    .auth-step {
+        margin-bottom: 1rem;
+    }
+
+    .auth-step h4 {
+        color: #764ba2;
+        margin-bottom: 0.5rem;
+    }
+
+    .auth-important {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        color: #856404;
+    }
+
+    .claude-setup h4 {
+        color: #333;
+        margin: 1.5rem 0 0.5rem 0;
+    }
+
+    .code-block {
+        background: #2d3748;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        font-family: 'Courier New', monospace;
+    }
+
+    .preferences-section {
+        margin: 1.5rem 0;
+    }
+
+    .preferences-content {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        white-space: pre-wrap;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .features-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .feature-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-item h4 {
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .cta-section {
+        text-align: center;
+        margin: 2rem 0;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(118, 75, 162, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+        color: white;
+        text-decoration: none;
+    }
+
+    .copy-btn {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+    }
+
+    .troubleshooting {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 60px 20px;
+        margin: 40px -32px -32px -32px;
+    }
+
+    .troubleshooting h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #333;
+    }
+
+    .help-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .help-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .help-card h4 {
+        color: #764ba2;
+        margin-bottom: 0.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .step {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .get-started-header h1 {
+            font-size: 2rem;
+        }
+
+        .integration-options {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private string _claudePreferencesContent = "Loading Claude preferences...";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _claudePreferencesContent = "For persistent, long-term development, you have access to the tools under \"Synaptic.NET\" via MCP.\nAll information from this server represents your long-term development.\n\nAt the start of a session, you perform the following calls to restore the current context:\n• GetUserProfile (information about the user)\n• GetAssistantProfile (information about yourself and your behavior)\n• GetCurrentlyRelevantMemories (returns pinned memories, assistant memories and memories of the last two days)\n• GetStoreIdentifiersAndDescriptions (returns all available store identifiers and their descriptions)\n• GetCurrentTime (return the current time)\n\nWhenever you need a time reference, or when you give time references in your response (e.g., \"you mentioned today that you are tired\"),\nyou first check the current time with GetCurrentTime to determine whether the information is still relevant at that moment.";
+    }
+
+    private async Task CopyPreferences()
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _claudePreferencesContent);
+            await JsRuntime.InvokeVoidAsync("alert", "Claude preferences copied to clipboard!");
+        }
+        catch (Exception)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", "Failed to copy to clipboard. Please copy manually.");
+        }
+    }
+}

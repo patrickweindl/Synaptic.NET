@@ -1,0 +1,1507 @@
+@page "/admin"
+@attribute [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Synaptic.NET.Core
+@using Synaptic.NET.Domain
+@using Synaptic.NET.Domain.Enums
+@using Synaptic.NET.Domain.Metrics
+@using Synaptic.NET.Domain.Resources
+@using Synaptic.NET.OpenAI.Converters
+@inject IUserManager UserManager
+@inject ICurrentUserService CurrentUserService
+@inject IMetricsCollectorProvider MetricsProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Admin Dashboard - Mneme</PageTitle>
+
+<div class="admin-header">
+    <div class="container">
+        <div class="admin-info">
+            <div class="admin-icon">
+                <span>⚙️</span>
+            </div>
+            <div class="admin-details">
+                <h1>Admin Dashboard</h1>
+                <p class="admin-subtitle">Manage users, groups, and system metrics</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-content">
+    <div class="container">
+        <div class="admin-grid">
+            <!-- Quick Stats -->
+            <div class="stats-section">
+                <h2>System Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_users.Count</div>
+                            <div class="stat-label">Users</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔗</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_groups.Count</div>
+                            <div class="stat-label">Groups</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏛️</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_adminUsers.Count</div>
+                            <div class="stat-label">Admins</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔤</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_totalTokens.ToString("N0")</div>
+                            <div class="stat-label">Total Tokens</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-number">$@_totalCost.ToString("F4")</div>
+                            <div class="stat-label">Total Cost</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="tabs-section">
+                <div class="tabs-header">
+                    <button class="tab-button @(_activeTab == "users" ? "active" : "")" @onclick="@(() => SetActiveTab("users"))">
+                        <span class="tab-icon">👥</span>
+                        Users
+                    </button>
+                    <button class="tab-button @(_activeTab == "groups" ? "active" : "")" @onclick="@(() => SetActiveTab("groups"))">
+                        <span class="tab-icon">🔗</span>
+                        Groups
+                    </button>
+                    <button class="tab-button @(_activeTab == "metrics" ? "active" : "")" @onclick="@(() => SetActiveTab("metrics"))">
+                        <span class="tab-icon">📊</span>
+                        Token Metrics
+                    </button>
+                </div>
+
+                <div class="tab-content">
+                    @if (_activeTab == "users")
+                    {
+                        <div class="section-content">
+                            <div class="section-header">
+                                <h3>User Management</h3>
+                                <p>Manage user roles and group memberships</p>
+                            </div>
+
+                            @if (_users.Any())
+                            {
+                                <div class="users-grid">
+                                    @foreach (var user in _users)
+                                    {
+                                        <div class="user-card">
+                                            <div class="user-header">
+                                                <div class="user-info">
+                                                    <div class="user-avatar">
+                                                        <span>@GetUserInitials(user.DisplayName)</span>
+                                                    </div>
+                                                    <div class="user-details">
+                                                        <h4>@user.DisplayName</h4>
+                                                        <span class="user-id">@user.UserIdentifier</span>
+                                                        <span class="user-role role-@user.Role.ToString().ToLower()">@user.Role</span>
+                                                    </div>
+                                                </div>
+                                                <div class="user-actions">
+                                                    <select class="role-selector" @onchange="@(e => ChangeUserRole(user, Enum.Parse<UserRole>(e.Value?.ToString() ?? "User")))">
+                                                        <option value="Guest" selected="@(user.Role == UserRole.Guest)">Guest</option>
+                                                        <option value="User" selected="@(user.Role == UserRole.User)">User</option>
+                                                        <option value="Admin" selected="@(user.Role == UserRole.Admin)">Admin</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="user-groups">
+                                                <div class="groups-header">
+                                                    <strong>Groups:</strong>
+                                                    <select class="group-selector" @onchange="@(e => AddUserToGroup(user, e.Value?.ToString() ?? string.Empty))">
+                                                        <option value="">Add to group...</option>
+                                                        @foreach (var group in _groups)
+                                                        {
+                                                            <option value="@UserManager.GroupIdentifierToReadableName(group.UserIdentifier)">
+                                                                @UserManager.GroupIdentifierToReadableName(group.UserIdentifier)
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                @if (user.Groups.Any())
+                                                {
+                                                    <div class="user-group-list">
+                                                        @foreach (var groupId in user.Groups)
+                                                        {
+                                                            <div class="group-tag">
+                                                                <span>@UserManager.GroupIdentifierToReadableName(groupId)</span>
+                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(user, UserManager.GroupIdentifierToReadableName(groupId)))">×</button>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <p class="no-groups">No groups assigned</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state">
+                                    <span class="empty-icon">👥</span>
+                                    <h4>No users found</h4>
+                                    <p>Users will appear here when they log in to the system.</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (_activeTab == "groups")
+                    {
+                        <div class="section-content">
+                            <div class="section-header">
+                                <h3>Group Management</h3>
+                                <p>Create and manage user groups</p>
+                            </div>
+
+                            <div class="create-group-section">
+                                <h4>🆕 Create New Group</h4>
+                                <EditForm Model="_createGroupForm" OnValidSubmit="CreateNewGroup" class="create-group-form">
+                                    <div class="input-group">
+                                        <InputText @bind-Value="_createGroupForm.GroupName" placeholder="Enter group name..." class="group-name-input"/>
+                                        <button type="submit" class="create-group-btn" disabled="@_isCreatingGroup">
+                                            @if (_isCreatingGroup)
+                                            {
+                                                <span>Creating...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Create Group</span>
+                                            }
+                                        </button>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(_groupMessage))
+                                    {
+                                        <div class="group-message @(_groupSuccess ? "success" : "error")">
+                                            @_groupMessage
+                                        </div>
+                                    }
+                                </EditForm>
+                            </div>
+
+                            @if (_groups.Any())
+                            {
+                                <div class="groups-grid">
+                                    @foreach (var group in _groups)
+                                    {
+                                        var groupName = UserManager.GroupIdentifierToReadableName(group.UserIdentifier);
+                                        var memberCount = _users.Count(u => u.Groups.Contains(group.UserIdentifier));
+
+                                        <div class="group-card">
+                                            <div class="group-header">
+                                                <div class="group-info">
+                                                    <div class="group-icon">🔗</div>
+                                                    <div class="group-details">
+                                                        <h4>@groupName</h4>
+                                                        <span class="group-id">@group.UserIdentifier</span>
+                                                        <span class="member-count">@memberCount member@(memberCount != 1 ? "s" : "")</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="group-members">
+                                                <div class="members-header">
+                                                    <strong>Members:</strong>
+                                                </div>
+                                                @{
+                                                    var members = _users.Where(u => u.Groups.Contains(group.UserIdentifier)).ToList();
+                                                }
+                                                @if (members.Any())
+                                                {
+                                                    <div class="member-list">
+                                                        @foreach (var member in members)
+                                                        {
+                                                            <div class="member-tag">
+                                                                <span>@member.DisplayName</span>
+                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(member, groupName))">×</button>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <p class="no-members">No members assigned</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state">
+                                    <span class="empty-icon">🔗</span>
+                                    <h4>No groups found</h4>
+                                    <p>Create your first group using the form above.</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (_activeTab == "metrics")
+                    {
+                        <div class="section-content">
+                            <div class="section-header">
+                                <h3>Token Metrics</h3>
+                                <p>Monitor token usage and costs across users and time periods</p>
+                            </div>
+
+                            <div class="metrics-overview">
+                                <div class="metrics-stats">
+                                    <div class="metric-card">
+                                        <div class="metric-icon">📈</div>
+                                        <div class="metric-info">
+                                            <div class="metric-number">@_totalTokens.ToString("N0")</div>
+                                            <div class="metric-label">Total Tokens Used</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">💰</div>
+                                        <div class="metric-info">
+                                            <div class="metric-number">$@_totalCost.ToString("F4")</div>
+                                            <div class="metric-label">Total Cost</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">👤</div>
+                                        <div class="metric-info">
+                                            <div class="metric-number">@_activeUsers.Count</div>
+                                            <div class="metric-label">Active Users</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">🔄</div>
+                                        <div class="metric-info">
+                                            <div class="metric-number">@_totalOperations</div>
+                                            <div class="metric-label">Total Operations</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Period Selector -->
+                            <div class="time-period-selector">
+                                <h4>📅 Time Period</h4>
+                                <div class="period-buttons">
+                                    <button class="period-btn @(_selectedPeriod == "hour" ? "active" : "")" @onclick="@(() => SetTimePeriod("hour"))">
+                                        By Hour
+                                    </button>
+                                    <button class="period-btn @(_selectedPeriod == "day" ? "active" : "")" @onclick="@(() => SetTimePeriod("day"))">
+                                        By Day
+                                    </button>
+                                    <button class="period-btn @(_selectedPeriod == "week" ? "active" : "")" @onclick="@(() => SetTimePeriod("week"))">
+                                        By Week
+                                    </button>
+                                    <button class="period-btn @(_selectedPeriod == "month" ? "active" : "")" @onclick="@(() => SetTimePeriod("month"))">
+                                        By Month
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Token Histogram -->
+                            <div class="histogram-container">
+                                <h4>🔤 Token Usage Histogram</h4>
+                                @if (_tokenHistogramData.Any())
+                                {
+                                    <div class="histogram">
+                                        <div class="histogram-chart">
+                                            @{
+                                                var maxTokens = _tokenHistogramData.Max(d => d.Value.Sum(u => u.Value));
+                                            }
+                                            @foreach (var period in _tokenHistogramData.OrderBy(d => d.Key))
+                                            {
+                                                <div class="histogram-bar-container">
+                                                    <div class="histogram-period">@FormatPeriodLabel(period.Key)</div>
+                                                    <div class="histogram-bar-stack">
+                                                        @foreach (var user in period.Value.OrderByDescending(u => u.Value))
+                                                        {
+                                                            var height = maxTokens > 0 ? (double)user.Value / maxTokens * 100 : 0;
+                                                            var userColor = GetUserColor(user.Key);
+                                                            <div class="histogram-bar" style="height: @(height)%; background-color: @userColor;"
+                                                                 title="@GetDisplayNameForUser(user.Key): @user.Value.ToString("N0") tokens">
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <div class="histogram-value">@period.Value.Sum(u => u.Value).ToString("N0")</div>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="histogram-legend">
+                                            @foreach (var user in _activeUsers.Take(10))
+                                            {
+                                                <div class="legend-item">
+                                                    <div class="legend-color" style="background-color: @GetUserColor(user.UserIdentifier);"></div>
+                                                    <span class="legend-label">@GetDisplayNameForUser(user.UserIdentifier)</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-histogram">
+                                        <span class="empty-icon">📊</span>
+                                        <p>No token usage data available for the selected period</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Cost Histogram -->
+                            <div class="histogram-container">
+                                <h4>💰 Cost Histogram</h4>
+                                @if (_costHistogramData.Any())
+                                {
+                                    <div class="histogram">
+                                        <div class="histogram-chart">
+                                            @{
+                                                var maxCost = _costHistogramData.Max(d => d.Value.Sum(u => u.Value));
+                                            }
+                                            @foreach (var period in _costHistogramData.OrderBy(d => d.Key))
+                                            {
+                                                <div class="histogram-bar-container">
+                                                    <div class="histogram-period">@FormatPeriodLabel(period.Key)</div>
+                                                    <div class="histogram-bar-stack">
+                                                        @foreach (var user in period.Value.OrderByDescending(u => u.Value))
+                                                        {
+                                                            var height = maxCost > 0 ? user.Value / maxCost * 100 : 0;
+                                                            var userColor = GetUserColor(user.Key);
+                                                            <div class="histogram-bar" style="height: @(height)%; background-color: @userColor;"
+                                                                 title="@GetDisplayNameForUser(user.Key): $@user.Value.ToString("F4")">
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <div class="histogram-value">$@period.Value.Sum(u => u.Value).ToString("F4")</div>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="histogram-legend">
+                                            @foreach (var user in _activeUsers.Take(10))
+                                            {
+                                                <div class="legend-item">
+                                                    <div class="legend-color" style="background-color: @GetUserColor(user.UserIdentifier);"></div>
+                                                    <span class="legend-label">@GetDisplayNameForUser(user.UserIdentifier)</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-histogram">
+                                        <span class="empty-icon">💰</span>
+                                        <p>No cost data available for the selected period</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Recent Activity Table -->
+                            <div class="metrics-details">
+                                <h4>📋 Recent Activity</h4>
+                                @if (_tokenMetrics.Any())
+                                {
+                                    <div class="metrics-table">
+                                        <div class="table-header">
+                                            <div class="header-cell">User</div>
+                                            <div class="header-cell">Operation</div>
+                                            <div class="header-cell">Tokens</div>
+                                            <div class="header-cell">Cost</div>
+                                            <div class="header-cell">Timestamp</div>
+                                        </div>
+                                        @foreach (var metric in _tokenMetrics.OrderByDescending(m => m.Timestamp).Take(50))
+                                        {
+                                            <div class="table-row">
+                                                <div class="table-cell">
+                                                    <span class="user-name">@GetDisplayNameForUser(metric.UserIdentifier)</span>
+                                                </div>
+                                                <div class="table-cell">
+                                                    <span class="operation-name">@metric.Operation</span>
+                                                </div>
+                                                <div class="table-cell">
+                                                    <span class="token-count">@metric.Value.ToString("N0")</span>
+                                                </div>
+                                                <div class="table-cell">
+                                                    <span class="cost-amount">$@metric.ConvertToCostInDollar().ToString("F4")</span>
+                                                </div>
+                                                <div class="table-cell">
+                                                    <span class="timestamp">@metric.Timestamp.ToString("MMM dd, HH:mm")</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-state">
+                                        <span class="empty-icon">📊</span>
+                                        <h4>No metrics found</h4>
+                                        <p>Token usage metrics will appear here as users interact with the AI.</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+
+    .admin-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .admin-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .admin-details h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+
+    .admin-subtitle {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+
+    .admin-content {
+        min-height: 70vh;
+    }
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .stats-section h2 {
+        color: #333;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.8;
+    }
+
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #dc2626;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .tabs-section {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .tabs-header {
+        display: flex;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        overflow-x: auto;
+    }
+
+    .tab-button {
+        background: none;
+        border: none;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #64748b;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+        border-bottom: 3px solid transparent;
+    }
+
+    .tab-button:hover {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+    .tab-icon {
+        font-size: 1.1rem;
+    }
+
+    .tab-content {
+        padding: 2rem;
+    }
+
+    .section-content {
+        max-width: 100%;
+    }
+
+    .section-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h3 {
+        color: #1e293b;
+        font-size: 1.4rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .section-header p {
+        color: #64748b;
+        margin: 0;
+    }
+
+    .users-grid, .groups-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .user-card, .group-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .user-card:hover, .group-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-header, .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .user-info, .group-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #dc2626;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .group-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #059669;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .user-details, .group-details {
+        flex: 1;
+    }
+
+    .user-details h4, .group-details h4 {
+        margin: 0 0 0.25rem 0;
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .user-id, .group-id {
+        font-size: 0.8rem;
+        color: #64748b;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .user-role {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .member-count {
+        font-size: 0.85rem;
+        color: #059669;
+        font-weight: 500;
+    }
+
+    .role-selector, .group-selector {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: white;
+    }
+
+    .user-groups, .group-members {
+        margin-top: 1rem;
+    }
+
+    .groups-header, .members-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+
+    .user-group-list, .member-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .group-tag, .member-tag {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #e2e8f0;
+        color: #475569;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .remove-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+
+    .remove-btn:hover {
+        background: #dc2626;
+    }
+
+    .no-groups, .no-members {
+        color: #6b7280;
+        font-style: italic;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .create-group-section {
+        background: #f0f9ff;
+        border: 1px solid #e0f2fe;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .create-group-section h4 {
+        margin: 0 0 0.75rem 0;
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .create-group-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .group-name-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
+    }
+
+    .group-name-input:focus {
+        outline: none;
+        border-color: #dc2626;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+
+    .create-group-btn {
+        padding: 0.75rem 1.5rem;
+        background: #dc2626;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        white-space: nowrap;
+    }
+
+    .create-group-btn:hover:not(:disabled) {
+        background: #b91c1c;
+    }
+
+    .create-group-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+
+    .group-message {
+        padding: 0.75rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .metrics-overview {
+        margin-bottom: 2rem;
+    }
+
+    .metrics-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: #f0f9ff;
+        border: 1px solid #e0f2fe;
+        border-radius: 8px;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .metric-icon {
+        font-size: 1.5rem;
+        opacity: 0.8;
+    }
+
+    .metric-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #0c4a6e;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .metrics-details {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+
+    .metrics-details h4 {
+        margin: 0 0 1rem 0;
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .metrics-table {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .table-header {
+        display: grid;
+        grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .header-cell {
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        border-right: 1px solid #e2e8f0;
+    }
+
+    .header-cell:last-child {
+        border-right: none;
+    }
+
+    .table-row {
+        display: grid;
+        grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .table-row:hover {
+        background: #f8fafc;
+    }
+
+    .table-row:last-child {
+        border-bottom: none;
+    }
+
+    .table-cell {
+        padding: 0.75rem 1rem;
+        border-right: 1px solid #f1f5f9;
+        font-size: 0.9rem;
+    }
+
+    .table-cell:last-child {
+        border-right: none;
+    }
+
+    .user-name {
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .operation-name {
+        color: #475569;
+        font-family: monospace;
+        font-size: 0.85rem;
+    }
+
+    .token-count {
+        font-weight: 600;
+        color: #059669;
+    }
+
+    .timestamp {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+
+    .cost-amount {
+        font-weight: 600;
+        color: #dc2626;
+    }
+
+    .time-period-selector {
+        background: #f0f9ff;
+        border: 1px solid #e0f2fe;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .time-period-selector h4 {
+        margin: 0 0 1rem 0;
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .period-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .period-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .period-btn:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+    }
+
+    .histogram-container {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .histogram-container h4 {
+        margin: 0 0 1rem 0;
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .histogram {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .histogram-chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+        height: 200px;
+        padding: 1rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        overflow-x: auto;
+    }
+
+    .histogram-bar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 80px;
+        gap: 0.5rem;
+    }
+
+    .histogram-period {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+        text-align: center;
+        transform: rotate(-45deg);
+        width: 60px;
+        white-space: nowrap;
+    }
+
+    .histogram-bar-stack {
+        display: flex;
+        flex-direction: column-reverse;
+        height: 140px;
+        width: 40px;
+        align-items: stretch;
+        gap: 1px;
+    }
+
+    .histogram-bar {
+        background: #dc2626;
+        border-radius: 2px 2px 0 0;
+        transition: all 0.2s;
+        cursor: pointer;
+        min-height: 2px;
+    }
+
+    .histogram-bar:hover {
+        opacity: 0.8;
+        filter: brightness(1.1);
+    }
+
+    .histogram-value {
+        font-size: 0.75rem;
+        color: #374151;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .histogram-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    .legend-label {
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .empty-histogram {
+        text-align: center;
+        padding: 2rem;
+        color: #64748b;
+    }
+
+    .empty-histogram .empty-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+
+    .empty-histogram p {
+        margin: 0;
+        font-style: italic;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #64748b;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+        color: #475569;
+    }
+
+    .empty-state p {
+        margin: 0;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .admin-header {
+            padding: 1.5rem 0;
+        }
+
+        .admin-info {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.75rem;
+        }
+
+        .admin-details h1 {
+            font-size: 1.5rem;
+        }
+
+        .tabs-header {
+            flex-direction: column;
+        }
+
+        .tab-button {
+            justify-content: center;
+            border-bottom: none;
+            border-right: 3px solid transparent;
+        }
+
+        .tab-content {
+            padding: 1.5rem;
+        }
+
+        .stats-grid, .metrics-stats {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+
+        .users-grid, .groups-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .table-header, .table-row {
+            grid-template-columns: 1fr;
+        }
+
+        .header-cell, .table-cell {
+            border-right: none;
+        }
+
+        .table-row {
+            margin-bottom: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .container {
+            padding: 0 0.75rem;
+        }
+
+        .admin-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+        }
+
+        .admin-details h1 {
+            font-size: 1.3rem;
+        }
+
+        .stats-grid, .metrics-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .tab-content {
+            padding: 1rem;
+        }
+
+        .user-card, .group-card {
+            padding: 1rem;
+        }
+    }
+</style>
+
+@code {
+    private string _activeTab = "users";
+    private List<User> _users = new();
+    private List<User> _groups = new();
+    private List<User> _adminUsers = new();
+    private List<User> _activeUsers = new();
+    private List<MetricsEvent<long>> _tokenMetrics = new();
+    private long _totalTokens;
+    private double _totalCost;
+    private int _totalOperations;
+    private string _selectedPeriod = "day";
+    private readonly Dictionary<DateTime, Dictionary<string, long>> _tokenHistogramData = new();
+    private readonly Dictionary<DateTime, Dictionary<string, double>> _costHistogramData = new();
+
+    private readonly CreateGroupForm _createGroupForm = new();
+    private bool _isCreatingGroup;
+    private string _groupMessage = string.Empty;
+    private bool _groupSuccess;
+
+    public class CreateGroupForm
+    {
+        public string GroupName { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+        if (currentUser.Role < UserRole.Admin)
+        {
+            NavigationManager.NavigateTo("/home", true, true);
+        }
+
+        await LoadAdminData();
+    }
+
+    private Task LoadAdminData()
+    {
+        if (UserManager.GetCurrentUser(CurrentUserService).Role < UserRole.Admin)
+        {
+            NavigationManager.NavigateTo("/home", true, true);
+        }
+        try
+        {
+            // Load users and groups
+            _users = UserManager.GetUsers().Where(u => !u.UserIdentifier.StartsWith("group-")).ToList();
+            _groups = UserManager.GetGroups();
+            _adminUsers = _users.Where(u => u.Role == UserRole.Admin).ToList();
+
+            // Load token metrics
+            var tokenMeter = MetricsProvider.TokenMetrics.InMemoryMeter;
+            _tokenMetrics = tokenMeter.Events.ToList();
+            _totalTokens = _tokenMetrics.Sum(m => m.Value);
+            _totalCost = _tokenMetrics.Sum(m => m.ConvertToCostInDollar());
+            _totalOperations = _tokenMetrics.GroupBy(m => m.Operation).Count();
+            _activeUsers = _tokenMetrics.GroupBy(m => m.UserIdentifier).Select(g => g.Key).Select(u => UserManager.GetOrCreateUser(u)).ToList();
+
+            // Generate histogram data
+            GenerateHistogramData();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading admin data: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        _activeTab = tab;
+        StateHasChanged();
+    }
+
+    private async Task ChangeUserRole(User user, UserRole newRole)
+    {
+        try
+        {
+            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            UserManager.SetUserRole(currentUser, user, newRole);
+            await LoadAdminData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error changing user role: {ex.Message}");
+        }
+    }
+
+    private async Task AddUserToGroup(User user, string groupName)
+    {
+        if (string.IsNullOrEmpty(groupName)) return;
+
+        try
+        {
+            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            UserManager.AddUserToGroup(currentUser, user, groupName);
+            await LoadAdminData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding user to group: {ex.Message}");
+        }
+    }
+
+    private async Task RemoveUserFromGroup(User user, string groupName)
+    {
+        try
+        {
+            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            UserManager.RemoveUserFromGroup(currentUser, user, groupName);
+            await LoadAdminData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error removing user from group: {ex.Message}");
+        }
+    }
+
+    private async Task CreateNewGroup()
+    {
+        if (string.IsNullOrWhiteSpace(_createGroupForm.GroupName))
+        {
+            _groupMessage = "Group name is required";
+            _groupSuccess = false;
+            return;
+        }
+
+        _isCreatingGroup = true;
+        _groupMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            UserManager.CreateGroup(currentUser, _createGroupForm.GroupName);
+
+            _groupMessage = $"Group '{_createGroupForm.GroupName}' created successfully";
+            _groupSuccess = true;
+            _createGroupForm.GroupName = string.Empty;
+
+            await LoadAdminData();
+        }
+        catch (Exception ex)
+        {
+            _groupMessage = $"Error creating group: {ex.Message}";
+            _groupSuccess = false;
+            Console.WriteLine($"Error creating group: {ex.Message}");
+        }
+        finally
+        {
+            _isCreatingGroup = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetUserInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "U";
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return name[0].ToString().ToUpper();
+    }
+
+    private string GetDisplayNameForUser(string? userIdentifier)
+    {
+        if (string.IsNullOrEmpty(userIdentifier)) return "Unknown User";
+
+        var user = _users.FirstOrDefault(u => u.UserIdentifier == userIdentifier);
+        return user?.DisplayName ?? userIdentifier.Split("__").FirstOrDefault() ?? userIdentifier;
+    }
+
+    private void SetTimePeriod(string period)
+    {
+        _selectedPeriod = period;
+        GenerateHistogramData();
+        StateHasChanged();
+    }
+
+    private void GenerateHistogramData()
+    {
+        _tokenHistogramData.Clear();
+        _costHistogramData.Clear();
+
+        var groupedMetrics = _tokenMetrics
+            .Where(m => !string.IsNullOrEmpty(m.UserIdentifier))
+            .GroupBy(m => GetPeriodKey(m.Timestamp, _selectedPeriod))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var period in groupedMetrics)
+        {
+            var tokensByUser = period.Value
+                .GroupBy(m => m.UserIdentifier)
+                .ToDictionary(g => g.Key, g => g.Sum(m => m.Value));
+
+            var costsByUser = period.Value
+                .GroupBy(m => m.UserIdentifier)
+                .ToDictionary(g => g.Key, g => g.Sum(m => m.ConvertToCostInDollar()));
+
+            _tokenHistogramData[period.Key] = tokensByUser;
+            _costHistogramData[period.Key] = costsByUser;
+        }
+    }
+
+    private DateTime GetPeriodKey(DateTime timestamp, string period)
+    {
+        return period switch
+        {
+            "hour" => new DateTime(timestamp.Year, timestamp.Month, timestamp.Day, timestamp.Hour, 0, 0),
+            "day" => timestamp.Date,
+            "week" => timestamp.Date.AddDays(-(int)timestamp.DayOfWeek),
+            "month" => new DateTime(timestamp.Year, timestamp.Month, 1),
+            _ => timestamp.Date
+        };
+    }
+
+    private string FormatPeriodLabel(DateTime period)
+    {
+        return _selectedPeriod switch
+        {
+            "hour" => period.ToString("MMM dd, HH:00"),
+            "day" => period.ToString("MMM dd"),
+            "week" => $"Week of {period:MMM dd}",
+            "month" => period.ToString("MMM yyyy"),
+            _ => period.ToString("MMM dd")
+        };
+    }
+
+    private readonly string[] _userColors = {
+        "#dc2626", "#059669", "#2563eb", "#7c3aed", "#ea580c",
+        "#0891b2", "#be185d", "#9333ea", "#0d9488", "#c2410c",
+        "#1d4ed8", "#be123c", "#7e22ce", "#0369a1", "#a21caf"
+    };
+
+    private string GetUserColor(string? userIdentifier)
+    {
+        if (string.IsNullOrEmpty(userIdentifier)) return "#6b7280";
+
+        var hash = userIdentifier.GetHashCode();
+        var index = Math.Abs(hash) % _userColors.Length;
+        return _userColors[index];
+    }
+}
