@@ -1,0 +1,85 @@
+using OpenAI.Chat;
+using Synaptic.NET.Core;
+using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.OpenAI;
+using Synaptic.NET.OpenAI.Clients;
+using Synaptic.NET.OpenAI.StructuredResponses;
+
+namespace Synaptic.NET.Augmentation.Services;
+
+public class FileMemoryCreationService : IFileMemoryCreationService
+{
+    private readonly GptClientBase _gptClient;
+    private readonly IMetricsCollectorProvider _metricsCollectorProvider;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IMemoryAugmentationService _memoryAugmentationService;
+    public FileMemoryCreationService(ICurrentUserService currentUserService, IMemoryAugmentationService memoryAugmentationService, IMetricsCollectorProvider metricsCollectorProvider, OpenAiClientFactory openAiClientFactory, SynapticServerSettings serverSettings)
+    {
+        _gptClient = openAiClientFactory.GetClient(serverSettings.OpenAiRagCreationModel);
+        _metricsCollectorProvider = metricsCollectorProvider;
+        _currentUserService = currentUserService;
+        _memoryAugmentationService = memoryAugmentationService;
+    }
+    public Task<FileProcessor> GetFileProcessor()
+    {
+        return Task.FromResult(new FileProcessor(this, _memoryAugmentationService));
+    }
+
+    public async Task<MemorySummaries> CreateMemoriesFromPdfFileAsync(string fileName, string base64Pdf)
+    {
+        List<ChatMessage> messages = new()
+        {
+            ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
+            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateFilePart(BinaryData.FromBytes(Convert.FromBase64String(base64Pdf)),
+                "application/pdf", fileName))
+        };
+        DateTime start = DateTime.UtcNow;
+        var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
+        Log.Debug("[File Memory Creation Service] Acquiring model response...");
+        var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "PDF Processing", response.Value);
+        DateTime responseAcquisition = DateTime.Now;
+
+        Log.Debug($"[File Memory Creation Service] LLM Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
+
+        var summaries = CompletionOptionsHelper.ParseModelResponse<MemorySummaries>(response);
+        if (summaries == null)
+        {
+            Log.Error("[File Memory Creation Service] Failed to parse model response to memory summaries!");
+            return new MemorySummaries { Summaries = new List<MemorySummary>() };
+        }
+        DateTime parsingFinish = DateTime.Now;
+        Log.Debug($"[File Memory Creation Service] JSON successfully parsed after {(parsingFinish - responseAcquisition).TotalSeconds} seconds.");
+        return summaries;
+    }
+
+
+    public async Task<MemorySummaries> CreateMemoriesFromBase64String(string fileName, string base64String)
+    {
+        List<ChatMessage> messages = new()
+        {
+            ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
+            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateTextPart(base64String))
+        };
+
+        var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
+        DateTime start = DateTime.UtcNow;
+        var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "File Processing", response.Value);
+        DateTime responseAcquisition = DateTime.Now;
+        Log.Information($"Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
+
+        var summaries = CompletionOptionsHelper.ParseModelResponse<MemorySummaries>(response);
+        if (summaries == null)
+        {
+            Log.Error("Failed to parse model response!");
+            return new MemorySummaries { Summaries = new List<MemorySummary>() };
+        }
+
+        DateTime parsingFinish = DateTime.Now;
+        Log.Information($"JSON successfully parsed after {(parsingFinish - responseAcquisition).TotalSeconds} seconds.");
+        return summaries;
+    }
+}

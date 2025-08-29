@@ -1,4 +1,4 @@
-namespace Synaptic.NET.OpenAI.Attributes;
+namespace Synaptic.NET.Domain.Attributes;
 
 /// <summary>
 /// Attribute to add descriptions to properties for JSON schema generation

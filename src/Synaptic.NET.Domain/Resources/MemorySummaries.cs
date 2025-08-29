@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
-using Synaptic.NET.OpenAI.Attributes;
+using Synaptic.NET.Domain.Attributes;
 
-namespace Synaptic.NET.OpenAI.Resources;
+namespace Synaptic.NET.Domain.Resources;
 
 /// <summary>
 /// Represents a memory summary item with an identifier and summary

@@ -11,7 +11,7 @@ public static class AugmentationServices
     {
         builder.Services.AddScoped<IMemoryStoreRouter, WeightedMemoryStoreRouter>();
         builder.Services.AddScoped<IMemoryAugmentationService, MemoryAugmentationService>();
-
+        builder.Services.AddScoped<IFileMemoryCreationService, FileMemoryCreationService>();
         return builder;
     }
 }

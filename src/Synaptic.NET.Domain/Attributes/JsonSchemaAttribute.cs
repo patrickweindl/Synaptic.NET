@@ -1,4 +1,4 @@
-namespace Synaptic.NET.OpenAI.Attributes;
+namespace Synaptic.NET.Domain.Attributes;
 
 /// <summary>
 /// Attribute to define JSON schema metadata for structured response classes

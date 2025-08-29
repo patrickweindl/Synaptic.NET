@@ -8,8 +8,4 @@
     <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Middlewares\" />
-  </ItemGroup>
-
 </Project>

@@ -3,7 +3,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Synaptic.NET.OpenAI.Attributes;
+using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Attributes;
 
 namespace Synaptic.NET.OpenAI.StructuredResponses;
 
