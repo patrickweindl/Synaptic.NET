@@ -29,7 +29,8 @@ public static class CoreServices
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddMeter("Synaptic.Api.TokenMeter")
-                    .AddMeter("Synaptic.Api.BenchmarkMeter");
+                    .AddMeter("Synaptic.Api.BenchmarkMeter")
+                    .AddPrometheusExporter();
             })
             .WithTracing(tracing =>
             {
@@ -50,12 +51,14 @@ public static class CoreServices
 
     public static WebApplication ConfigureCoreApplication(this WebApplication app, SynapticServerSettings configuration)
     {
+
         app.ConfigureHeaderForwarding(configuration);
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/alive", new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("live")
         });
+        app.UseOpenTelemetryPrometheusScrapingEndpoint();
         return app;
     }
 }

@@ -18,6 +18,7 @@ public class SynapticAppHost
             .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "Verbose", "VerboseLog.log"), rollingInterval: RollingInterval.Day, shared: true)
             .WriteTo.Logger(l => l.Filter.ByIncludingOnly(e => e.Level >= LogEventLevel.Debug).WriteTo.Console())
             .WriteTo.Logger(l => l.Filter.ByIncludingOnly(e => e.Level >= LogEventLevel.Information).WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "Filtered", "InfoLog.log"), rollingInterval: RollingInterval.Day, shared: true))
+            .WriteTo.Logger(l => l.WriteTo.OpenTelemetry())
             .CreateLogger();
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
