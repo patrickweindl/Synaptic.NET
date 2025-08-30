@@ -20,7 +20,7 @@ public static class DomainServices
         builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
 
         builder.Services.AddDbContext<SynapticDbContext>(options =>
-            options.UseSqlite(builder.Configuration.GetConnectionString("Data Source=data/synaptic.db")));
+            options.UseSqlite("Data Source=synaptic.db"));
 
         return builder;
     }

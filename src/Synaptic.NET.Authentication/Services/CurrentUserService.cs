@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Synaptic.NET.Core;
+using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Helpers;
 using Synaptic.NET.Domain.Resources;
@@ -13,12 +14,14 @@ public class CurrentUserService : ICurrentUserService
     private readonly ISymLinkUserService _symlinkUserService;
     private readonly AuthenticationStateProvider? _authenticationStateProvider;
     private readonly SynapticDbContext _dbContext;
-    public CurrentUserService(SynapticDbContext synapticDbContext, ISymLinkUserService symlinkUserService, AuthenticationStateProvider? authenticationStateProvider = null, IHttpContextAccessor? accessor = null)
+    private readonly SynapticServerSettings _settings;
+    public CurrentUserService(SynapticServerSettings serverSettings, SynapticDbContext synapticDbContext, ISymLinkUserService symlinkUserService, AuthenticationStateProvider? authenticationStateProvider = null, IHttpContextAccessor? accessor = null)
     {
         _accessor = accessor;
         _symlinkUserService = symlinkUserService;
         _authenticationStateProvider = authenticationStateProvider;
         _dbContext = synapticDbContext;
+        _settings = serverSettings;
     }
 
     public User GetCurrentUser()
@@ -68,6 +71,13 @@ public class CurrentUserService : ICurrentUserService
                 Role = UserRole.Guest
             };
             _dbContext.Users.Add(user);
+            _dbContext.SaveChanges();
+        }
+
+        if (_settings.AdminIdentifiers.Contains(identifier))
+        {
+            user.Role = UserRole.Admin;
+            _dbContext.Users.Update(user);
             _dbContext.SaveChanges();
         }
 

@@ -8,6 +8,8 @@
 **/testSettings.json
 **/TestFiles/**
 
+**synaptic.db**
+
 .idea/
 .DS_Store
 .vscode/

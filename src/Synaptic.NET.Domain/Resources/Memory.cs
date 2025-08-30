@@ -65,15 +65,19 @@ public class Memory
     [JsonIgnore]
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
+    [NotMapped]
     [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "store_description_embedding")]
     public ReadOnlyMemory<float>? StoreDescriptionEmbedding { get; set; }
 
+    [NotMapped]
     [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "title_embedding")]
     public ReadOnlyMemory<float>? TitleEmbedding { get; set; }
 
+    [NotMapped]
     [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "description_embedding")]
     public ReadOnlyMemory<float>? DescriptionEmbedding { get; set; }
 
+    [NotMapped]
     [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
     public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
 
