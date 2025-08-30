@@ -44,14 +44,14 @@ public static class CoreServices
         builder.Services.AddScoped<IUserManager, UserManager>();
         builder.Services.AddScoped<IEncryptionService, ClaimsBasedEncryptionService>();
         builder.Services.AddScoped<IArchiveService, ArchiveService>();
-        /*builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-        builder.Services.AddHostedService<BackgroundTaskService>();*/
+        builder.Services.AddScoped<IMemoryProvider, HybridMemoryProvider>();
+        builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+        builder.Services.AddHostedService<BackgroundTaskService>();
         return builder;
     }
 
     public static WebApplication ConfigureCoreApplication(this WebApplication app, SynapticServerSettings configuration)
     {
-
         app.ConfigureHeaderForwarding(configuration);
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/alive", new HealthCheckOptions

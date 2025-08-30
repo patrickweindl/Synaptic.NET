@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+    <ProjectReference Include="..\Synaptic.NET.Qdrant\Synaptic.NET.Qdrant.csproj" />
   </ItemGroup>
 
 </Project>
