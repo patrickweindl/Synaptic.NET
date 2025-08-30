@@ -4,9 +4,9 @@ using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.StructuredResponses;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.OpenAI.Clients;
-using Synaptic.NET.OpenAI.Resources;
 using Synaptic.NET.OpenAI.StructuredResponses;
 
 namespace Synaptic.NET.Augmentation.Services;
@@ -42,7 +42,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         ClientResult<ChatCompletion> chatCompletion = await _client.CompleteChatAsync(messages, structuredResponseSchema);
 
         MemorySummary? summary = CompletionOptionsHelper.ParseModelResponse<MemorySummary>(chatCompletion);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "Memory Summarization",
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Memory Summarization",
             chatCompletion.Value);
         string output = summary?.Summary ?? string.Empty;
         Log.Information(
@@ -74,7 +74,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
         var response = await _client.CompleteChatAsync(messages);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "Store Summary", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",

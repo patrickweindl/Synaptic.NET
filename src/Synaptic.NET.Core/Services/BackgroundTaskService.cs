@@ -35,6 +35,7 @@ public class BackgroundTaskService : BackgroundService
                 var archiveService = scope.ServiceProvider.GetRequiredService<IArchiveService>();
                 var memoryProvider = scope.ServiceProvider.GetRequiredService<IMemoryProvider>();
                 var fileMemoryCreationService = scope.ServiceProvider.GetRequiredService<IFileMemoryCreationService>();
+                var currentUserService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
                 var workItem = await taskQueue.DequeueAsync(stoppingToken);
 
                 _logger.LogInformation("Processing background task {TaskId} of type {TaskType} for user {UserId}",
@@ -42,7 +43,7 @@ public class BackgroundTaskService : BackgroundService
 
                 try
                 {
-                    await workItem.ExecuteAsync(archiveService, memoryProvider, fileMemoryCreationService, taskQueue, stoppingToken);
+                    await workItem.ExecuteAsync(currentUserService, archiveService, memoryProvider, fileMemoryCreationService, taskQueue, stoppingToken);
 
                     var completedStatus = new BackgroundTaskStatus
                     {

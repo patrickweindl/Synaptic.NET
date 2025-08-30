@@ -1,5 +1,6 @@
 using Synaptic.NET.Core;
 using Synaptic.NET.Core.BackgroundTasks;
+using Synaptic.NET.Core.Helpers;
 using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Augmentation.Handlers;
@@ -11,8 +12,9 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
     public string FileExtension { get; set; } = string.Empty;
     public long FileSize { get; set; }
 
-    public override async Task ExecuteAsync(IArchiveService archiveService, IMemoryProvider memoryProvider, IFileMemoryCreationService fileMemoryCreationService, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken)
+    public override async Task ExecuteAsync(ICurrentUserService currentUserService, IArchiveService archiveService, IMemoryProvider memoryProvider, IFileMemoryCreationService fileMemoryCreationService, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken)
     {
+        var user = currentUserService.GetCurrentUser();
         try
         {
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Starting file processing...", 0.1);
@@ -29,8 +31,8 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
             var fileProcessor = await fileMemoryCreationService.GetFileProcessor();
 
             Task processingTask = FileExtension.ToLowerInvariant() == ".pdf"
-                ? fileProcessor.ExecutePdf(FileName, FileContent)
-                : fileProcessor.ExecuteFile(FileName, FileContent);
+                ? fileProcessor.ExecutePdf(user, FileName, FileContent)
+                : fileProcessor.ExecuteFile(user, FileName, FileContent);
 
             while (!fileProcessor.Completed && !cancellationToken.IsCancellationRequested)
             {
@@ -46,17 +48,19 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             if (fileProcessor.Result.Count > 0)
             {
+                await memoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(FileName), fileProcessor.StoreDescription);
+
                 await Parallel.ForEachAsync(fileProcessor.Result, cancellationToken, async (result, _) =>
                     {
                         Memory memory = result.memory;
-                        await memoryProvider.CreateMemoryEntryAsync(memory.StoreIdentifier, memory, fileProcessor.StoreDescription);
+                        await memoryProvider.CreateMemoryEntryAsync(FileProcessingHelper.SanitizeFileName(FileName), memory, fileProcessor.StoreDescription);
                     });
 
                 var result = new FileUploadResult
                 {
                     FileName = FileName,
                     MemoryCount = fileProcessor.Result.Count,
-                    StoreIdentifier = fileProcessor.Result.FirstOrDefault().memory.StoreTitle,
+                    StoreIdentifier = FileProcessingHelper.SanitizeFileName(FileName),
                     StoreDescription = fileProcessor.StoreDescription
                 };
 

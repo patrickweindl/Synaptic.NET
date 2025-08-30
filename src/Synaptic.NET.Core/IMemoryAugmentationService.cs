@@ -1,4 +1,3 @@
-using Microsoft.SemanticKernel.Memory;
 using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Core;

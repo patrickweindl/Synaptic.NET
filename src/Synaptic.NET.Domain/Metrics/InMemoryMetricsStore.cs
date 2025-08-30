@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain.Metrics;
 
@@ -37,44 +37,44 @@ public class InMemoryMetricsStore
         Benchmarks = savedStore.Benchmarks;
     }
 
-    public void IncrementCounter(string meterName, string counterName, string operation, ClaimsIdentity? userName)
+    public void IncrementCounter(string meterName, string counterName, string operation, User? user)
     {
         string key = $"{meterName}:{counterName}";
         if (!Counters.TryGetValue(key, out InMemoryMeter<long>? existingMeter))
         {
             Counters.TryAdd(key, new InMemoryMeter<long>(key));
         }
-        existingMeter?.Record(new MetricsEvent<long>(1, operation, userName));
+        existingMeter?.Record(new MetricsEvent<long>(1, operation, user));
     }
 
-    public void AddToCounter(long value, string meterName, string counterName, string operation, ClaimsIdentity? userName)
+    public void AddToCounter(long value, string meterName, string counterName, string operation, User? user)
     {
         string key = $"{meterName}:{counterName}";
         if (!Counters.TryGetValue(key, out InMemoryMeter<long>? existingMeter))
         {
             Counters.TryAdd(key, new InMemoryMeter<long>(key));
         }
-        existingMeter?.Record(new MetricsEvent<long>(value, operation, userName));
+        existingMeter?.Record(new MetricsEvent<long>(value, operation, user));
     }
 
-    public void AddToHistogram(double value, string meterName, string counterName, string operation, ClaimsIdentity? userName)
+    public void AddToHistogram(double value, string meterName, string counterName, string operation, User? user)
     {
         string key = $"{meterName}:{counterName}";
         if (!Histograms.TryGetValue(key, out InMemoryMeter<double>? existingMeter))
         {
             Histograms.TryAdd(key, new InMemoryMeter<double>(key));
         }
-        existingMeter?.Record(new MetricsEvent<double>(value, operation, userName));
+        existingMeter?.Record(new MetricsEvent<double>(value, operation, user));
     }
 
-    public void AddToBenchmark(TimeSpan value, string meterName, string counterName, string operation, ClaimsIdentity? userName)
+    public void AddToBenchmark(TimeSpan value, string meterName, string counterName, string operation, User? user)
     {
         string key = $"{meterName}:{counterName}";
         if (!Benchmarks.TryGetValue(key, out InMemoryMeter<TimeSpan>? existingMeter))
         {
             Benchmarks.TryAdd(key, new InMemoryMeter<TimeSpan>(key));
         }
-        existingMeter?.Record(new MetricsEvent<TimeSpan>(value, operation, userName));
+        existingMeter?.Record(new MetricsEvent<TimeSpan>(value, operation, user));
     }
 
 }

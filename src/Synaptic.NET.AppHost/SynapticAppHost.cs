@@ -44,6 +44,7 @@ public class SynapticAppHost
         var app = builder.Build();
 
         app.MapStaticAssets();
+        app.ConfigureDomainApplication();
         app.ConfigureCoreApplication(synapticSettings);
         app.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
         app.MapRazorComponents<SynapticWebApp>().AddInteractiveServerRenderMode();

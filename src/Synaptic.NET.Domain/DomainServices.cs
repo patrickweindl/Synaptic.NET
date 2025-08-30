@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Synaptic.NET.Domain.Providers;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain;
 
@@ -16,6 +19,18 @@ public static class DomainServices
         builder.Services.AddSingleton(configuration);
         builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
 
+        builder.Services.AddDbContext<SynapticDbContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("Data Source=data/synaptic.db")));
+
         return builder;
+    }
+
+    public static WebApplication ConfigureDomainApplication(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SynapticDbContext>();
+        db.Database.Migrate();
+
+        return app;
     }
 }

@@ -1,66 +1,46 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Synaptic.NET.Domain.Enums;
 
 namespace Synaptic.NET.Domain.Resources;
 
-public class User : IComparable<User>, IEquatable<User>
+public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
 {
+    [Key]
+    [JsonPropertyName("user_id")]
+    public Guid Id { get; set; }
+
     [JsonPropertyName("user_identifier")]
-    public required string UserIdentifier { get; set; }
+    [Required]
+    public required string Identifier { get; set; }
 
     [JsonPropertyName("display_name")]
     public string DisplayName { get; set; } = string.Empty;
 
-    public string UserName => UserIdentifier.Split("__").FirstOrDefault() ?? UserIdentifier;
+    [JsonIgnore]
+    public string UserName => Identifier.Split("__").FirstOrDefault() ?? Identifier;
 
-    public string UserAuthId => UserIdentifier.Split("__").LastOrDefault() ?? UserIdentifier;
-
-    [JsonPropertyName("user_groups")]
-    public List<string> Groups { get; set; } = new();
+    [JsonIgnore]
+    public string UserAuthId => Identifier.Split("__").LastOrDefault() ?? Identifier;
 
     [JsonPropertyName("user_role")]
     public UserRole Role { get; set; } = UserRole.Guest;
+
+    public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
+
+    public ICollection<GroupMembership> Memberships { get; set; } = new List<GroupMembership>();
 
     public int CompareTo(User? other)
     {
         return other == null
             ? 1
-            : string.Compare(UserIdentifier, other.UserIdentifier, StringComparison.InvariantCulture);
+            : Id.CompareTo(other.Id);
     }
 
     public bool Equals(User? other)
     {
-        return other != null && string.Equals(UserIdentifier, other.UserIdentifier, StringComparison.InvariantCulture);
+        return other != null && Id.Equals(other.Id);
     }
 
-    public override string ToString() => UserIdentifier;
-
-    public string GetStorageDirectory(SynapticServerSettings settings)
-    {
-        Directory.CreateDirectory(Path.Join(settings.BaseDataPath, "users"));
-        return Path.Join(settings.BaseDataPath, "users", UserIdentifier);
-    }
-
-    public void AddToGroup(string groupIdentifier)
-    {
-        if (!Groups.Contains(groupIdentifier))
-        {
-            Groups.Add(groupIdentifier);
-        }
-    }
-
-    public void RemoveFromGroup(string groupIdentifier)
-    {
-        Groups.Remove(groupIdentifier);
-    }
-
-    public bool CanAccessGroup(string groupIdentifier)
-    {
-        return Groups.Contains(groupIdentifier);
-    }
-
-    public static bool CanAccessGroup(User user, string groupIdentifier)
-    {
-        return user.CanAccessGroup(groupIdentifier);
-    }
+    public override string ToString() => Identifier;
 }

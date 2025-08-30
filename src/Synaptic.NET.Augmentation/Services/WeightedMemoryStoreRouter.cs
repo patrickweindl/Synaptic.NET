@@ -1,11 +1,9 @@
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using OpenAI.Chat;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
-using Synaptic.NET.Domain.Providers;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.OpenAI.Clients;
@@ -37,7 +35,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
                 availableStoresStringBuilder.AppendLine("---");
                 var storeMemories = store.Memories;
                 var tags = storeMemories.SelectMany(m => m.Tags).Distinct().ToList();
-                availableStoresStringBuilder.AppendLine($"Store: {store.Identifier} Description: {store.Description} Tags in Store: {string.Join(",", tags)}");
+                availableStoresStringBuilder.AppendLine($"Store: {store.Title} Description: {store.Description} Tags in Store: {string.Join(",", tags)}");
                 availableStoresStringBuilder.AppendLine("---");
             }
 
@@ -53,7 +51,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
             DateTime start = DateTime.UtcNow;
             Log.Information("[StoreRouter] Calling model to rank stores. Input query: {Query} at {Start}", query, start);
             var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
-            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "Store Ranking", response.Value);
+            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Ranking", response.Value);
             string suggestion = response.Value.Content[0].Text ?? string.Empty;
             Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start, suggestion);
             string[] ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -88,7 +86,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
                 var storeMemories = store.Memories;
                 var tags = storeMemories.SelectMany(m => m.Tags).Distinct().ToList();
                 availableStoresStringBuilder.AppendLine(
-                    $"Store: {store.Identifier} Description: {store.Description} Tags in Store: {string.Join(",", tags)}");
+                    $"Store: {store.Title} Description: {store.Description} Tags in Store: {string.Join(",", tags)}");
                 availableStoresStringBuilder.AppendLine("---");
             }
 
@@ -104,7 +102,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
             DateTime start = DateTime.UtcNow;
             Log.Information("[StoreRouter] Calling model to route memory to stores.");
             var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
-            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "Store Routing", response.Value);
+            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Routing", response.Value);
             string suggestion = response.Value.Content[0].Text ?? string.Empty;
             Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start,
                 suggestion);

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Resources;
-using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
 
@@ -16,21 +15,18 @@ public class AuthController : ControllerBase
     private readonly IRefreshTokenHandler _refreshTokenHandler;
     private readonly RedirectUriProvider _redirectUriProvider;
     private readonly CodeBasedAuthProvider _codeBasedAuthProvider;
-    private readonly IUserManager _userManager;
     public AuthController(
         SynapticServerSettings settings,
         ISecurityTokenHandler tokenHandler,
         IRefreshTokenHandler refreshTokenHandler,
         RedirectUriProvider redirectUriProvider,
-        CodeBasedAuthProvider codeBasedAuthProvider,
-        IUserManager userManager)
+        CodeBasedAuthProvider codeBasedAuthProvider)
     {
         _settings = settings;
         _tokenHandler = tokenHandler;
         _refreshTokenHandler = refreshTokenHandler;
         _redirectUriProvider = redirectUriProvider;
         _codeBasedAuthProvider = codeBasedAuthProvider;
-        _userManager = userManager;
     }
 
     [HttpPost("register")]
@@ -203,7 +199,6 @@ public class AuthController : ControllerBase
         }
 
         var identity = ClaimsHelper.ClaimsIdentityFromUserNameAndId(validationResult.UserName, validationResult.UserId);
-        _ = _userManager.GetOrCreateUser(identity, out _);
         AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, identity);
         return Ok(token);
     }

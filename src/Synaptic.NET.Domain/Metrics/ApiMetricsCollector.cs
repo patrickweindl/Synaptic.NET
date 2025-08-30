@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Security.Claims;
 using Synaptic.NET.Domain.Providers;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain.Metrics;
 
@@ -34,12 +34,12 @@ public class ApiMetricsCollector : IMetricsCollector<TimeSpan>
         }
     }
 
-    public void RecordBenchmark(TimeSpan value, string operation, ClaimsIdentity? userName)
+    public void RecordBenchmark(TimeSpan value, string operation, User? user)
     {
-        InMemoryMeter.Record(new MetricsEvent<TimeSpan>(value, operation, userName));
+        InMemoryMeter.Record(new MetricsEvent<TimeSpan>(value, operation, user));
         _benchmarkMeter.Record(value.TotalMilliseconds, new TagList
         {
-            { "user.id", userName },
+            { "user.id", user },
             { "operation", operation },
             { "service.name", MetricsCollectorProvider.ServiceName }
         });

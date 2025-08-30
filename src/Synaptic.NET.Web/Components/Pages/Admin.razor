@@ -114,7 +114,7 @@
                                                     </div>
                                                     <div class="user-details">
                                                         <h4>@user.DisplayName</h4>
-                                                        <span class="user-id">@user.UserIdentifier</span>
+                                                        <span class="user-id">@user.Identifier</span>
                                                         <span class="user-role role-@user.Role.ToString().ToLower()">@user.Role</span>
                                                     </div>
                                                 </div>
@@ -133,20 +133,20 @@
                                                         <option value="">Add to group...</option>
                                                         @foreach (var group in _groups)
                                                         {
-                                                            <option value="@UserManager.GroupIdentifierToReadableName(group.UserIdentifier)">
-                                                                @UserManager.GroupIdentifierToReadableName(group.UserIdentifier)
+                                                            <option value="@UserManager.GroupIdentifierToReadableName(group.Identifier)">
+                                                                @UserManager.GroupIdentifierToReadableName(group.Identifier)
                                                             </option>
                                                         }
                                                     </select>
                                                 </div>
-                                                @if (user.Groups.Any())
+                                                @if (user.Memberships.Any())
                                                 {
                                                     <div class="user-group-list">
-                                                        @foreach (var groupId in user.Groups)
+                                                        @foreach (var groupId in user.Memberships)
                                                         {
                                                             <div class="group-tag">
-                                                                <span>@UserManager.GroupIdentifierToReadableName(groupId)</span>
-                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(user, UserManager.GroupIdentifierToReadableName(groupId)))">×</button>
+                                                                <span>@UserManager.GroupIdentifierToReadableName(groupId.GroupId)</span>
+                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(user, UserManager.GroupIdentifierToReadableName(groupId.GroupId)))">×</button>
                                                             </div>
                                                         }
                                                     </div>
@@ -208,8 +208,8 @@
                                 <div class="groups-grid">
                                     @foreach (var group in _groups)
                                     {
-                                        var groupName = UserManager.GroupIdentifierToReadableName(group.UserIdentifier);
-                                        var memberCount = _users.Count(u => u.Groups.Contains(group.UserIdentifier));
+                                        var groupName = group.DisplayName;
+                                        var memberCount = _users.Count(u => u.Memberships.Any(m => m.GroupId == group.Id));
 
                                         <div class="group-card">
                                             <div class="group-header">
@@ -217,7 +217,7 @@
                                                     <div class="group-icon">🔗</div>
                                                     <div class="group-details">
                                                         <h4>@groupName</h4>
-                                                        <span class="group-id">@group.UserIdentifier</span>
+                                                        <span class="group-id">@group.Identifier</span>
                                                         <span class="member-count">@memberCount member@(memberCount != 1 ? "s" : "")</span>
                                                     </div>
                                                 </div>
@@ -227,7 +227,7 @@
                                                     <strong>Members:</strong>
                                                 </div>
                                                 @{
-                                                    var members = _users.Where(u => u.Groups.Contains(group.UserIdentifier)).ToList();
+                                                    var members = _users.Where(u => u.Memberships.Any(m => m.GroupId == group.Id)).ToList();
                                                 }
                                                 @if (members.Any())
                                                 {
@@ -352,8 +352,8 @@
                                             @foreach (var user in _activeUsers.Take(10))
                                             {
                                                 <div class="legend-item">
-                                                    <div class="legend-color" style="background-color: @GetUserColor(user.UserIdentifier);"></div>
-                                                    <span class="legend-label">@GetDisplayNameForUser(user.UserIdentifier)</span>
+                                                    <div class="legend-color" style="background-color: @GetUserColor(user.Identifier);"></div>
+                                                    <span class="legend-label">@GetDisplayNameForUser(user.Identifier)</span>
                                                 </div>
                                             }
                                         </div>
@@ -400,8 +400,8 @@
                                             @foreach (var user in _activeUsers.Take(10))
                                             {
                                                 <div class="legend-item">
-                                                    <div class="legend-color" style="background-color: @GetUserColor(user.UserIdentifier);"></div>
-                                                    <span class="legend-label">@GetDisplayNameForUser(user.UserIdentifier)</span>
+                                                    <div class="legend-color" style="background-color: @GetUserColor(user.Identifier);"></div>
+                                                    <span class="legend-label">@GetDisplayNameForUser(user.Identifier)</span>
                                                 </div>
                                             }
                                         </div>
@@ -1261,7 +1261,7 @@
 @code {
     private string _activeTab = "users";
     private List<User> _users = new();
-    private List<User> _groups = new();
+    private List<Group> _groups = new();
     private List<User> _adminUsers = new();
     private List<User> _activeUsers = new();
     private List<MetricsEvent<long>> _tokenMetrics = new();
@@ -1284,7 +1284,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+        var currentUser = CurrentUserService.GetCurrentUser();
         if (currentUser.Role < UserRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
@@ -1295,14 +1295,14 @@
 
     private Task LoadAdminData()
     {
-        if (UserManager.GetCurrentUser(CurrentUserService).Role < UserRole.Admin)
+        if (CurrentUserService.GetCurrentUser().Role < UserRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
         }
         try
         {
             // Load users and groups
-            _users = UserManager.GetUsers().Where(u => !u.UserIdentifier.StartsWith("group-")).ToList();
+            _users = UserManager.GetUsers();
             _groups = UserManager.GetGroups();
             _adminUsers = _users.Where(u => u.Role == UserRole.Admin).ToList();
 
@@ -1312,7 +1312,6 @@
             _totalTokens = _tokenMetrics.Sum(m => m.Value);
             _totalCost = _tokenMetrics.Sum(m => m.ConvertToCostInDollar());
             _totalOperations = _tokenMetrics.GroupBy(m => m.Operation).Count();
-            _activeUsers = _tokenMetrics.GroupBy(m => m.UserIdentifier).Select(g => g.Key).Select(u => UserManager.GetOrCreateUser(u)).ToList();
 
             // Generate histogram data
             GenerateHistogramData();
@@ -1337,7 +1336,7 @@
     {
         try
         {
-            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            var currentUser = CurrentUserService.GetCurrentUser();
             UserManager.SetUserRole(currentUser, user, newRole);
             await LoadAdminData();
         }
@@ -1353,7 +1352,7 @@
 
         try
         {
-            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            var currentUser = CurrentUserService.GetCurrentUser();
             UserManager.AddUserToGroup(currentUser, user, groupName);
             await LoadAdminData();
         }
@@ -1367,7 +1366,7 @@
     {
         try
         {
-            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            var currentUser = CurrentUserService.GetCurrentUser();
             UserManager.RemoveUserFromGroup(currentUser, user, groupName);
             await LoadAdminData();
         }
@@ -1392,7 +1391,7 @@
 
         try
         {
-            var currentUser = UserManager.GetCurrentUser(CurrentUserService);
+            var currentUser = CurrentUserService.GetCurrentUser();
             UserManager.CreateGroup(currentUser, _createGroupForm.GroupName);
 
             _groupMessage = $"Group '{_createGroupForm.GroupName}' created successfully";
@@ -1430,7 +1429,7 @@
     {
         if (string.IsNullOrEmpty(userIdentifier)) return "Unknown User";
 
-        var user = _users.FirstOrDefault(u => u.UserIdentifier == userIdentifier);
+        var user = _users.FirstOrDefault(u => u.Identifier == userIdentifier);
         return user?.DisplayName ?? userIdentifier.Split("__").FirstOrDefault() ?? userIdentifier;
     }
 

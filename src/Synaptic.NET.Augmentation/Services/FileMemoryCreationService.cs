@@ -3,6 +3,7 @@ using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.StructuredResponses;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.OpenAI.Clients;
 using Synaptic.NET.OpenAI.StructuredResponses;
@@ -39,7 +40,7 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
         Log.Debug("[File Memory Creation Service] Acquiring model response...");
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "PDF Processing", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "PDF Processing", response.Value);
         DateTime responseAcquisition = DateTime.Now;
 
         Log.Debug($"[File Memory Creation Service] LLM Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
@@ -67,7 +68,7 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
         DateTime start = DateTime.UtcNow;
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetUserClaimIdentity(), "File Processing", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "File Processing", response.Value);
         DateTime responseAcquisition = DateTime.Now;
         Log.Information($"Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
 

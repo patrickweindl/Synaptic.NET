@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using System.Security.Claims;
 using OpenAI.Chat;
 using Synaptic.NET.Domain.Providers;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain.Metrics;
 
@@ -37,13 +37,13 @@ public class TokenMetricCollector : IMetricsCollector<long>
         }
     }
 
-    public void IncrementTokenCountsFromChatCompletion(ClaimsIdentity? user, string operation, ChatCompletion completion)
+    public void IncrementTokenCountsFromChatCompletion(User? user, string operation, ChatCompletion completion)
     {
         IncrementInputTokenCount(user, operation, completion.Model, completion.Usage.InputTokenCount);
         IncrementOutputTokenCount(user, operation, completion.Model, completion.Usage.OutputTokenCount);
     }
 
-    public void IncrementInputTokenCount(ClaimsIdentity? user, string operation, string model, long count)
+    public void IncrementInputTokenCount(User? user, string operation, string model, long count)
     {
         InMemoryMeter.Record(new MetricsEvent<long>(count, $"Token incurrence by |{model}|, Input: {operation}", user));
         _inputTokenCounter.Record(count, new TagList
@@ -55,7 +55,7 @@ public class TokenMetricCollector : IMetricsCollector<long>
         });
     }
 
-    public void IncrementOutputTokenCount(ClaimsIdentity? user, string operation, string model, long count)
+    public void IncrementOutputTokenCount(User? user, string operation, string model, long count)
     {
         InMemoryMeter.Record(new MetricsEvent<long>(count, $"Token incurrence by |{model}|, Output: {operation}", user));
         _outputTokenCounter.Record(count, new TagList

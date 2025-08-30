@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.VectorData;
 
@@ -8,19 +9,6 @@ namespace Synaptic.NET.Domain.Resources;
 [Description("Contains data on a specific memory the model persistantly stores.")]
 public class Memory
 {
-    [VectorStoreData(StorageName = "store_identifier", IsFullTextIndexed = true)]
-    [JsonPropertyName("store_id")]
-    [Description("The unique identifier of the store/collection which the memory belongs to.")]
-    public Guid StoreIdentifier { get; set; }
-
-    [VectorStoreData(StorageName = "store_title", IsFullTextIndexed = true)]
-    [JsonPropertyName("store_description")]
-    public string StoreTitle { get; set; } = string.Empty;
-
-    [VectorStoreData(StorageName = "store_description", IsFullTextIndexed = true)]
-    [JsonPropertyName("store_description")]
-    public string StoreDescription { get; set; } = string.Empty;
-
     [VectorStoreKey(StorageName = "id")]
     [Key]
     [Description("A unique identifier for a memory entry.")]
@@ -43,11 +31,6 @@ public class Memory
     [Description("The memory's content. Required.")]
     [JsonPropertyName("content")]
     public required string Content { get; set; }
-
-    [VectorStoreData(StorageName = "owner")]
-    [Description("The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
-    [JsonPropertyName("owner")]
-    public string Owner { get; set; } = string.Empty;
 
     [VectorStoreData(StorageName = "pinned")]
     [Description("Whether the information has been marked as 'pinned' and is therefore of an importance that justifies always keeping it in context - e.g. personality information, life changing events, changes in the assistant's behavior. Defaults to false.")]
@@ -74,6 +57,11 @@ public class Memory
     [JsonPropertyName("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
+    [VectorStoreData(StorageName = "owner")]
+    [Description("The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
+    [JsonPropertyName("owner")]
+    public required Guid Owner { get; set; }
+
     [JsonIgnore]
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
@@ -88,4 +76,10 @@ public class Memory
 
     [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
     public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
+
+    [ForeignKey(nameof(MemoryStore.StoreId))]
+    public Guid StoreId { get; set; }
+
+    [ForeignKey(nameof(MemoryStore))]
+    public MemoryStore Store { get; set; } = null!;
 }

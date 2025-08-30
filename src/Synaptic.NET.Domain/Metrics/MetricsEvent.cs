@@ -1,16 +1,15 @@
-using System.Security.Claims;
 using System.Text.Json.Serialization;
-using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain.Metrics;
 
 public record MetricsEvent<T>
 {
-    public MetricsEvent(T value, string operation, ClaimsIdentity? userIdentifier = null)
+    public MetricsEvent(T value, string operation, User? userIdentifier = null)
     {
         Timestamp = DateTime.UtcNow;
         Value = value;
-        UserIdentifier = userIdentifier.ToUserIdentifier();
+        UserIdentifier = userIdentifier?.Identifier ?? string.Empty;
         Operation = operation;
     }
 
