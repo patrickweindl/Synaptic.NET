@@ -6,6 +6,7 @@ using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Mcp;
 using Synaptic.NET.OpenAI;
+using Synaptic.NET.Qdrant;
 using Synaptic.NET.RestApi;
 using Synaptic.NET.Web;
 
@@ -30,6 +31,7 @@ public class SynapticAppHost
 
         builder.ConfigureDomainServices(out var synapticSettings);
         builder.ConfigureOpenAiServices();
+        builder.ConfigureQdrantServices();
         builder.ConfigureCoreServices();
         builder.ConfigureAugmentationServices();
 
