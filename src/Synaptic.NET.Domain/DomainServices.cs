@@ -19,8 +19,10 @@ public static class DomainServices
         builder.Services.AddSingleton(configuration);
         builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
 
+        Directory.CreateDirectory(configuration.BaseDataPath);
+        string basePath = configuration.BaseDataPath;
         builder.Services.AddDbContext<SynapticDbContext>(options =>
-            options.UseSqlite("Data Source=synaptic.db"));
+            options.UseSqlite($"Data Source={Path.Join(basePath, "synaptic.db")}"));
 
         return builder;
     }

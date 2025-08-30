@@ -96,8 +96,7 @@ public class UserManager : IUserManager
 
     public void AddUserToGroup(User currentUser, User targetUser, string readableGroupName)
     {
-        string groupUserName = ReadableGroupNameToUserGroupIdentifier(readableGroupName);
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == groupUserName) is not { } existingGroup)
+        if (GetGroups().FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } existingGroup)
         {
             if (currentUser.Role == UserRole.Admin)
             {
@@ -109,7 +108,7 @@ public class UserManager : IUserManager
             }
         }
 
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == groupUserName) is not { } createdGroup)
+        if (GetGroups().FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } createdGroup)
         {
             return;
         }

@@ -24,9 +24,8 @@ public class CurrentUserService : ICurrentUserService
         _settings = serverSettings;
     }
 
-    public User GetCurrentUser()
+    private ClaimsIdentity? TryGetClaimsIdentityFromCookie()
     {
-        ClaimsIdentity? currentClaimsIdentity = null;
         var cookieState = _authenticationStateProvider?.GetAuthenticationStateAsync().Result;
 
         if (cookieState?.User is { Identity: { IsAuthenticated: true } } &&
@@ -36,22 +35,50 @@ public class CurrentUserService : ICurrentUserService
             var cookieClaim = new ClaimsIdentity();
             cookieClaim.AddClaim(new Claim(ClaimTypes.NameIdentifier, nameIdentifier.Value));
             cookieClaim.AddClaim(new Claim(ClaimTypes.Name, name.Value));
-            currentClaimsIdentity = cookieClaim;
+            return cookieClaim;
         }
 
-        if (_accessor?.HttpContext?.User.Identity is ClaimsIdentity httpClaimsIdentity)
+        return null;
+    }
+
+    private ClaimsIdentity? TryGetClaimsIdentityFromHttpContext()
+    {
+        if (_accessor?.HttpContext is { } httpContext)
+        {
+            if (httpContext.User.Identity is ClaimsIdentity httpClaimsIdentity)
+            {
+                return httpClaimsIdentity;
+            }
+
+            if (httpContext.User is { Identity: { IsAuthenticated: true } } principal
+                && !string.IsNullOrEmpty(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value)
+                && !string.IsNullOrEmpty(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value))
+            {
+                var claimsIdentity = new ClaimsIdentity();
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, principal.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value));
+                claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, principal.Claims.First(c => c.Type == ClaimTypes.Name).Value));
+                return claimsIdentity;
+            }
+        }
+
+        return null;
+    }
+
+    public User GetCurrentUser()
+    {
+        ClaimsIdentity? currentClaimsIdentity = null;
+
+        if (TryGetClaimsIdentityFromCookie() is { } cookieClaimsIdentity)
+        {
+            currentClaimsIdentity = _symlinkUserService.GetMainIdentity(cookieClaimsIdentity);
+        }
+        else if (TryGetClaimsIdentityFromHttpContext() is { } httpClaimsIdentity)
         {
             currentClaimsIdentity = _symlinkUserService.GetMainIdentity(httpClaimsIdentity);
         }
-
-        if (_accessor?.HttpContext?.User is { Identity: { IsAuthenticated: true } } principal
-            && !string.IsNullOrEmpty(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value)
-            && !string.IsNullOrEmpty(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value))
+        else
         {
-            var claimsIdentity = new ClaimsIdentity();
-            claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, principal.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value));
-            claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, principal.Claims.First(c => c.Type == ClaimTypes.Name).Value));
-            currentClaimsIdentity = _symlinkUserService.GetMainIdentity(claimsIdentity);
+            currentClaimsIdentity = new ClaimsIdentity();
         }
 
         string identifier = currentClaimsIdentity.ToUserIdentifier();
