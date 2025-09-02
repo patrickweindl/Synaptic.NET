@@ -52,6 +52,13 @@ public interface IMemoryProvider
     Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription);
 
     /// <summary>
+    /// Creates a new memory entry and routes it to the most suitable collection.
+    /// </summary>
+    /// <param name="memory">The memory object containing the details of the memory entry to be created.</param>
+    /// <returns>A task representing the operation, returning true if the memory entry was created successfully; otherwise, false.</returns>
+    Task<bool> CreateMemoryEntryAsync(Memory memory);
+
+    /// <summary>
     /// Creates a new memory entry in the specified collection.
     /// </summary>
     /// <param name="collectionIdentifier">The unique identifier of the collection in which the memory will be created.</param>
@@ -84,6 +91,14 @@ public interface IMemoryProvider
     /// <param name="newStore">The new memory store to replace the current collection with.</param>
     /// <returns>A task representing the operation, returning true if the collection was successfully replaced, otherwise false.</returns>
     Task<bool> ReplaceCollectionAsync(string collectionTitle, MemoryStore newStore);
+
+    /// <summary>
+    /// Replaces an existing memory entry within a collection identified by the specified collection identifier.
+    /// </summary>
+    /// <param name="entryIdentifier">The unique identifier of the memory entry to be replaced.</param>
+    /// <param name="newMemory">The new memory object that replaces the existing memory entry.</param>
+    /// <returns>A task representing the operation, returning a boolean indicating whether the replacement was successful.</returns>
+    Task<bool> ReplaceMemoryEntryAsync(Guid entryIdentifier, Memory newMemory);
 
     /// <summary>
     /// Replaces an existing memory entry within a collection identified by the specified collection identifier.
@@ -122,6 +137,14 @@ public interface IMemoryProvider
     /// <summary>
     /// Updates an existing memory entry within a specified collection.
     /// </summary>
+    /// <param name="entryIdentifier">The identifier of the memory entry to be updated.</param>
+    /// <param name="newMemory">The new memory data to update the existing entry with.</param>
+    /// <returns>A task representing the operation, returning a boolean indicating whether the update was successful.</returns>
+    Task<bool> UpdateMemoryEntryAsync(Guid entryIdentifier, Memory newMemory);
+
+    /// <summary>
+    /// Updates an existing memory entry within a specified collection.
+    /// </summary>
     /// <param name="collectionIdentifier">The identifier of the collection containing the memory entry to be updated.</param>
     /// <param name="entryIdentifier">The identifier of the memory entry to be updated.</param>
     /// <param name="newMemory">The new memory data to update the existing entry with.</param>
@@ -150,6 +173,13 @@ public interface IMemoryProvider
     /// <param name="collectionTitle">The title of the collection to delete.</param>
     /// <returns>True if the collection was deleted, otherwise false.</returns>
     Task<bool> DeleteCollectionAsync(string collectionTitle);
+
+    /// <summary>
+    /// Deletes a memory entry.
+    /// </summary>
+    /// <param name="entryIdentifier">The identifier of the memory entry to delete.</param>
+    /// <returns>True if the memory entry was deleted, otherwise false.</returns>
+    Task<bool> DeleteMemoryEntryAsync(Guid entryIdentifier);
 
     /// <summary>
     /// Deletes a memory entry from a specified collection.

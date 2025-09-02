@@ -24,6 +24,8 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription) => throw new NotImplementedException();
 
+    public Task<bool> CreateMemoryEntryAsync(Memory memory) => throw new NotImplementedException();
+
     public Task<bool> CreateMemoryEntryAsync(Guid collectionIdentifier, Memory memory, string storeDescription = "") => throw new NotImplementedException();
 
     public Task<bool> CreateMemoryEntryAsync(string collectionTitle, Memory memory, string storeDescription = "") => throw new NotImplementedException();
@@ -32,6 +34,8 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public Task<bool> ReplaceCollectionAsync(string collectionTitle, MemoryStore newStore) => throw new NotImplementedException();
 
+    public Task<bool> ReplaceMemoryEntryAsync(Guid entryIdentifier, Memory newMemory) => throw new NotImplementedException();
+
     public Task<bool> ReplaceMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory) => throw new NotImplementedException();
 
     public Task<bool> ReplaceMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory) => throw new NotImplementedException();
@@ -39,6 +43,8 @@ public class HybridMemoryProvider : IMemoryProvider
     public Task<bool> UpdateCollectionAsync(Guid collectionIdentifier, MemoryStore newStore) => throw new NotImplementedException();
 
     public Task<bool> UpdateCollectionAsync(string collectionTitle, MemoryStore newStore) => throw new NotImplementedException();
+
+    public Task<bool> UpdateMemoryEntryAsync(Guid entryIdentifier, Memory newMemory) => throw new NotImplementedException();
 
     public Task<bool> UpdateMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory) => throw new NotImplementedException();
 
@@ -49,6 +55,8 @@ public class HybridMemoryProvider : IMemoryProvider
     public Task<bool> DeleteCollectionAsync(string collectionTitle) => throw new NotImplementedException();
 
     public Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier) => throw new NotImplementedException();
+
+    public Task<bool> DeleteMemoryEntryAsync(Guid entryIdentifier) => throw new NotImplementedException();
 
     public Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, string entryTitle) => throw new NotImplementedException();
 }
