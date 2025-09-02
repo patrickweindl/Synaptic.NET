@@ -1,10 +1,15 @@
 using System.ComponentModel;
+using JetBrains.Annotations;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
 namespace Synaptic.NET.Mcp.Prompts;
 
+/// <summary>
+/// Provides a parametrized prompt as an example of how to create prompts with arguments.
+/// </summary>
 [McpServerPromptType]
+[PublicAPI]
 public static class ParametrizedPrompt
 {
     [McpServerPrompt(Name = "complex_prompt"), Description("A prompt with arguments")]

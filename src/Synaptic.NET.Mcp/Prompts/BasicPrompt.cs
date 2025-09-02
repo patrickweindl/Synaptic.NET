@@ -4,6 +4,9 @@ using ModelContextProtocol.Server;
 
 namespace Synaptic.NET.Mcp.Prompts;
 
+/// <summary>
+/// Provides an example for a basic prompt without parameters or dependency injection.
+/// </summary>
 [McpServerPromptType]
 public static class BasicPrompt
 {

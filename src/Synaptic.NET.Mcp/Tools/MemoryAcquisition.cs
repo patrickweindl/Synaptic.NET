@@ -1,11 +1,16 @@
 using System.ComponentModel;
 using System.Text.Json;
+using JetBrains.Annotations;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Core;
 
 namespace Synaptic.NET.Mcp.Tools;
 
+/// <summary>
+/// Provides tools for memory acquisition, using Dependency Injection for the individual methods.
+/// </summary>
 [McpServerResourceType]
+[PublicAPI]
 public static class MemoryAcquisition
 {
     [McpServerResource(Name = "FreeTextSearchResource", MimeType = "application/json")]

@@ -1,11 +1,16 @@
 using System.ComponentModel;
 using System.Text.Json;
+using JetBrains.Annotations;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Core;
 
 namespace Synaptic.NET.Mcp.Resources;
 
+/// <summary>
+/// Provides memories as resources, using Dependency Injection for the individual methods.
+/// </summary>
 [McpServerResourceType]
+[PublicAPI]
 public static class MemoryResources
 {
     [McpServerResource(Name = "FreeTextSearchResource", MimeType = "application/json")]

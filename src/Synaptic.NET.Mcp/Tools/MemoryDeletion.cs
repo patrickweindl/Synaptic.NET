@@ -6,6 +6,9 @@ using Synaptic.NET.Domain.Constants;
 
 namespace Synaptic.NET.Mcp.Tools;
 
+/// <summary>
+/// Provides tools for memory deletion, using Dependency Injection for the individual methods.
+/// </summary>
 [McpServerToolType]
 [PublicAPI]
 public static class MemoryDeletion

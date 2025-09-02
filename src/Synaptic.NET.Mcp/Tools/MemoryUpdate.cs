@@ -7,6 +7,9 @@ using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Mcp.Tools;
 
+/// <summary>
+/// Provides tools for memory updates, using Dependency Injection for the individual methods.
+/// </summary>
 [McpServerToolType]
 [PublicAPI]
 public static class MemoryUpdate
