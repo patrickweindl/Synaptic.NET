@@ -1,28 +1,63 @@
+using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Qdrant;
 
 namespace Synaptic.NET.Core.Services;
 
+/// <summary>
+/// Provides an <see cref="IMemoryProvider"/> implementation that relies on EF for basic data retrieval but Vector Search for free text queries.
+///
+/// This implementation keeps a <see cref="QdrantMemoryClient"/> connected server's Qdrant instance in sync with the EF database.
+/// </summary>
 public class HybridMemoryProvider : IMemoryProvider
 {
     private readonly SynapticDbContext _dbContext;
     private readonly QdrantMemoryClient _qdrantMemoryClient;
-    public HybridMemoryProvider(SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient)
+    private readonly ICurrentUserService _currentUserService;
+
+    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient)
     {
+        _currentUserService = currentUserService;
         _dbContext = synapticDbContext;
         _qdrantMemoryClient = qdrantMemoryClient;
     }
-    public Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync() => throw new NotImplementedException();
 
-    public Task<List<MemoryStore>> GetStoresAsync() => throw new NotImplementedException();
+    public Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync() =>
+        throw new NotImplementedException();
 
-    public Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier) => throw new NotImplementedException();
+    public async Task<List<MemoryStore>> GetStoresAsync()
+    {
+        return await _dbContext.MemoryStores.ToListAsync();
+    }
 
-    public Task<MemoryStore?> GetCollectionAsync(string collectionTitle) => throw new NotImplementedException();
+    public Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier)
+    {
+        return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier));
+    }
 
-    public Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5) => throw new NotImplementedException();
+    public Task<MemoryStore?> GetCollectionAsync(string collectionTitle)
+    {
+        return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle));
+    }
 
-    public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription) => throw new NotImplementedException();
+    public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
+    {
+        var vectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
+        // TODO: Add augmented search.
+        return vectorResults;
+    }
+
+    public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription)
+    {
+        _dbContext.MemoryStores.Add(new MemoryStore()
+        {
+            Title = collectionTitle,
+            Description = storeDescription,
+            StoreId = Guid.NewGuid(),
+            OwnerUser = _currentUserService.GetCurrentUser()
+        });
+        return Task.FromResult(true);
+    }
 
     public Task<bool> CreateMemoryEntryAsync(Memory memory) => throw new NotImplementedException();
 
