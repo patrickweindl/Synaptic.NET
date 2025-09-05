@@ -9,6 +9,7 @@ using OpenTelemetry.Trace;
 using Synaptic.NET.Core.Extensions;
 using Synaptic.NET.Core.Services;
 using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Providers;
 
 namespace Synaptic.NET.Core;
 
@@ -40,6 +41,8 @@ public static class CoreServices
 
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+        builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
 
         builder.Services.AddScoped<IUserManager, UserManager>();
         builder.Services.AddScoped<IEncryptionService, ClaimsBasedEncryptionService>();

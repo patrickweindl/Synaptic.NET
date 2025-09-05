@@ -1,9 +1,6 @@
-using System.Linq.Expressions;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
-using Microsoft.SemanticKernel.Memory;
 using OpenAI;
 using OpenAI.Embeddings;
 using Qdrant.Client;

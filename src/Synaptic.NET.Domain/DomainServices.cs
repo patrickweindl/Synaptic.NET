@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Synaptic.NET.Domain.Providers;
 using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Domain;
@@ -17,7 +16,6 @@ public static class DomainServices
 
         configuration = new SynapticServerSettings(builder.Configuration);
         builder.Services.AddSingleton(configuration);
-        builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
 
         Directory.CreateDirectory(configuration.BaseDataPath);
         string basePath = configuration.BaseDataPath;
