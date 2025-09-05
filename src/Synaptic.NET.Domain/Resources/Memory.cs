@@ -32,12 +32,12 @@ public class Memory
     [JsonPropertyName("content")]
     public required string Content { get; set; }
 
-    [VectorStoreData(StorageName = "pinned")]
+    [VectorStoreData(StorageName = "pinned", IsIndexed = true)]
     [Description("Whether the information has been marked as 'pinned' and is therefore of an importance that justifies always keeping it in context - e.g. personality information, life changing events, changes in the assistant's behavior. Defaults to false.")]
     [JsonPropertyName("pinned")]
     public bool Pinned { get; set; }
 
-    [VectorStoreData(StorageName = "tags")]
+    [VectorStoreData(StorageName = "tags", IsFullTextIndexed = true)]
     [Description("Tags for the memory for easier referencing. Default to no tags.")]
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
@@ -47,21 +47,22 @@ public class Memory
     [JsonPropertyName("reference")]
     public string? Reference { get; set; }
 
-    [VectorStoreData(StorageName = "created_at", IsIndexed = false)]
+    [VectorStoreData(StorageName = "created_at", IsIndexed = true)]
     [Description("The datetime (with timezone) the memory has been created at. Usually set by the backend on creation.")]
     [JsonPropertyName("created_at")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [VectorStoreData(StorageName = "updated_at", IsIndexed = false)]
+    [VectorStoreData(StorageName = "updated_at", IsIndexed = true)]
     [Description("The datetime (with timezone) the memory has last been updated at. When initializing object, set to unix 0 (1970-01-01T00:00:00Z). Usually set by the backend on updates.")]
     [JsonPropertyName("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
-    [VectorStoreData(StorageName = "owner")]
+    [VectorStoreData(StorageName = "owner", IsIndexed = true)]
     [Description("The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
     [JsonPropertyName("owner")]
     public required Guid Owner { get; set; }
 
+    [NotMapped]
     [JsonIgnore]
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
@@ -82,6 +83,7 @@ public class Memory
     public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
 
     [ForeignKey(nameof(MemoryStore.StoreId))]
+    [VectorStoreData(StorageName = "store_id", IsIndexed = true)]
     public Guid StoreId { get; set; }
 
     [ForeignKey(nameof(MemoryStore))]
