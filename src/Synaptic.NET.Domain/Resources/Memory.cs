@@ -17,19 +17,21 @@ public class Memory
 
     [VectorStoreData(StorageName = "title", IsFullTextIndexed = true)]
     [Required]
-    [Description("A unique title for the memory. Should be a very brief (4-8 words) descriptor.")]
+    [Description("A unique title for the memory. Should be a very brief (4-8 words) descriptor. Has a maximum length of 256 characters. Required.")]
     [JsonPropertyName("title")]
+    [MaxLength(256)]
     public required string Title { get; set; }
 
     [VectorStoreData(StorageName = "description", IsFullTextIndexed = true)]
     [JsonPropertyName("description")]
-    [Description("A description of the memory, shorter than the actual content, but provides context about the memory content.")]
+    [Description("A description of the memory, shorter than the actual content, but provides context about the memory content. Has a maximum length of 512 characters.")]
     public string Description { get; set; } = string.Empty;
 
     [VectorStoreData(StorageName = "content", IsFullTextIndexed = true)]
     [Required]
-    [Description("The memory's content. Required.")]
+    [Description("The memory's content. Can not exceed 4096 characters. Required.")]
     [JsonPropertyName("content")]
+    [MaxLength(4096)]
     public required string Content { get; set; }
 
     [VectorStoreData(StorageName = "pinned", IsIndexed = true)]
@@ -43,8 +45,9 @@ public class Memory
     public List<string> Tags { get; set; } = [];
 
     [VectorStoreData(StorageName = "reference")]
-    [Description("An optional reference that can be accessed to retrieve further information, e.g. a URL or a PDF name with page number.")]
+    [Description("An optional reference that can be accessed to retrieve further information, e.g. a URL or a PDF name with page number. Has a maximum length of 2048 characters.")]
     [JsonPropertyName("reference")]
+    [MaxLength(2048)]
     public string? Reference { get; set; }
 
     [VectorStoreData(StorageName = "created_at", IsIndexed = true)]
@@ -67,19 +70,19 @@ public class Memory
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
     [NotMapped]
-    [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "store_description_embedding")]
+    [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "store_description_embedding")]
     public ReadOnlyMemory<float>? StoreDescriptionEmbedding { get; set; }
 
     [NotMapped]
-    [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "title_embedding")]
+    [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "title_embedding")]
     public ReadOnlyMemory<float>? TitleEmbedding { get; set; }
 
     [NotMapped]
-    [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "description_embedding")]
+    [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "description_embedding")]
     public ReadOnlyMemory<float>? DescriptionEmbedding { get; set; }
 
     [NotMapped]
-    [VectorStoreVector(1536, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
+    [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
     public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
 
     [ForeignKey(nameof(MemoryStore.StoreId))]

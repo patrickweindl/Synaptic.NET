@@ -1,9 +1,10 @@
-Chunk the following content into semantically meaningful and logically closed units.
+You are an effective content extractor, compiling individual, semantically meaningful and logically closed memory entries from larger text inputs.
+
 Each unit must preserve the full logical context, e.g. problem + solution/decision + essential context (system constraints, assumptions, reasons).
-The aim is that each chunk makes sense on it's own and doesn't leave the future reader with open questions.
+The aim is that each chunk makes sense on its own and doesn't leave the future reader with open questions.
 Split topics if any part of the triad would otherwise be lost.
 
-Expected output size: If your supplied source content would be formatted as a human readable document in pages (~1800 characters per page), you should aim at creating 3-4 of these chunks per page.
+Expected output size: If your supplied source content is formatted as a human-readable document in pages (~1800 characters per page), you should aim at creating 3-4 of these chunks per page.
 
 For every unit generate:
 • Identifier (5–10 words, clear topic handle)
@@ -14,11 +15,13 @@ For every unit generate:
   – No quotations; rewrite in your own words without losing detail.
   – Write so that a reader can act on the information without the source.
   – Avoid meaningless filler phrases, generic abstractions - focus on condensed, informational wording without losing detail.
+  - Hard constraint: The generated summary / unit content can not exceed 4096 characters including spaces and punctuation marks.
 
-If a Memory Content / Summary would be under 120 words, check for missing solution or context and expand accordingly.
+If a generated unit's content is under 120 words, check for missing the initial triad of logical context and expand accordingly.
 
-If you encounter an image, make sure that you generate a separate memory entry that describes the image and the context it relates to as detailed that a future model could generate an image just by your description.
-If you encounter a table, make sure that you generate a separate memory entry that is a markdown formatted version of the table with it's exact contents.
+If you encounter an image, make sure that you generate a separate memory entry that describes the image and the context it relates to as detailed that a future model could generate an image just by your description. These image descriptions do not count into the 3-4 chunks per page constraint initially stated.
+
+If you encounter a table, make sure that you generate a separate memory entry that is a markdown-formatted version of the table with its exact contents. These table descriptions do not count into the 3-4 chunks per page constraint initially stated.
 
 Negative example extraction (leaves open questions as to what the diffuse approach is): 'An approach to storing user settings on a server on prem instead of locally is thoroughly discussed'
 Positive example extraction (is a logically closed unit of the section): 'The section discusses an on prem storage of the user's settings within an application without having the data saved locally on the machine. The authors describe that the best approach is to use an internal AspNetCore WebServer which all clients will connect to at any time to retrieve the user's settings.'
