@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.IdentityModel.Tokens;
-using mneme.Core.Handlers;
 using Synaptic.NET.Authentication.Controllers;
 using Synaptic.NET.Authentication.Handlers;
 using Synaptic.NET.Authentication.Middlewares;
@@ -12,6 +11,8 @@ using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Services;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication;
 

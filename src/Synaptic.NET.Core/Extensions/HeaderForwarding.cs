@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Core.Extensions;
 

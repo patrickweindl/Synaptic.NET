@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Synaptic.NET.Domain.Providers;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Core.Providers;
+using Synaptic.NET.Domain.Resources.Management;
 
-namespace Synaptic.NET.Domain.Metrics;
+namespace Synaptic.NET.Core.Metrics;
 
 public class ApiMetricsCollector : IMetricsCollector<TimeSpan>
 {

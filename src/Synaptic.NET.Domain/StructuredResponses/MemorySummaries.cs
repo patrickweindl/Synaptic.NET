@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Attributes;
-using Synaptic.NET.Domain.StructuredResponses;
 
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.StructuredResponses;
 
 /// <summary>
 /// Structured response for memory summaries containing an array of identifier-summary pairs

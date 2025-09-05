@@ -1,6 +1,8 @@
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Storage;
 
-namespace Synaptic.NET.Domain;
+namespace Synaptic.NET.Domain.Abstractions.Management;
 
 public interface IManagedIdentity
 {

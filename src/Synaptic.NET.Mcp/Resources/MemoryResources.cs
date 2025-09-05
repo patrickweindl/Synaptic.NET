@@ -2,7 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using JetBrains.Annotations;
 using ModelContextProtocol.Server;
-using Synaptic.NET.Core;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Storage;
 
 namespace Synaptic.NET.Mcp.Resources;
 

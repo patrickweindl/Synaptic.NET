@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Helpers;
 
 namespace Synaptic.NET.Core.Services;

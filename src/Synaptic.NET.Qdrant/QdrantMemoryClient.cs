@@ -4,8 +4,8 @@ using Microsoft.SemanticKernel.Connectors.Qdrant;
 using OpenAI;
 using OpenAI.Embeddings;
 using Qdrant.Client;
-using Synaptic.NET.Domain;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Qdrant;
 

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using mneme.OpenAi.Clients;
 using Synaptic.NET.OpenAI.Clients;
 
 namespace Synaptic.NET.OpenAI;

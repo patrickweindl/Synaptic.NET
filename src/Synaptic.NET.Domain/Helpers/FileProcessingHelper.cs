@@ -1,7 +1,7 @@
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Writer;
 
-namespace Synaptic.NET.Core.Helpers;
+namespace Synaptic.NET.Domain.Helpers;
 
 public static class FileProcessingHelper
 {

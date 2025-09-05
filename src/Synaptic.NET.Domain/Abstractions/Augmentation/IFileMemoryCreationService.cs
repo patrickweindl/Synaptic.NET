@@ -1,9 +1,11 @@
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Storage;
+using Synaptic.NET.Domain.StructuredResponses;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Augmentation;
 
 /// <summary>
-/// Represents a service responsible for creating <see cref="Synaptic.NET.Domain.Resources.Memory"/> instances from files.
+/// Represents a service responsible for creating <see cref="Memory"/> instances from files.
 /// </summary>
 public interface IFileMemoryCreationService
 {

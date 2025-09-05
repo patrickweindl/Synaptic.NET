@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Resources;
-using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication.Controllers;
 

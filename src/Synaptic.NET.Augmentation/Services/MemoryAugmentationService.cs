@@ -1,9 +1,10 @@
 using System.ClientModel;
 using OpenAI.Chat;
 using Synaptic.NET.Core;
-using Synaptic.NET.Domain;
-using Synaptic.NET.Domain.Helpers;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Domain.StructuredResponses;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.OpenAI.Clients;

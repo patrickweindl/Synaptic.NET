@@ -1,6 +1,9 @@
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Core.Services;
 

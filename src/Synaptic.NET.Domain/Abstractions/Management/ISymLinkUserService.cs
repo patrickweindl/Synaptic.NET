@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Management;
 
 /// <summary>
 /// A service to create symbolic links between user identities in case they switch their OAuth provider.

@@ -1,4 +1,4 @@
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.Resources.Storage;
 
 /// <summary>
 /// Represents the result of a routing operation for a memory store.

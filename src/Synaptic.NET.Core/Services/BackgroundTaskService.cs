@@ -1,7 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Synaptic.NET.Core.BackgroundTasks;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Services;
+using Synaptic.NET.Domain.Abstractions.Storage;
+using Synaptic.NET.Domain.BackgroundTasks;
 
 namespace Synaptic.NET.Core.Services;
 

@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Management;
 
-namespace Synaptic.NET.Domain.Metrics;
+namespace Synaptic.NET.Core.Metrics;
 
 public class InMemoryMetricsStore
 {

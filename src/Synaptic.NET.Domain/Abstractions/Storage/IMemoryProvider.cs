@@ -1,6 +1,6 @@
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Storage;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Storage;
 
 /// <summary>
 /// Provides an interface for managing memory storage, including operations for creating, updating, replacing, and deleting memory collections and entries.

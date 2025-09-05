@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Resources;
 

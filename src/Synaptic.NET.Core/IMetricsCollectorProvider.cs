@@ -1,6 +1,6 @@
-using Synaptic.NET.Domain.Metrics;
+using Synaptic.NET.Core.Metrics;
 
-namespace Synaptic.NET.Domain;
+namespace Synaptic.NET.Core;
 
 public interface IMetricsCollectorProvider
 {

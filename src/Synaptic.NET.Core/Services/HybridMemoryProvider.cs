@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Qdrant;
 
 namespace Synaptic.NET.Core.Services;

@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Synaptic.NET.Authentication.Resources;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication;
 

@@ -1,4 +1,4 @@
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.Resources.Storage;
 
 public class MemorySearchResult
 {

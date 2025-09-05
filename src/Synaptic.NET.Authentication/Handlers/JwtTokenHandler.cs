@@ -2,13 +2,12 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
-using Synaptic.NET.Authentication;
 using Synaptic.NET.Authentication.Resources;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Resources.Configuration;
 using AccessTokenResult = Synaptic.NET.Authentication.Resources.AccessTokenResult;
 using TokenHandler = System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler;
 
-namespace mneme.Core.Handlers;
+namespace Synaptic.NET.Authentication.Handlers;
 
 public class JwtTokenHandler : ISecurityTokenHandler
 {

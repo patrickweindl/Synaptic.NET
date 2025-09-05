@@ -1,4 +1,9 @@
-namespace Synaptic.NET.Core.BackgroundTasks;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Services;
+using Synaptic.NET.Domain.Abstractions.Storage;
+
+namespace Synaptic.NET.Domain.BackgroundTasks;
 
 public abstract class BackgroundTaskItem
 {

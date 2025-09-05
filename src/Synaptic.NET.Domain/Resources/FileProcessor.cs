@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
-using Synaptic.NET.Core.Helpers;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Domain.StructuredResponses;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Writer;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Resources;
 
 /// <summary>
 /// A class representing the result of a file processing operation with observable progress and status message.

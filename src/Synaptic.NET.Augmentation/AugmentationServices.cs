@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Synaptic.NET.Augmentation.Services;
-using Synaptic.NET.Core;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Storage;
 
 namespace Synaptic.NET.Augmentation;
 

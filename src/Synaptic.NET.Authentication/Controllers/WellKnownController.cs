@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication.Controllers;
 

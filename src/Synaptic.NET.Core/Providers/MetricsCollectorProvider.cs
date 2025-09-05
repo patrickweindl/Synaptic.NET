@@ -1,7 +1,7 @@
+using Synaptic.NET.Core.Metrics;
 using Synaptic.NET.Domain.Helpers;
-using Synaptic.NET.Domain.Metrics;
 
-namespace Synaptic.NET.Domain.Providers;
+namespace Synaptic.NET.Core.Providers;
 
 public sealed class MetricsCollectorProvider : IMetricsCollectorProvider, IDisposable
 {

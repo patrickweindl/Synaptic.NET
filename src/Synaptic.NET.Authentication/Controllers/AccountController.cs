@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Synaptic.NET.Authentication.Providers;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication.Controllers;
 

@@ -7,9 +7,12 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Synaptic.NET.Core.Extensions;
+using Synaptic.NET.Core.Providers;
 using Synaptic.NET.Core.Services;
-using Synaptic.NET.Domain;
-using Synaptic.NET.Domain.Providers;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Services;
+using Synaptic.NET.Domain.Abstractions.Storage;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Core;
 

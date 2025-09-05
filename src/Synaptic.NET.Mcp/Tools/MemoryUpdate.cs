@@ -1,9 +1,10 @@
 using System.ComponentModel;
 using JetBrains.Annotations;
 using ModelContextProtocol.Server;
-using Synaptic.NET.Core;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Constants;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Mcp.Tools;
 

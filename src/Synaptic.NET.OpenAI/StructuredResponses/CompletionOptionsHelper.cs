@@ -2,7 +2,7 @@ using System.ClientModel;
 using System.Text;
 using System.Text.Json;
 using OpenAI.Chat;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
 
 namespace Synaptic.NET.OpenAI.StructuredResponses;
 

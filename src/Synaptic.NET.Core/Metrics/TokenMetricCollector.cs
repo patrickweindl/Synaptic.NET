@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using OpenAI.Chat;
-using Synaptic.NET.Domain.Providers;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Core.Providers;
+using Synaptic.NET.Domain.Resources.Management;
 
-namespace Synaptic.NET.Domain.Metrics;
+namespace Synaptic.NET.Core.Metrics;
 
 public class TokenMetricCollector : IMetricsCollector<long>
 {

@@ -1,7 +1,10 @@
-using Synaptic.NET.Core;
-using Synaptic.NET.Core.BackgroundTasks;
-using Synaptic.NET.Core.Helpers;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Abstractions.Services;
+using Synaptic.NET.Domain.Abstractions.Storage;
+using Synaptic.NET.Domain.BackgroundTasks;
+using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Augmentation.Handlers;
 

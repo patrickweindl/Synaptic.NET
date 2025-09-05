@@ -1,6 +1,6 @@
-using Synaptic.NET.Core.BackgroundTasks;
+using Synaptic.NET.Domain.BackgroundTasks;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Services;
 
 public interface IBackgroundTaskQueue
 {

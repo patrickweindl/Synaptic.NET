@@ -1,6 +1,6 @@
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Storage;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Augmentation;
 
 public interface IMemoryAugmentationService
 {

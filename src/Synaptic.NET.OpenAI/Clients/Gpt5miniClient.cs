@@ -1,7 +1,6 @@
-using Synaptic.NET.OpenAI.Clients;
 using Synaptic.NET.OpenAI.Resources;
 
-namespace mneme.OpenAi.Clients;
+namespace Synaptic.NET.OpenAI.Clients;
 
 /// <summary>
 /// A client for the GPT-5 Mini model.

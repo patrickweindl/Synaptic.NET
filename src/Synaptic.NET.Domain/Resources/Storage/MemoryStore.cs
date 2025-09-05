@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Synaptic.NET.Domain.Resources.Management;
 
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.Resources.Storage;
 
 [Description("A memory store is a collection of memories that are grouped together by a common topic. It allows for better organization and retrieval of memories based on their context or subject matter.")]
 public class MemoryStore

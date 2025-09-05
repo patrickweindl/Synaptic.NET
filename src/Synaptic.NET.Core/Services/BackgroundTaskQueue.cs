@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Synaptic.NET.Core.BackgroundTasks;
+using Synaptic.NET.Domain.Abstractions.Services;
+using Synaptic.NET.Domain.BackgroundTasks;
 
 namespace Synaptic.NET.Core.Services;
 

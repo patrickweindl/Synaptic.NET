@@ -1,4 +1,4 @@
-namespace Synaptic.NET.Domain;
+namespace Synaptic.NET.Domain.Resources.Configuration;
 
 public class OAuthSettings
 {

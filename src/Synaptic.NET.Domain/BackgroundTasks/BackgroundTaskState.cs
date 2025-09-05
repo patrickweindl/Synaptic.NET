@@ -1,4 +1,4 @@
-namespace Synaptic.NET.Core.BackgroundTasks;
+namespace Synaptic.NET.Domain.BackgroundTasks;
 
 public enum BackgroundTaskState
 {

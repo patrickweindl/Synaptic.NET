@@ -1,7 +1,7 @@
 using Synaptic.NET.Domain.Enums;
-using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Management;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Management;
 
 public interface IUserManager
 {

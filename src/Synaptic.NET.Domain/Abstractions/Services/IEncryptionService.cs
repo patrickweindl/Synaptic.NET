@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Services;
 
 public interface IEncryptionService
 {

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Synaptic.NET.Domain.Helpers;
+namespace Synaptic.NET.Augmentation;
 
 public static class PromptTemplates
 {

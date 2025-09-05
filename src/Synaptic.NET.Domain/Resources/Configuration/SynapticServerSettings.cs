@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 
-namespace Synaptic.NET.Domain;
+namespace Synaptic.NET.Domain.Resources.Configuration;
 
 public class SynapticServerSettings
 {

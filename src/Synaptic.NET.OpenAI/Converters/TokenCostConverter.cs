@@ -1,4 +1,4 @@
-using Synaptic.NET.Domain.Metrics;
+using Synaptic.NET.Core.Metrics;
 using Synaptic.NET.OpenAI.Resources;
 
 namespace Synaptic.NET.OpenAI.Converters;

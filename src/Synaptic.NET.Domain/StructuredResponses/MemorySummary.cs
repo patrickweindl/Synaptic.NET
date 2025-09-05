@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Attributes;
 
 namespace Synaptic.NET.Domain.StructuredResponses;

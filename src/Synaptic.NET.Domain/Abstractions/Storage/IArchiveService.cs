@@ -1,4 +1,4 @@
-namespace Synaptic.NET.Core;
+namespace Synaptic.NET.Domain.Abstractions.Storage;
 
 /// <summary>
 /// A scoped service for archiving user data, e.g. uploaded files.

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using JetBrains.Annotations;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
-using Synaptic.NET.Core;
+using Synaptic.NET.Domain.Abstractions.Management;
 
 namespace Synaptic.NET.Mcp.Prompts;
 

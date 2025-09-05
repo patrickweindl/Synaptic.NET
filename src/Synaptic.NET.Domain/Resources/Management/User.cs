@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Enums;
+using Synaptic.NET.Domain.Resources.Storage;
 
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.Resources.Management;
 
 public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
 {

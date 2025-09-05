@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Synaptic.NET.Domain.Helpers;
 
-namespace Synaptic.NET.Domain.Metrics;
+namespace Synaptic.NET.Core.Metrics;
 
 public class InMemoryMeter<T>
 {

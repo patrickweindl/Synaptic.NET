@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.VectorData;
 
-namespace Synaptic.NET.Domain.Resources;
+namespace Synaptic.NET.Domain.Resources.Storage;
 
 [Description("Contains data on a specific memory the model persistantly stores.")]
 public class Memory

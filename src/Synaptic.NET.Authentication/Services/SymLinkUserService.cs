@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Synaptic.NET.Authentication.Resources;
-using Synaptic.NET.Core;
-using Synaptic.NET.Domain;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Authentication.Services;
 
