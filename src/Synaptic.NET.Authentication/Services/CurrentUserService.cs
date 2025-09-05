@@ -96,7 +96,7 @@ public class CurrentUserService : ICurrentUserService
             {
                 Identifier = identifier,
                 DisplayName = identifier.Split("__").FirstOrDefault() ?? identifier,
-                Role = UserRole.Guest
+                Role = IdentityRole.Guest
             };
             _dbContext.Users.Add(user);
             _dbContext.SaveChanges();
@@ -104,7 +104,7 @@ public class CurrentUserService : ICurrentUserService
 
         if (_settings.AdminIdentifiers.Contains(identifier))
         {
-            user.Role = UserRole.Admin;
+            user.Role = IdentityRole.Admin;
             _dbContext.Users.Update(user);
             _dbContext.SaveChanges();
         }

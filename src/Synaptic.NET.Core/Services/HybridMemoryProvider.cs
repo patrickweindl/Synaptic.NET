@@ -52,7 +52,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription)
     {
-        _dbContext.MemoryStores.Add(new MemoryStore()
+        _dbContext.MemoryStores.Add(new MemoryStore
         {
             Title = collectionTitle,
             Description = storeDescription,

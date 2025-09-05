@@ -26,7 +26,7 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
     public string UserAuthId => Identifier.Split("__").LastOrDefault() ?? Identifier;
 
     [JsonPropertyName("user_role")]
-    public UserRole Role { get; set; } = UserRole.Guest;
+    public IdentityRole Role { get; set; } = IdentityRole.Guest;
 
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
 

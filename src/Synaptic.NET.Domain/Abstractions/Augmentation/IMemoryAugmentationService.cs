@@ -2,6 +2,11 @@ using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Abstractions.Augmentation;
 
+/// <summary>
+/// Defines a contract for services that provide memory augmentation functionalities,
+/// including the generation of descriptive summaries for individual memory content
+/// and groups of memories associated with a store.
+/// </summary>
 public interface IMemoryAugmentationService
 {
     /// <summary>

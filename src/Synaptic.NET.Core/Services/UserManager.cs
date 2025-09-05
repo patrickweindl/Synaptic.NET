@@ -23,7 +23,7 @@ public class UserManager : IUserManager
 
     public List<User> GetUsers()
     {
-        if (_currentUserService.GetCurrentUser().Role >= UserRole.Admin)
+        if (_currentUserService.GetCurrentUser().Role >= IdentityRole.Admin)
         {
             return _dbContext.Users.ToList();
         }
@@ -32,16 +32,16 @@ public class UserManager : IUserManager
 
     public List<Group> GetGroups()
     {
-        if (_currentUserService.GetCurrentUser().Role >= UserRole.Admin)
+        if (_currentUserService.GetCurrentUser().Role >= IdentityRole.Admin)
         {
             return _dbContext.Groups.ToList();
         }
         return [];
     }
 
-    public void SetUserRole(User currentUser, User targetUser, UserRole targetRole)
+    public void SetUserRole(User currentUser, User targetUser, IdentityRole targetRole)
     {
-        if (currentUser.Role == UserRole.Admin)
+        if (currentUser.Role == IdentityRole.Admin)
         {
             var dbTargetUser = _dbContext.Users.FirstOrDefault(u => u.Id == targetUser.Id);
             if (dbTargetUser == null)
@@ -56,13 +56,13 @@ public class UserManager : IUserManager
 
     public void CreateGroup(User currentUser, string groupName)
     {
-        if (currentUser.Role < UserRole.Admin)
+        if (currentUser.Role < IdentityRole.Admin)
         {
             return;
         }
 
         string groupUserName = $"group-{groupName}__{Guid.NewGuid():N}";
-        Group newGroup = new Group() { Identifier = groupUserName, DisplayName = groupName };
+        Group newGroup = new Group { Identifier = groupUserName, DisplayName = groupName };
         if (_dbContext.Groups.Any(u => u.DisplayName == groupUserName))
         {
             return;
@@ -101,7 +101,7 @@ public class UserManager : IUserManager
     {
         if (GetGroups().FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } existingGroup)
         {
-            if (currentUser.Role == UserRole.Admin)
+            if (currentUser.Role == IdentityRole.Admin)
             {
                 CreateGroup(currentUser, readableGroupName);
             }
@@ -116,9 +116,9 @@ public class UserManager : IUserManager
             return;
         }
 
-        if (currentUser.Role == UserRole.Admin)
+        if (currentUser.Role == IdentityRole.Admin)
         {
-            createdGroup.Memberships.Add(new GroupMembership() { UserId = targetUser.Id });
+            createdGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(createdGroup);
             _dbContext.SaveChanges();
         }
@@ -131,9 +131,9 @@ public class UserManager : IUserManager
             return;
         }
 
-        if (currentUser.Role == UserRole.Admin)
+        if (currentUser.Role == IdentityRole.Admin)
         {
-            existingGroup.Memberships.Add(new GroupMembership() { UserId = targetUser.Id });
+            existingGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(existingGroup);
             _dbContext.SaveChanges();
         }
@@ -143,7 +143,7 @@ public class UserManager : IUserManager
     {
         if (GetGroups().FirstOrDefault(u => u.Id == group.Id) is not { } existingGroup)
         {
-            if (currentUser.Role == UserRole.Admin)
+            if (currentUser.Role == IdentityRole.Admin)
             {
                 CreateGroup(currentUser, group.DisplayName);
             }
@@ -158,9 +158,9 @@ public class UserManager : IUserManager
             return;
         }
 
-        if (currentUser.Role == UserRole.Admin)
+        if (currentUser.Role == IdentityRole.Admin)
         {
-            createdGroup.Memberships.Add(new GroupMembership() { UserId = targetUser.Id });
+            createdGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(createdGroup);
             _dbContext.SaveChanges();
         }
@@ -171,7 +171,7 @@ public class UserManager : IUserManager
         string groupUserName = ReadableGroupNameToUserGroupIdentifier(readableGroupName);
         if (GetGroups().FirstOrDefault(u => u.DisplayName == groupUserName) is not { } existingGroup)
         {
-            if (currentUser.Role == UserRole.Admin)
+            if (currentUser.Role == IdentityRole.Admin)
             {
                 CreateGroup(currentUser, readableGroupName);
             }
@@ -186,7 +186,7 @@ public class UserManager : IUserManager
             return;
         }
 
-        if (currentUser.Role == UserRole.Admin && createdGroup.Memberships.FirstOrDefault(m => m.UserId == targetUser.Id) is { } existingMembership)
+        if (currentUser.Role == IdentityRole.Admin && createdGroup.Memberships.FirstOrDefault(m => m.UserId == targetUser.Id) is { } existingMembership)
         {
             createdGroup.Memberships.Remove(existingMembership);
             _dbContext.Groups.Update(createdGroup);
@@ -200,7 +200,7 @@ public class UserManager : IUserManager
         {
             return;
         }
-        if (currentUser.Role == UserRole.Admin && existingGroup.Memberships.FirstOrDefault(m => m.UserId == targetUser.Id) is { } existingMembership)
+        if (currentUser.Role == IdentityRole.Admin && existingGroup.Memberships.FirstOrDefault(m => m.UserId == targetUser.Id) is { } existingMembership)
         {
             existingGroup.Memberships.Remove(existingMembership);
             _dbContext.Groups.Update(existingGroup);

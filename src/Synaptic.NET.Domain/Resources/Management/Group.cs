@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Synaptic.NET.Domain.Abstractions.Management;
+using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Resources.Management;
@@ -14,6 +15,8 @@ public class Group : IManagedIdentity
     [Required]
     [JsonPropertyName("group_identifier")]
     public required string Identifier { get; set; }
+
+    public IdentityRole Role => IdentityRole.Group;
 
     [JsonPropertyName("group_name")]
     public string DisplayName { get; set; } = string.Empty;

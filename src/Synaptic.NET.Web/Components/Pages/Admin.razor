@@ -119,10 +119,10 @@
                                                     </div>
                                                 </div>
                                                 <div class="user-actions">
-                                                    <select class="role-selector" @onchange="@(e => ChangeUserRole(user, Enum.Parse<UserRole>(e.Value?.ToString() ?? "User")))">
-                                                        <option value="Guest" selected="@(user.Role == UserRole.Guest)">Guest</option>
-                                                        <option value="User" selected="@(user.Role == UserRole.User)">User</option>
-                                                        <option value="Admin" selected="@(user.Role == UserRole.Admin)">Admin</option>
+                                                    <select class="role-selector" @onchange="@(e => ChangeUserRole(user, Enum.Parse<IdentityRole>(e.Value?.ToString() ?? "User")))">
+                                                        <option value="Guest" selected="@(user.Role == IdentityRole.Guest)">Guest</option>
+                                                        <option value="User" selected="@(user.Role == IdentityRole.User)">User</option>
+                                                        <option value="Admin" selected="@(user.Role == IdentityRole.Admin)">Admin</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -1285,7 +1285,7 @@
     protected override async Task OnInitializedAsync()
     {
         var currentUser = CurrentUserService.GetCurrentUser();
-        if (currentUser.Role < UserRole.Admin)
+        if (currentUser.Role < IdentityRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
         }
@@ -1295,7 +1295,7 @@
 
     private Task LoadAdminData()
     {
-        if (CurrentUserService.GetCurrentUser().Role < UserRole.Admin)
+        if (CurrentUserService.GetCurrentUser().Role < IdentityRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
         }
@@ -1304,7 +1304,7 @@
             // Load users and groups
             _users = UserManager.GetUsers();
             _groups = UserManager.GetGroups();
-            _adminUsers = _users.Where(u => u.Role == UserRole.Admin).ToList();
+            _adminUsers = _users.Where(u => u.Role == IdentityRole.Admin).ToList();
 
             // Load token metrics
             var tokenMeter = MetricsProvider.TokenMetrics.InMemoryMeter;
@@ -1332,7 +1332,7 @@
         StateHasChanged();
     }
 
-    private async Task ChangeUserRole(User user, UserRole newRole)
+    private async Task ChangeUserRole(User user, IdentityRole newRole)
     {
         try
         {

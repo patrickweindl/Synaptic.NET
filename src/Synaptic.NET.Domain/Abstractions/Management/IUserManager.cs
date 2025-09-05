@@ -9,7 +9,7 @@ public interface IUserManager
 
     List<Group> GetGroups();
 
-    void SetUserRole(User currentUser, User targetUser, UserRole targetRole);
+    void SetUserRole(User currentUser, User targetUser, IdentityRole targetRole);
 
     void CreateGroup(User currentUser, string groupName);
 
