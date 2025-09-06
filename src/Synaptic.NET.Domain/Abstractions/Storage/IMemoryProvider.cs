@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Abstractions.Storage;
@@ -48,8 +49,9 @@ public interface IMemoryProvider
     /// </summary>
     /// <param name="collectionTitle">The title of the collection to create.</param>
     /// <param name="storeDescription">An optional description of the collection to be created.</param>
+    /// <param name="memoryStore">The created memory store if successful.</param>
     /// <returns>A task representing the operation, returning true if the collection was successfully created, otherwise false.</returns>
-    Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription);
+    Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore memoryStore);
 
     /// <summary>
     /// Creates a new memory entry and routes it to the most suitable collection.

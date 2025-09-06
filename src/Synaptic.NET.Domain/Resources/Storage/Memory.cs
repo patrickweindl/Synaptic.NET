@@ -25,6 +25,7 @@ public class Memory
     [VectorStoreData(StorageName = "description", IsFullTextIndexed = true)]
     [JsonPropertyName("description")]
     [Description("A description of the memory, shorter than the actual content, but provides context about the memory content. Has a maximum length of 512 characters.")]
+    [MaxLength(512)]
     public string Description { get; set; } = string.Empty;
 
     [VectorStoreData(StorageName = "content", IsFullTextIndexed = true)]
@@ -43,6 +44,11 @@ public class Memory
     [Description("Tags for the memory for easier referencing. Default to no tags.")]
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
+
+    [VectorStoreData(StorageName = "reference_type")]
+    [Description("The type of the reference, e.g. conversation, document, memory, codebase, homepage or none. Defaults to none.")]
+    [JsonPropertyName("reference_type")]
+    public ReferenceType ReferenceType { get; set; } = ReferenceType.None;
 
     [VectorStoreData(StorageName = "reference")]
     [Description("An optional reference that can be accessed to retrieve further information, e.g. a URL or a PDF name with page number. Has a maximum length of 2048 characters.")]

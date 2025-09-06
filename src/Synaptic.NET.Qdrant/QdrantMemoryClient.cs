@@ -47,12 +47,27 @@ public class QdrantMemoryClient
     {
         using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
-        var result = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+        var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
+            VectorProperty = m => m.ContentEmbedding,
+            Filter = m => m.Owner == userIdentifier
+        },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+
+        var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+        {
+            VectorProperty = m => m.TitleEmbedding,
             Filter = m => m.Owner == userIdentifier
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
-        return result
-            .Where(v => v.Score >= relevanceThreshold)
+
+        var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+        {
+            VectorProperty = m => m.DescriptionEmbedding,
+            Filter = m => m.Owner == userIdentifier
+        }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+
+
+        return contentResult.Concat(titleResult).Concat(descriptionResult)
+            .Where(v => v.Score > relevanceThreshold)
             .OrderBy(r => r.Score)
             .Take(top)
             .Select(v => new MemorySearchResult { Memory = v.Record, Relevance = v.Score ?? 0 });
@@ -62,11 +77,27 @@ public class QdrantMemoryClient
     {
         using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
-        var result = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+
+        var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
-            Filter = m => m.StoreId == collectionIdentifier
+            VectorProperty = m => m.ContentEmbedding,
+            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
         },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
-        return result
+
+        var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+        {
+            VectorProperty = m => m.TitleEmbedding,
+            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
+        }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+
+        var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
+        {
+            VectorProperty = m => m.DescriptionEmbedding,
+            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
+        }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+
+
+        return contentResult.Concat(titleResult).Concat(descriptionResult)
             .Where(v => v.Score > relevanceThreshold)
             .OrderBy(r => r.Score)
             .Take(top)
