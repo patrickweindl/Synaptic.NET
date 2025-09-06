@@ -13,7 +13,7 @@ public class Memory
     [Key]
     [Description("A unique identifier for a memory entry.")]
     [JsonPropertyName("id")]
-    public Guid Identifier { get; set; }
+    public required Guid Identifier { get; set; }
 
     [VectorStoreData(StorageName = "title", IsFullTextIndexed = true)]
     [Required]
@@ -40,8 +40,8 @@ public class Memory
     [JsonPropertyName("pinned")]
     public bool Pinned { get; set; }
 
-    [VectorStoreData(StorageName = "tags", IsFullTextIndexed = true)]
-    [Description("Tags for the memory for easier referencing. Default to no tags.")]
+    [VectorStoreData(StorageName = "tags", IsIndexed = true)]
+    [Description("Tags for the memory for easier referencing. Defaults to no tags.")]
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
 
@@ -49,7 +49,7 @@ public class Memory
     [Description("The type of the reference, e.g. conversation, document, memory, codebase, homepage or none. Defaults to none.")]
     [JsonPropertyName("reference_type")]
     [Range(0, 5)]
-    public int ReferenceType { get; set; } = 0;
+    public int ReferenceType { get; set; }
 
     [NotMapped]
     [JsonIgnore]
@@ -64,19 +64,21 @@ public class Memory
     [VectorStoreData(StorageName = "created_at", IsIndexed = true)]
     [Description("The datetime (with timezone) the memory has been created at. Usually set by the backend on creation.")]
     [JsonPropertyName("created_at")]
-    public DateTimeOffset CreatedAt { get; set; }
+    [Required]
+    public required DateTimeOffset CreatedAt { get; set; }
 
     [VectorStoreData(StorageName = "updated_at", IsIndexed = true)]
-    [Description("The datetime (with timezone) the memory has last been updated at. When initializing object, set to unix 0 (1970-01-01T00:00:00Z). Usually set by the backend on updates.")]
+    [Description(
+        "The datetime (with timezone) the memory has last been updated at. When initializing object, set to unix 0 (1970-01-01T00:00:00Z). Usually set by the backend on updates.")]
     [JsonPropertyName("updated_at")]
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UnixEpoch;
 
     private Guid? _ownerGuid;
 
     [Description(
         "The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
     [JsonPropertyName("owner")]
-    public required Guid Owner
+    public Guid Owner
     {
         get
         {
@@ -105,7 +107,7 @@ public class Memory
             }
             return _ownerGuidString;
         }
-        set
+        init
         {
             _ownerGuid = Guid.Parse(value);
             _ownerGuidString = value;
@@ -117,20 +119,16 @@ public class Memory
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
     [NotMapped]
-    [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "store_description_embedding")]
-    public ReadOnlyMemory<float>? StoreDescriptionEmbedding { get; set; }
-
-    [NotMapped]
     [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "title_embedding")]
-    public ReadOnlyMemory<float>? TitleEmbedding { get; set; }
+    public ReadOnlyMemory<float> TitleEmbedding { get; set; }
 
     [NotMapped]
     [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "description_embedding")]
-    public ReadOnlyMemory<float>? DescriptionEmbedding { get; set; }
+    public ReadOnlyMemory<float> DescriptionEmbedding { get; set; }
 
     [NotMapped]
     [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
-    public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
+    public ReadOnlyMemory<float> ContentEmbedding { get; set; }
 
     private Guid? _storeId;
 

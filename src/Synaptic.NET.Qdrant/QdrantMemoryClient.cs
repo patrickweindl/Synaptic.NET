@@ -4,6 +4,8 @@ using Microsoft.SemanticKernel.Connectors.Qdrant;
 using OpenAI;
 using OpenAI.Embeddings;
 using Qdrant.Client;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Configuration;
 using Synaptic.NET.Domain.Resources.Storage;
 
@@ -14,7 +16,8 @@ public class QdrantMemoryClient
     private readonly EmbeddingClient _embeddingGenerator;
     private readonly QdrantClient _client;
     private readonly QdrantVectorStore _store;
-    public QdrantMemoryClient(SynapticServerSettings settings)
+    private readonly IMemoryAugmentationService _memoryAugmentationService;
+    public QdrantMemoryClient(SynapticServerSettings settings, IMemoryAugmentationService augmentationService)
     {
         _embeddingGenerator = new OpenAIClient(settings.OpenAiApiKey)
             .GetEmbeddingClient(settings.OpenAiEmbeddingModel);
@@ -43,34 +46,39 @@ public class QdrantMemoryClient
                 EmbeddingGenerator = _embeddingGenerator.AsIEmbeddingGenerator(),
                 HasNamedVectors = true
             });
+
+        _memoryAugmentationService = augmentationService;
     }
 
     public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int top, double relevanceThreshold, Guid userIdentifier, CancellationToken cancellationToken = default)
     {
+        string userId = userIdentifier.ToString();
         using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
         var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.ContentEmbedding,
-            Filter = m => m.OwnerId == userIdentifier.ToString()
+            Filter = m => m.OwnerId == userId
         },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.TitleEmbedding,
-            Filter = m => m.OwnerId == userIdentifier.ToString()
+            Filter = m => m.OwnerId == userId
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.DescriptionEmbedding,
-            Filter = m => m.OwnerId == userIdentifier.ToString()
+            Filter = m => m.OwnerId == userId
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 
         return contentResult.Concat(titleResult).Concat(descriptionResult)
             .Where(v => v.Score > relevanceThreshold)
-            .OrderBy(r => r.Score)
+            .OrderByDescending(r => r.Score)
+            .DistinctBy(v => v.Record.Identifier)
             .Take(top)
             .Select(v => new MemorySearchResult { Memory = v.Record, Relevance = v.Score ?? 0 });
     }
@@ -125,10 +133,17 @@ public class QdrantMemoryClient
         await collection.DeleteAsync(memoryIdentifier, cancellationToken);
     }
 
-    public async Task UpsertMemoryAsync(Guid userIdentifier, Memory memory, CancellationToken cancellationToken = default)
+    public async Task UpsertMemoryAsync(IManagedIdentity identity, Memory memory, CancellationToken cancellationToken = default)
     {
-        using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
+        using var collection = _store.GetCollection<Guid, Memory>(identity.Id.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
+        await _client.CreateAliasAsync(identity.DisplayName, identity.Id.ToString(), cancellationToken: cancellationToken);
+
+        if (string.IsNullOrEmpty(memory.Description))
+        {
+            memory.Description = await _memoryAugmentationService.GenerateMemoryDescriptionAsync(memory.Content);
+        }
+
         var contentEmbeddingResult = await _embeddingGenerator.GenerateEmbeddingAsync(memory.Content, cancellationToken: cancellationToken);
         var descriptionEmbeddingResult =
             await _embeddingGenerator.GenerateEmbeddingAsync(memory.Description, cancellationToken: cancellationToken);
@@ -140,7 +155,7 @@ public class QdrantMemoryClient
         await collection.UpsertAsync(memory, cancellationToken);
     }
 
-    public async Task UpsertMemoryStoreAsync(Guid userIdentifier, MemoryStore memoryStore, CancellationToken cancellationToken = default)
+    public async Task UpsertMemoryStoreAsync(IManagedIdentity identity, MemoryStore memoryStore, CancellationToken cancellationToken = default)
     {
         foreach (var memory in memoryStore.Memories)
         {
@@ -150,7 +165,7 @@ public class QdrantMemoryClient
 
         var upsertTasks = memoryStore.Memories.Select(async m =>
         {
-            await UpsertMemoryAsync(userIdentifier, m, cancellationToken);
+            await UpsertMemoryAsync(identity, m, cancellationToken);
         });
 
         await Task.WhenAll(upsertTasks);

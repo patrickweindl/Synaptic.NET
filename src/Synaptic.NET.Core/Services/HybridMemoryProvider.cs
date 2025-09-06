@@ -158,7 +158,7 @@ public class HybridMemoryProvider : IMemoryProvider
         memory.Store = targetStore;
         targetStore.Memories.Add(memory);
         await _dbContext.SaveChangesAsync();
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, memory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
         return true;
     }
 
@@ -174,7 +174,7 @@ public class HybridMemoryProvider : IMemoryProvider
         memory.Store = targetStore;
         targetStore.Memories.Add(memory);
         await _dbContext.SaveChangesAsync();
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, memory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
         return true;
     }
 
@@ -190,7 +190,7 @@ public class HybridMemoryProvider : IMemoryProvider
         targetStore.Memories.Add(memory);
         _dbContext.MemoryStores.Update(targetStore);
         await _dbContext.SaveChangesAsync();
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, memory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
         return true;
     }
 
@@ -215,7 +215,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, newStore);
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser(), newStore);
 
         return true;
     }
@@ -241,7 +241,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, newStore);
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser(), newStore);
 
         return true;
     }
@@ -269,7 +269,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), newMemory);
 
         return true;
     }
@@ -297,7 +297,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), newMemory);
 
         return true;
     }
@@ -333,7 +333,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), newMemory);
 
         return true;
     }
@@ -398,7 +398,7 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), existingMemory);
 
         return true;
     }
@@ -425,7 +425,7 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), existingMemory);
 
         return true;
     }
@@ -460,7 +460,7 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), existingMemory);
 
         return true;
     }

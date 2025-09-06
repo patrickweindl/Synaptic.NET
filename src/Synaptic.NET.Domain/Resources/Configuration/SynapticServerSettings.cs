@@ -26,6 +26,8 @@ public class SynapticServerSettings
         OpenAiTaskAugmentationModel = _configuration?["OpenAi:TaskAugmentationModel"] ?? "gpt-4o";
         OpenAiMemoryAugmentationModel = _configuration?["OpenAi:MemoryAugmentationModel"] ?? "gpt-5-mini";
 
+        QdrantServerUrl = _configuration?["Servers:QdrantUrl"] ?? "http://localhost:6334";
+
         Log.Information("Created server settings:");
         Log.Information($"Task Augmentation Model: {OpenAiTaskAugmentationModel}");
         Log.Information($"Memory Augmentation Model: {OpenAiMemoryAugmentationModel}");
@@ -64,7 +66,7 @@ public class SynapticServerSettings
     public List<string> KnownProxies { get; }
     public int ServerPort => string.IsNullOrEmpty(_configuration?["Servers:Port"]) ? 8000 : int.Parse(_configuration["Servers:Port"]!);
     public List<string> AdminIdentifiers => string.IsNullOrEmpty(_configuration?["Security:Admins"]) ? new List<string>() : _configuration["Security:Admins"]?.Split(',').ToList() ?? new();
-    public string QdrantServerUrl => _configuration?["Servers:QdrantUrl"] ?? "http://localhost:6334";
+    public string QdrantServerUrl { get; set; }
 
     public OAuthSettings GitHubOAuthSettings => new()
     {

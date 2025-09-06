@@ -38,6 +38,7 @@ public static class MemoryUpdate
 
         Memory newMemory = new()
         {
+            Identifier = memoryIdentifier,
             Owner = currentUserService.GetCurrentUser().Id,
             Title = memoryTitle,
             Content = content,
