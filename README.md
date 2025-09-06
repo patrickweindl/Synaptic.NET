@@ -1,6 +1,6 @@
 # Synaptic.NET
-A purely .NET based solution to provide an ASP.NET server with MCP, RESTful API functionalities, a Blazor web interface,
-a RAG base via Qdrant and OpenAI API communication - all secured via OAuth2.
+Synaptic.NET is a fully .NET-based solution to provide an ASP.NET server with MCP, RESTful API functionalities, a Blazor web interface,
+a RAG base via Qdrant and OpenAI API communication — all secured via OAuth2.
 
 This repository acts as a starting point to dive into setting up MCP+RESTful RAG systems with a basic implementation through Qdrant.
 
@@ -14,19 +14,25 @@ To explore functionality with a default setup:
 
 ## Features
 
-- [ ] Blazor Web UI
+- [x] Blazor Web UI
     - [x] Login/Logout
+    - [x] User Management
     - [ ] Dashboard
     - [ ] Search
+    - [ ] Observable results
     - [ ] File Upload
     - [ ] Memory Management
-- [ ] MCP
-  - [ ] Memory Endpoints
-  - [ ] Common Tools
+- [x] MCP
+  - [x] Memory Endpoints
+  - [x] Common Tools
 - [ ] RESTful API
     - [ ] Memory Endpoints
     - [ ] Common Tools
-- [ ] Qdrant
+- [x] Backend
+  - [x] OAuth2
+  - [ ] Observable results for memory creation and search for frontend
+  - [ ] Group permissions for users
+- [x] Qdrant
 - [x] OpenAI
 - [ ] Builder pattern for AppHost
 - [ ] Docker support
