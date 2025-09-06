@@ -11,7 +11,11 @@ public sealed class MetricsCollectorProvider : IMetricsCollectorProvider, IDispo
     public MetricsCollectorProvider()
     {
         MetricsStore = new();
-        MetricsStore.InitFromFile();
+        try
+        {
+            MetricsStore.InitFromFile();
+        }
+        catch {/**/}
         TokenMetrics = new TokenMetricCollector(MetricsStore);
         ApiMetrics = new ApiMetricsCollector(MetricsStore);
         RecurringTask.Create(MetricsStore.ExportToFile, TimeSpan.FromMinutes(1), _tokenSource.Token);

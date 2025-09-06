@@ -48,7 +48,12 @@ public class Memory
     [VectorStoreData(StorageName = "reference_type")]
     [Description("The type of the reference, e.g. conversation, document, memory, codebase, homepage or none. Defaults to none.")]
     [JsonPropertyName("reference_type")]
-    public ReferenceType ReferenceType { get; set; } = ReferenceType.None;
+    [Range(0, 5)]
+    public int ReferenceType { get; set; } = 0;
+
+    [NotMapped]
+    [JsonIgnore]
+    public ReferenceType RefType => (ReferenceType)ReferenceType;
 
     [VectorStoreData(StorageName = "reference")]
     [Description("An optional reference that can be accessed to retrieve further information, e.g. a URL or a PDF name with page number. Has a maximum length of 2048 characters.")]

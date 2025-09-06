@@ -1300,7 +1300,7 @@
             StateHasChanged();
             var saveTasks = results.Select(async result =>
             {
-                result.memory.ReferenceType = ReferenceType.Document;
+                result.memory.ReferenceType = (int)ReferenceType.Document;
                 result.memory.Reference = result.referenceName;
                 await MemoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, result.memory, memoryStore.Description);
             });

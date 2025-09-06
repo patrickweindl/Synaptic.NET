@@ -5,6 +5,11 @@ namespace Synaptic.NET.Core.Metrics;
 
 public record MetricsEvent<T>
 {
+    [JsonConstructor]
+    protected MetricsEvent()
+    {
+
+    }
     public MetricsEvent(T value, string operation, User? userIdentifier = null)
     {
         Timestamp = DateTime.UtcNow;
