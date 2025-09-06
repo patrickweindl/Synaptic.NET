@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
+using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Resources;
@@ -19,13 +20,15 @@ public class HybridMemoryProvider : IMemoryProvider
     private readonly QdrantMemoryClient _qdrantMemoryClient;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMemoryStoreRouter _storeRouter;
+    private readonly IMemoryAugmentationService _augmentationService;
 
-    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient, IMemoryStoreRouter storeRouter)
+    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient, IMemoryStoreRouter storeRouter, IMemoryAugmentationService augmentationService)
     {
         _currentUserService = currentUserService;
         _dbContext = synapticDbContext;
         _qdrantMemoryClient = qdrantMemoryClient;
         _storeRouter = storeRouter;
+        _augmentationService = augmentationService;
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync()
@@ -93,8 +96,8 @@ public class HybridMemoryProvider : IMemoryProvider
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier);
         if (targetStore == null)
         {
-            // TODO: Add creation of a store title based on the memory.
-            await CreateCollectionAsync("placeHolder", storeDescription, out targetStore);
+            string title = await _augmentationService.GenerateStoreTitleAsync(storeDescription, [memory]);
+            await CreateCollectionAsync(title, storeDescription, out targetStore);
         }
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
@@ -125,24 +128,24 @@ public class HybridMemoryProvider : IMemoryProvider
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
-        
+
         if (existingStore == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, existingStore);
-        
+
         _dbContext.MemoryStores.Remove(existingStore);
-        
+
         newStore.StoreId = collectionIdentifier;
         newStore.OwnerUser = _currentUserService.GetCurrentUser();
         _dbContext.MemoryStores.Add(newStore);
-        
+
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, newStore);
-        
+
         return true;
     }
 
@@ -151,24 +154,24 @@ public class HybridMemoryProvider : IMemoryProvider
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
-        
+
         if (existingStore == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, existingStore);
-        
+
         _dbContext.MemoryStores.Remove(existingStore);
-        
+
         newStore.StoreId = existingStore.StoreId;
         newStore.OwnerUser = _currentUserService.GetCurrentUser();
         _dbContext.MemoryStores.Add(newStore);
-        
+
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, newStore);
-        
+
         return true;
     }
 
@@ -176,27 +179,27 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
-        
+
         if (existingMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, entryIdentifier);
-        
+
         _dbContext.Memories.Remove(existingMemory);
-        
+
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = existingMemory.StoreId;
         newMemory.Owner = _currentUserService.GetCurrentUser().Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Add(newMemory);
-        
+
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
-        
+
         return true;
     }
 
@@ -204,27 +207,27 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
-        
+
         if (existingMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, entryIdentifier);
-        
+
         _dbContext.Memories.Remove(existingMemory);
-        
+
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = collectionIdentifier;
         newMemory.Owner = _currentUserService.GetCurrentUser().Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Add(newMemory);
-        
+
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
-        
+
         return true;
     }
 
@@ -232,7 +235,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
-        
+
         if (targetStore == null)
         {
             return false;
@@ -240,27 +243,27 @@ public class HybridMemoryProvider : IMemoryProvider
 
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == targetStore.StoreId);
-        
+
         if (existingMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, entryIdentifier);
-        
+
         _dbContext.Memories.Remove(existingMemory);
-        
+
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = targetStore.StoreId;
         newMemory.Owner = _currentUserService.GetCurrentUser().Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Add(newMemory);
-        
+
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, newMemory);
-        
+
         return true;
     }
 
@@ -268,7 +271,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
-        
+
         if (existingStore == null)
         {
             return false;
@@ -276,10 +279,10 @@ public class HybridMemoryProvider : IMemoryProvider
 
         existingStore.Title = newStore.Title;
         existingStore.Description = newStore.Description;
-        
+
         _dbContext.MemoryStores.Update(existingStore);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -287,7 +290,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
-        
+
         if (existingStore == null)
         {
             return false;
@@ -295,10 +298,10 @@ public class HybridMemoryProvider : IMemoryProvider
 
         existingStore.Title = newStore.Title;
         existingStore.Description = newStore.Description;
-        
+
         _dbContext.MemoryStores.Update(existingStore);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -306,7 +309,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
-        
+
         if (existingMemory == null)
         {
             return false;
@@ -320,12 +323,12 @@ public class HybridMemoryProvider : IMemoryProvider
         existingMemory.ReferenceType = newMemory.ReferenceType;
         existingMemory.Reference = newMemory.Reference;
         existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
-        
+
         return true;
     }
 
@@ -333,7 +336,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
-        
+
         if (existingMemory == null)
         {
             return false;
@@ -347,12 +350,12 @@ public class HybridMemoryProvider : IMemoryProvider
         existingMemory.ReferenceType = newMemory.ReferenceType;
         existingMemory.Reference = newMemory.Reference;
         existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
-        
+
         return true;
     }
 
@@ -360,7 +363,7 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
-        
+
         if (targetStore == null)
         {
             return false;
@@ -368,7 +371,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == targetStore.StoreId);
-        
+
         if (existingMemory == null)
         {
             return false;
@@ -382,12 +385,12 @@ public class HybridMemoryProvider : IMemoryProvider
         existingMemory.ReferenceType = newMemory.ReferenceType;
         existingMemory.Reference = newMemory.Reference;
         existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
-        
+
         _dbContext.Memories.Update(existingMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser().Id, existingMemory);
-        
+
         return true;
     }
 
@@ -396,17 +399,17 @@ public class HybridMemoryProvider : IMemoryProvider
         var targetStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
-        
+
         if (targetStore == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, targetStore);
-        
+
         _dbContext.MemoryStores.Remove(targetStore);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -415,17 +418,17 @@ public class HybridMemoryProvider : IMemoryProvider
         var targetStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
-        
+
         if (targetStore == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, targetStore);
-        
+
         _dbContext.MemoryStores.Remove(targetStore);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -433,17 +436,17 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
-        
+
         if (targetMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, entryIdentifier);
-        
+
         _dbContext.Memories.Remove(targetMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -451,17 +454,17 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
-        
+
         if (targetMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, entryIdentifier);
-        
+
         _dbContext.Memories.Remove(targetMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 
@@ -469,17 +472,17 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Title == entryTitle && m.StoreId == collectionIdentifier);
-        
+
         if (targetMemory == null)
         {
             return false;
         }
 
         await _qdrantMemoryClient.DeleteMemoryAsync(_currentUserService.GetCurrentUser().Id, targetMemory.Identifier);
-        
+
         _dbContext.Memories.Remove(targetMemory);
         await _dbContext.SaveChangesAsync();
-        
+
         return true;
     }
 }

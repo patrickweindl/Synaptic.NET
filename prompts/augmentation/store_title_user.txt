@@ -1,0 +1,3 @@
+Store description: {StoreDescription}
+Memories:
+{Memories}

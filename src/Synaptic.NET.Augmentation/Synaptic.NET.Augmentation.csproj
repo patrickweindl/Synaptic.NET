@@ -16,6 +16,12 @@
       <EmbeddedResource Include="../../prompts/**/*.txt">
         <LogicalName>Prompts.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
       </EmbeddedResource>
+      <EmbeddedResource Update="..\..\prompts\augmentation\store_title_user.txt">
+        <Link>augmentation\store_title_user.txt</Link>
+      </EmbeddedResource>
+      <EmbeddedResource Update="..\..\prompts\augmentation\store_title_system.txt">
+        <Link>augmentation\store_title_system.txt</Link>
+      </EmbeddedResource>
     </ItemGroup>
 
 </Project>

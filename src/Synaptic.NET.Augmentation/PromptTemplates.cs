@@ -57,6 +57,12 @@ public static class PromptTemplates
     public static string GetStoreSummaryUserPrompt(string storeIdentifier, string memories)
         => Format(LoadPrompt("augmentation.store_summary_user"), ("StoreIdentifier", storeIdentifier), ("Memories", memories));
 
+    public static string GetStoreTitleSystemPrompt()
+        => LoadPrompt("core.store_title_system");
+
+    public static string GetStoreTitleUserPrompt(string storeDescription, string memories)
+        => Format(LoadPrompt("core.store_title_user"), ("StoreDescription", storeDescription), ("Memories", memories));
+
     public static string GetVectorSearchSystemPrompt()
         => LoadPrompt("core.vector_search_system");
 
