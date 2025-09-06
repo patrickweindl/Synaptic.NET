@@ -71,7 +71,19 @@ public class UserManager : IUserManager
         _dbContext.SaveChanges();
     }
 
-    public void RemoveUserFromGroup(User currentUser, User targetUser, Group group) => throw new NotImplementedException();
+    public void RemoveUserFromGroup(User currentUser, User targetUser, Group group)
+    {
+        if (currentUser.Role < IdentityRole.Admin)
+        {
+            return;
+        }
+        if (group.Memberships.FirstOrDefault(m => m.UserId == targetUser.Id) is { } existingMembership)
+        {
+            group.Memberships.Remove(existingMembership);
+            _dbContext.Groups.Update(group);
+            _dbContext.SaveChanges();
+        }
+    }
 
     public string ReadableGroupNameToUserGroupIdentifier(string groupName)
     {

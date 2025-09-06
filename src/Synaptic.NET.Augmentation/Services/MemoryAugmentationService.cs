@@ -118,48 +118,51 @@ public class MemoryAugmentationService : IMemoryAugmentationService
     public async Task<IEnumerable<(Guid, double)>> RankMemoriesAsync(string query, MemoryStore store, CancellationToken cancellationToken = default)
     {
         var memoryChunks = store.Memories.Chunk(20);
+        var rankTasks = memoryChunks.Select(async chunk => await RankMemoryChunkAsync(query, store, chunk, cancellationToken));
+        var result = await Task.WhenAll(rankTasks);
+        return result.SelectMany(r => r);
+    }
+
+    private async Task<IEnumerable<(Guid, double)>> RankMemoryChunkAsync(string query, MemoryStore store, IEnumerable<Memory> chunk, CancellationToken token = default)
+    {
         var ranking = new List<(Guid memoryId, double relevance)>();
-        await Parallel.ForEachAsync(memoryChunks, cancellationToken, async (chunk, token) =>
+        string memoryDescriptions = string.Join("\n", chunk.Select(r =>
+            $"Identifier: {r.Identifier} | Description: {r.Description} | Date: {r.CreatedAt:yyyy-MM-dd} | Tags: {r.Tags} | Content: {r.Content}"));
+
+        string systemPrompt = PromptTemplates.GetVectorSearchSystemPrompt();
+        string userPrompt = PromptTemplates.GetVectorSearchUserPrompt(query, store.Description, memoryDescriptions);
+
+        var messages = new List<ChatMessage>
         {
-            string memoryDescriptions = string.Join("\n", chunk.Select(r =>
-                $"Identifier: {r.Identifier} | Description: {r.Description} | Date: {r.CreatedAt:yyyy-MM-dd} | Tags: {r.Tags} | Content: {r.Content}"));
+            ChatMessage.CreateSystemMessage(systemPrompt),
+            ChatMessage.CreateUserMessage(userPrompt)
+        };
+        var response = await _client.CompleteChatAsync(messages, cancellationToken: token);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Augmented Search", response.Value);
+        string suggestion = response.Value.Content[0].Text ?? string.Empty;
 
-            string systemPrompt = PromptTemplates.GetVectorSearchSystemPrompt();
-            string userPrompt = PromptTemplates.GetVectorSearchUserPrompt(query, store.Description, memoryDescriptions);
+        if (string.IsNullOrEmpty(suggestion))
+        {
+            return ranking;
+        }
 
-            var messages = new List<ChatMessage>
+        string[] orderedSuggestions = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (string result in orderedSuggestions)
+        {
+            try
             {
-                ChatMessage.CreateSystemMessage(systemPrompt),
-                ChatMessage.CreateUserMessage(userPrompt)
-            };
-            var response = await _client.CompleteChatAsync(messages, cancellationToken: token);
-            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Augmented Search", response.Value);
-            string suggestion = response.Value.Content[0].Text ?? string.Empty;
-
-            if (string.IsNullOrEmpty(suggestion))
-            {
-                return;
+                string[] splits = result.Split("__");
+                string identifier = splits[0];
+                double weight = double.Parse(splits[1], NumberStyles.Any, CultureInfo.InvariantCulture);
+                Guid id = Guid.Parse(identifier);
+                ranking.Add((id, weight));
             }
-
-            var ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            foreach (var result in ordered)
+            catch (Exception)
             {
-                try
-                {
-                    string[] splits = result.Split("__");
-                    string identifier = splits[0];
-                    double weight = double.Parse(splits[1], NumberStyles.Any, CultureInfo.InvariantCulture);
-                    Guid id = Guid.Parse(identifier);
-                    ranking.Add((id, weight));
-                }
-                catch (Exception)
-                {
-                    Log.Error("Failed to parse a model response for augmented search!.");
-                }
-
+                Log.Error("Failed to parse a model response for augmented search!.");
             }
-        });
+        }
         return ranking;
     }
 }

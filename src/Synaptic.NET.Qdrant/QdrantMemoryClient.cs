@@ -108,12 +108,14 @@ public class QdrantMemoryClient
 
     public async Task DeleteMemoryStoreAsync(Guid userIdentifier, MemoryStore memoryStore, CancellationToken cancellationToken = default)
     {
-        using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
-        await collection.EnsureCollectionExistsAsync(cancellationToken);
-        await Parallel.ForEachAsync(memoryStore.Memories, cancellationToken, async (memory, _) =>
+        var deletionTasks = memoryStore.Memories.Select(async m =>
         {
-            await collection.DeleteAsync(memory.Identifier, cancellationToken);
+            using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
+            await collection.EnsureCollectionExistsAsync(cancellationToken);
+            await collection.DeleteAsync(m.Identifier, cancellationToken);
         });
+
+        await Task.WhenAll(deletionTasks);
     }
 
     public async Task DeleteMemoryAsync(Guid userIdentifier, Guid memoryIdentifier, CancellationToken cancellationToken = default)
@@ -140,19 +142,17 @@ public class QdrantMemoryClient
 
     public async Task UpsertMemoryStoreAsync(Guid userIdentifier, MemoryStore memoryStore, CancellationToken cancellationToken = default)
     {
-        using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
-        await Parallel.ForEachAsync(memoryStore.Memories, cancellationToken, async (memory, _) =>
+        foreach (var memory in memoryStore.Memories)
         {
-            await collection.EnsureCollectionExistsAsync(cancellationToken);
-            var contentEmbeddingResult = await _embeddingGenerator.GenerateEmbeddingAsync(memory.Content, cancellationToken: cancellationToken);
-            var descriptionEmbeddingResult =
-                await _embeddingGenerator.GenerateEmbeddingAsync(memory.Description, cancellationToken: cancellationToken);
-            var titleEmbedding = await _embeddingGenerator.GenerateEmbeddingAsync(memory.Title, cancellationToken: cancellationToken);
+            memory.StoreId = memoryStore.StoreId;
+            memory.Store = memoryStore;
+        }
 
-            memory.TitleEmbedding = titleEmbedding.Value.ToFloats();
-            memory.ContentEmbedding = contentEmbeddingResult.Value.ToFloats();
-            memory.DescriptionEmbedding = descriptionEmbeddingResult.Value.ToFloats();
-            await collection.UpsertAsync(memory, cancellationToken);
+        var upsertTasks = memoryStore.Memories.Select(async m =>
+        {
+            await UpsertMemoryAsync(userIdentifier, m, cancellationToken);
         });
+
+        await Task.WhenAll(upsertTasks);
     }
 }

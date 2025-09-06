@@ -18,7 +18,7 @@ public interface IMemoryStoreRouter
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of
     /// <see cref="MemoryStoreRoutingResult"/> objects, each containing an identifier and a relevance score
     /// for the ranked memory stores.</returns>
-    Task<List<MemoryStoreRoutingResult>> RankStoresAsync(string query, IEnumerable<MemoryStore> availableStores);
+    Task<IEnumerable<MemoryStoreRoutingResult>> RankStoresAsync(string query, IEnumerable<MemoryStore> availableStores);
 
     /// <summary>
     /// Routes a given memory to the most appropriate memory store from a provided collection of available memory stores,

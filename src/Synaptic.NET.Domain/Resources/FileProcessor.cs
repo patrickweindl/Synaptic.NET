@@ -16,6 +16,9 @@ public class FileProcessor
 {
     private readonly IFileMemoryCreationService _fileMemoryCreationService;
     private readonly IMemoryAugmentationService _augmentationService;
+    private int _chunksCount;
+    private int _chunksFinished;
+
     public FileProcessor(IFileMemoryCreationService fileMemoryCreationService, IMemoryAugmentationService augmentationService)
     {
         _fileMemoryCreationService = fileMemoryCreationService;
@@ -32,8 +35,6 @@ public class FileProcessor
     {
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, base64String.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
-        Guid storeIdentifier = Guid.NewGuid();
-        ConcurrentBag<MemorySummary> summaries = new();
         DateTime start = DateTime.Now;
         Log.Information("[File Processor] Starting file chunking...");
         Message = "Starting file chunking...";
@@ -56,55 +57,26 @@ public class FileProcessor
             base64EncodedChunks.Add(Convert.ToBase64String(output));
             Progress += 0.1 / chunkIndices.Count;
         }
+        _chunksCount = base64EncodedChunks.Count;
 
         Progress = 0.1;
-
         Message = "Finished file preparation. Starting model processing...";
-
         Log.Information("[File Processor] Finished file chunking, created {Count} chunks!", base64EncodedChunks.Count);
 
-        int chunksFinished = 0;
-        await Parallel.ForEachAsync(base64EncodedChunks, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (base64EncodedChunk, _) =>
-        {
-            DateTime chunkStart = DateTime.Now;
-            Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", chunksFinished + 1,
-                base64EncodedChunks.Count);
-            var response =
-                await _fileMemoryCreationService.CreateMemoriesFromPdfFileAsync(fileName, base64EncodedChunk);
-            Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", chunksFinished + 1,
-                (DateTime.Now - chunkStart).TotalSeconds);
-            foreach (var summary in response.Summaries)
-            {
-                summaries.Add(summary);
-            }
-            Progress += 0.9 / base64EncodedChunks.Count;
-            chunksFinished++;
-            Message =
-                $"Finished chunk {chunksFinished + 1} of {base64EncodedChunks.Count} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
-        });
+        var chunkTasks = base64EncodedChunks.Select(async chunk => await CreateMemorySummaryFromBase64EncodedString(fileName, chunk));
+        var chunkResults = (await Task.WhenAll(chunkTasks)).SelectMany(s => s).ToList();
 
-        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", summaries.Count, base64String.Length, summaries.Sum(s => s.Summary.Length));
-        Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {summaries.Sum(s => s.Summary.Length)} characters to {base64String.Length} characters.";
+        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, base64String.Length, chunkResults.Sum(s => s.Summary.Length));
+        Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {base64String.Length} characters.";
 
-        var returnMemories = new List<(string, Memory)>();
-        var chunksList = summaries.ToList();
-        await Parallel.ForEachAsync(chunksList, async (summary, _) =>
-        {
-            Memory mem = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Title = summary.Identifier,
-                Description = await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary),
-                Content = summary.Summary,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UnixEpoch,
-                Reference = fileName,
-                Owner = user.Id
-            };
-            returnMemories.Add((fileName, mem));
-        });
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, fileName, summary));
+        var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
         Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
+
+        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, returnMemories.Select(m => m.Item2).ToList());
+        StoreDescription = description;
+
         Result = returnMemories;
         Completed = true;
         Progress = 1;
@@ -114,8 +86,6 @@ public class FileProcessor
     {
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, fileContent.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
-        Guid storeIdentifier = Guid.NewGuid();
-        ConcurrentBag<MemorySummary> summaries = new();
         DateTime start = DateTime.Now;
         Log.Information("[File Processor] Starting file chunking...");
         Message = "Starting file chunking...";
@@ -134,47 +104,16 @@ public class FileProcessor
         Message = "Finished file preparation. Starting model processing...";
         Progress = 0.1;
 
-        int chunksFinished = 0;
-        await Parallel.ForEachAsync(chunks, async (chunk, _) =>
-        {
-            DateTime chunkStart = DateTime.Now;
-            Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", chunksFinished + 1, chunks.Count);
-            if (string.IsNullOrWhiteSpace(chunk))
-            {
-                Log.Warning("[File Processor] Chunk {ChunkIndex} is empty, skipping.", chunksFinished + 1);
-                return;
-            }
+        _chunksCount = chunks.Count;
 
-            var response = await _fileMemoryCreationService.CreateMemoriesFromBase64String(fileName, chunk);
-            Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", chunksFinished + 1, (DateTime.Now - chunkStart).TotalSeconds);
-            foreach (var summary in response.Summaries)
-            {
-                summaries.Add(summary);
-            }
-            chunksFinished++;
-            Progress += 0.9 / chunks.Count;
-            Message = $"Finished chunk {chunksFinished + 1} of {chunks.Count} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
-        });
+        var chunkTasks = chunks.Select(async chunk => await CreateMemorySummaryFromRawString(fileName, chunk));
+        var chunkResults = (await Task.WhenAll(chunkTasks)).SelectMany(s => s).ToList();
 
-        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", summaries.Count, fileContent.Length, summaries.Sum(s => s.Summary.Length));
-        Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {summaries.Sum(s => s.Summary.Length)} characters to {fileContent.Length} characters.";
-        var returnMemories = new List<(string, Memory)>();
-        var returnSummaries = summaries.ToList();
-        await Parallel.ForEachAsync(returnSummaries, async (summary, _) =>
-        {
-            Memory mem = new()
-            {
-                Identifier = Guid.NewGuid(),
-                Description = await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary),
-                Title = summary.Identifier,
-                Content = summary.Summary,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UnixEpoch,
-                Reference = fileName,
-                Owner = user.Id
-            };
-            returnMemories.Add((fileName, mem));
-        });
+        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, fileContent.Length, chunkResults.Sum(s => s.Summary.Length));
+        Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {fileContent.Length} characters.";
+
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, fileName, summary));
+        var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
         Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
         Result = returnMemories;
@@ -183,6 +122,66 @@ public class FileProcessor
         StoreDescription = description;
         Completed = true;
         Progress = 100;
+    }
+
+    private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromBase64EncodedString(string fileName, string base64EncodedChunk)
+    {
+        var returnSummaries = new List<MemorySummary>();
+        DateTime chunkStart = DateTime.Now;
+        Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1,
+            _chunksCount);
+        var response =
+            await _fileMemoryCreationService.CreateMemoriesFromPdfFileAsync(fileName, base64EncodedChunk);
+        Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", _chunksFinished + 1,
+            (DateTime.Now - chunkStart).TotalSeconds);
+        foreach (var summary in response.Summaries)
+        {
+            returnSummaries.Add(summary);
+        }
+        Progress += 0.9 / _chunksCount;
+        _chunksFinished++;
+        Message =
+            $"Finished chunk {_chunksFinished + 1} of {_chunksCount} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
+        return returnSummaries;
+    }
+
+    private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromRawString(string fileName, string rawString)
+    {
+        var returnSummaries = new List<MemorySummary>();
+        DateTime chunkStart = DateTime.Now;
+        Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1, _chunksCount);
+        if (string.IsNullOrWhiteSpace(rawString))
+        {
+            Log.Warning("[File Processor] Chunk {ChunkIndex} is empty, skipping.", _chunksFinished + 1);
+            return returnSummaries;
+        }
+
+        var response = await _fileMemoryCreationService.CreateMemoriesFromBase64String(fileName, rawString);
+        Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", _chunksFinished + 1, (DateTime.Now - chunkStart).TotalSeconds);
+        foreach (var summary in response.Summaries)
+        {
+            returnSummaries.Add(summary);
+        }
+        _chunksFinished++;
+        Progress += 0.9 / _chunksCount;
+        Message = $"Finished chunk {_chunksFinished + 1} of {_chunksCount} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
+        return returnSummaries;
+    }
+
+    private async Task<(string, Memory)> CreateReturnMemory(User currentUser, string fileName, MemorySummary summary)
+    {
+        Memory mem = new()
+        {
+            Identifier = Guid.NewGuid(),
+            Title = summary.Identifier,
+            Description = await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary),
+            Content = summary.Summary,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UnixEpoch,
+            Reference = fileName,
+            Owner = currentUser.Id
+        };
+        return (fileName, mem);
     }
 
     public string Message { get; private set; } = string.Empty;

@@ -97,7 +97,7 @@
                                     @_uploadMessage
                                 </div>
                             }
-                            
+
                             @if (_isUploading && (!string.IsNullOrEmpty(_uploadProgress.Message) || _uploadProgress.Progress > 0))
                             {
                                 <div class="progress-section">
@@ -1288,31 +1288,31 @@
             }
 
             var results = processor.Result;
-            
+
             _uploadProgress.Message = "Creating memory collection...";
             _uploadProgress.Progress = 0.9;
             StateHasChanged();
-            
+
             await MemoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(_selectedFile.Name), processor.StoreDescription, out var memoryStore);
 
             _uploadProgress.Message = "Saving memories to database...";
             _uploadProgress.Progress = 0.95;
             StateHasChanged();
-
-            await Parallel.ForEachAsync(results, async (result, _) =>
+            var saveTasks = results.Select(async result =>
             {
                 result.memory.ReferenceType = ReferenceType.Document;
                 result.memory.Reference = result.referenceName;
                 await MemoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, result.memory, memoryStore.Description);
             });
+            await Task.WhenAll(saveTasks);
 
             _uploadProgress.Progress = 1.0;
             _uploadProgress.Message = "Upload completed successfully!";
             StateHasChanged();
-            
+
             // Show completion message briefly
             await Task.Delay(1000);
-            
+
             _uploadMessage = $"File '{_selectedFile.Name}' has been successfully uploaded and processed.";
             _uploadSuccess = true;
             _selectedFile = null;

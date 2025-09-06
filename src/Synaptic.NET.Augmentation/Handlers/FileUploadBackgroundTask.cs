@@ -53,11 +53,11 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
             {
                 await memoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(FileName), fileProcessor.StoreDescription, out var memoryStore);
 
-                await Parallel.ForEachAsync(fileProcessor.Result, cancellationToken, async (result, _) =>
-                    {
-                        Memory memory = result.memory;
-                        await memoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, memory);
-                    });
+                var saveTasks = fileProcessor.Result.Select(async m =>
+                {
+                    await memoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, m.memory);
+                });
+                await Task.WhenAll(saveTasks);
 
                 var result = new FileUploadResult
                 {

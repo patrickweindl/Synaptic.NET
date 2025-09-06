@@ -82,7 +82,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         var allStores = memoryStores.Concat(groupStores).ToList();
 
-        var storeRankings = await _storeRouter.RankStoresAsync(query, allStores);
+        var storeRankings = (await _storeRouter.RankStoresAsync(query, allStores)).ToList();
 
         var topScore = storeRankings.FirstOrDefault()?.Relevance ?? double.MinValue;
 
@@ -95,27 +95,39 @@ public class HybridMemoryProvider : IMemoryProvider
 
         var rankedStores = allStores.Where(s => storeRankings.Any(r => r.Identifier == s.StoreId)).ToList();
 
+        CancellationToken token = new CancellationTokenSource().Token;
+        var searchTasks = rankedStores.Select(async s => await AugmentedSearchInStore(s, query, limit, relevanceThreshold, token));
+        // TODO: Figure out a way to cancel the search tasks when the limit is reached.
+        var results = (await Task.WhenAll(searchTasks)).SelectMany(r => r).ToList();
+        return results.OrderBy(r => r.Relevance).Take(limit);
+    }
+
+    private async Task<IEnumerable<MemorySearchResult>> AugmentedSearchInStore(MemoryStore chunk, string query, int limit = 10, double relevanceThreshold = 0.5,
+        CancellationToken token = default)
+    {
         var results = new List<MemorySearchResult>();
-        await Parallel.ForEachAsync(rankedStores, async (rankedStore, token) =>
+        var vectorResults = await _qdrantMemoryClient.SearchInStoreAsync(query, limit, relevanceThreshold, chunk.StoreId, _currentUserService.GetCurrentUser().Id, token);
+
+        var rankings = await _augmentationService.RankMemoriesAsync(query, chunk, token);
+        foreach (var ranking in rankings.Where(r => r.Item2 >= relevanceThreshold))
         {
             if (results.Count >= limit)
             {
-                return;
+                break;
             }
-            var rankings = await _augmentationService.RankMemoriesAsync(query, rankedStore, token);
-            foreach (var ranking in rankings.Where(r => r.Item2 >= relevanceThreshold))
+            if (chunk.Memories.FirstOrDefault(m => m.Identifier == ranking.Item1) is { } memory)
             {
-                if (rankedStore.Memories.FirstOrDefault(m => m.Identifier == ranking.Item1) is { } memory)
+                results.Add(new MemorySearchResult
                 {
-                    results.Add(new MemorySearchResult
-                    {
-                        Memory = memory,
-                        Relevance = ranking.Item2
-                    });
-                }
+                    Memory = memory,
+                    Relevance = ranking.Item2
+                });
             }
-        });
-        return results.OrderBy(r => r.Relevance).Take(limit);
+        }
+
+        var concatResults = results.Concat(vectorResults).Where(r => r.Relevance >= relevanceThreshold).Take(limit);
+
+        return concatResults;
     }
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore store)
