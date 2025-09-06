@@ -4,7 +4,8 @@
 @using Synaptic.NET.Domain.Resources.Storage
 @using Synaptic.NET.Domain.Abstractions.Management
 @using System.Security.Claims
-@attribute [Authorize]
+@using Microsoft.AspNetCore.Authentication.Cookies
+@attribute [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 @rendermode InteractiveServer
 @inject IMemoryProvider MemoryProvider
 @inject ICurrentUserService CurrentUserService
