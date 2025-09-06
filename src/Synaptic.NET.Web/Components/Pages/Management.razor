@@ -5,11 +5,14 @@
 @using Synaptic.NET.Domain.Abstractions.Management
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication.Cookies
+@using Synaptic.NET.Domain.Abstractions.Augmentation
+@using Synaptic.NET.Domain.Helpers
 @attribute [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 @rendermode InteractiveServer
 @inject IMemoryProvider MemoryProvider
 @inject ICurrentUserService CurrentUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IFileMemoryCreationService FileMemoryCreationService
 
 <PageTitle>Memory Management - Synaptic.NET</PageTitle>
 
@@ -92,6 +95,23 @@
                             {
                                 <div class="upload-message @(_uploadSuccess ? "success" : "error")">
                                     @_uploadMessage
+                                </div>
+                            }
+                            
+                            @if (_isUploading && (!string.IsNullOrEmpty(_uploadProgress.Message) || _uploadProgress.Progress > 0))
+                            {
+                                <div class="progress-section">
+                                    <div class="progress-header">
+                                        <span class="progress-label">Processing File...</span>
+                                        <span class="progress-percent">@((_uploadProgress.Progress * 100).ToString("F0"))%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: @((_uploadProgress.Progress * 100).ToString("F1"))%"></div>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(_uploadProgress.Message))
+                                    {
+                                        <div class="progress-message">@_uploadProgress.Message</div>
+                                    }
                                 </div>
                             }
                         </EditForm>
@@ -995,6 +1015,59 @@
         border-top: 1px solid #f5c6cb;
     }
 
+    /* Progress Section Styles */
+    .progress-section {
+        margin-top: 1.5rem;
+        padding: 1.5rem;
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .progress-label {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .progress-percent {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #1b6ec2;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1b6ec2 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+        min-width: 2px;
+    }
+
+    .progress-message {
+        font-size: 0.9rem;
+        color: #666;
+        line-height: 1.4;
+        font-style: italic;
+    }
+
     /* Responsive Design */
     @@media (max-width: 768px) {
         .management-header {
@@ -1064,6 +1137,12 @@
         public double Relevance { get; set; }
     }
 
+    public class UploadProgress
+    {
+        public string Message { get; set; } = string.Empty;
+        public double Progress { get; set; } = 0.0;
+    }
+
     private List<MemoryDisplayItem> _memories = [];
     private List<MemoryStore> _memoryStores = [];
     private int _memoryCount;
@@ -1078,6 +1157,7 @@
     private string _searchMessage = string.Empty;
     private bool _uploadSuccess;
     private bool _searchSuccess;
+    private UploadProgress _uploadProgress = new();
 
     private MemoryDisplayItem? _selectedMemoryDetail;
     private bool _isDeletingMemory;
@@ -1156,6 +1236,7 @@
 
         _isUploading = true;
         _uploadMessage = string.Empty;
+        _uploadProgress = new UploadProgress();
         StateHasChanged();
 
         try
@@ -1175,7 +1256,6 @@
                 return;
             }
 
-            // Read file content
             string fileContent;
             using var ms = new MemoryStream();
             await _selectedFile.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024).CopyToAsync(ms);
@@ -1191,35 +1271,52 @@
                 fileContent = await reader.ReadToEndAsync();
             }
 
-            // Create memory entry from file content
-            var memory = new Memory
-            {
-                Identifier = Guid.NewGuid(),
-                Title = Path.GetFileNameWithoutExtension(_selectedFile.Name),
-                Description = $"Uploaded file: {_selectedFile.Name}",
-                Content = extension == ".pdf" ? "PDF content (base64 encoded)" : fileContent,
-                Tags = [extension.Replace(".", ""), "uploaded"],
-                ReferenceType = ReferenceType.Document,
-                Reference = _selectedFile.Name,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow,
-                Owner = CurrentUserService.GetCurrentUser().Id
-            };
+            var processor = await FileMemoryCreationService.GetFileProcessor();
 
-            var success = await MemoryProvider.CreateMemoryEntryAsync(memory);
+            _ = extension.Contains("pdf")
+                ? processor.ExecutePdf(CurrentUserService.GetCurrentUser(), _selectedFile.Name, fileContent)
+                : processor.ExecuteFile(CurrentUserService.GetCurrentUser(), _selectedFile.Name, fileContent);
 
-            if (success)
+            _uploadProgress.Message = "File received...";
+            _uploadProgress.Progress = 0;
+            while (!processor.Completed)
             {
-                _uploadMessage = $"File '{_selectedFile.Name}' has been successfully uploaded and processed.";
-                _uploadSuccess = true;
-                _selectedFile = null;
-                await LoadData();
+                await Task.Delay(100);
+                _uploadProgress.Message = processor.Message;
+                _uploadProgress.Progress = processor.Progress;
+                StateHasChanged();
             }
-            else
+
+            var results = processor.Result;
+            
+            _uploadProgress.Message = "Creating memory collection...";
+            _uploadProgress.Progress = 0.9;
+            StateHasChanged();
+            
+            await MemoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(_selectedFile.Name), processor.StoreDescription, out var memoryStore);
+
+            _uploadProgress.Message = "Saving memories to database...";
+            _uploadProgress.Progress = 0.95;
+            StateHasChanged();
+
+            await Parallel.ForEachAsync(results, async (result, _) =>
             {
-                _uploadMessage = "Failed to create memory entry from file.";
-                _uploadSuccess = false;
-            }
+                result.memory.ReferenceType = ReferenceType.Document;
+                result.memory.Reference = result.referenceName;
+                await MemoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, result.memory, memoryStore.Description);
+            });
+
+            _uploadProgress.Progress = 1.0;
+            _uploadProgress.Message = "Upload completed successfully!";
+            StateHasChanged();
+            
+            // Show completion message briefly
+            await Task.Delay(1000);
+            
+            _uploadMessage = $"File '{_selectedFile.Name}' has been successfully uploaded and processed.";
+            _uploadSuccess = true;
+            _selectedFile = null;
+            await LoadData();
         }
         catch (Exception ex)
         {
