@@ -52,19 +52,19 @@ public class QdrantMemoryClient
         var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.ContentEmbedding,
-            Filter = m => m.Owner == userIdentifier
+            Filter = m => m.OwnerId == userIdentifier.ToString()
         },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.TitleEmbedding,
-            Filter = m => m.Owner == userIdentifier
+            Filter = m => m.OwnerId == userIdentifier.ToString()
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.DescriptionEmbedding,
-            Filter = m => m.Owner == userIdentifier
+            Filter = m => m.OwnerId == userIdentifier.ToString()
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 
@@ -83,19 +83,19 @@ public class QdrantMemoryClient
         var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.ContentEmbedding,
-            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
+            Filter = m => m.StoreIdString == collectionIdentifier.ToString() && m.OwnerId == userIdentifier.ToString()
         },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.TitleEmbedding,
-            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
+            Filter = m => m.StoreIdString == collectionIdentifier.ToString() && m.OwnerId == userIdentifier.ToString()
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<Memory>
         {
             VectorProperty = m => m.DescriptionEmbedding,
-            Filter = m => m.StoreId == collectionIdentifier && m.Owner == userIdentifier
+            Filter = m => m.StoreIdString == collectionIdentifier.ToString() && m.OwnerId == userIdentifier.ToString()
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 

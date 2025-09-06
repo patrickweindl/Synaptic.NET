@@ -71,10 +71,46 @@ public class Memory
     [JsonPropertyName("updated_at")]
     public DateTimeOffset UpdatedAt { get; set; }
 
-    [VectorStoreData(StorageName = "owner", IsIndexed = true)]
-    [Description("The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
+    private Guid? _ownerGuid;
+
+    [Description(
+        "The owner of the memory. Usually set by the backend on creation based on user claims. Defaults to empty string.")]
     [JsonPropertyName("owner")]
-    public required Guid Owner { get; set; }
+    public required Guid Owner
+    {
+        get
+        {
+            _ownerGuid ??= Guid.Parse(_ownerGuidString);
+            return (Guid)_ownerGuid;
+        }
+        set
+        {
+            _ownerGuid = value;
+            _ownerGuidString = value.ToString();
+        }
+    }
+
+    private string _ownerGuidString = string.Empty;
+
+    [NotMapped]
+    [VectorStoreData(StorageName = "owner_id", IsIndexed = true)]
+    [Description("The owner of the memory, usually set by the backend on creation. This string value must be parseable to a GUID as it is a backing property for storage to vector databases.")]
+    public string OwnerId
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_ownerGuidString))
+            {
+                _ownerGuidString = Owner.ToString();
+            }
+            return _ownerGuidString;
+        }
+        set
+        {
+            _ownerGuid = Guid.Parse(value);
+            _ownerGuidString = value;
+        }
+    }
 
     [NotMapped]
     [JsonIgnore]
@@ -96,9 +132,45 @@ public class Memory
     [VectorStoreVector(3072, DistanceFunction = DistanceFunction.CosineSimilarity, IndexKind = IndexKind.Hnsw, StorageName = "content_embedding")]
     public ReadOnlyMemory<float>? ContentEmbedding { get; set; }
 
+    private Guid? _storeId;
+
     [ForeignKey(nameof(MemoryStore.StoreId))]
+    public Guid StoreId
+    {
+        get
+        {
+            _storeId ??= Guid.Parse(_storeIdString);
+            return (Guid)_storeId;
+        }
+        set
+        {
+            _storeId = value;
+            _storeIdString = value.ToString();
+        }
+    }
+
+    private string _storeIdString = string.Empty;
+
     [VectorStoreData(StorageName = "store_id", IsIndexed = true)]
-    public Guid StoreId { get; set; }
+    [Description("The identifier of the store the memory belongs to as a string value. Must be parseable to a GUID.")]
+    [NotMapped]
+    public string StoreIdString
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_storeIdString))
+            {
+                _storeIdString = StoreId.ToString();
+            }
+
+            return _storeIdString;
+        }
+        set
+        {
+            _storeId = Guid.Parse(value);
+            _storeIdString = value;
+        }
+    }
 
     [ForeignKey(nameof(MemoryStore))]
     public MemoryStore Store { get; set; } = null!;
