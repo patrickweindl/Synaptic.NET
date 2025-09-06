@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.Globalization;
 using OpenAI.Chat;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
@@ -112,5 +113,53 @@ public class MemoryAugmentationService : IMemoryAugmentationService
             DateTime.UtcNow - start, output);
 
         return output;
+    }
+
+    public async Task<IEnumerable<(Guid, double)>> RankMemoriesAsync(string query, MemoryStore store, CancellationToken cancellationToken = default)
+    {
+        var memoryChunks = store.Memories.Chunk(20);
+        var ranking = new List<(Guid memoryId, double relevance)>();
+        await Parallel.ForEachAsync(memoryChunks, cancellationToken, async (chunk, token) =>
+        {
+            string memoryDescriptions = string.Join("\n", chunk.Select(r =>
+                $"Identifier: {r.Identifier} | Description: {r.Description} | Date: {r.CreatedAt:yyyy-MM-dd} | Tags: {r.Tags} | Content: {r.Content}"));
+
+            string systemPrompt = PromptTemplates.GetVectorSearchSystemPrompt();
+            string userPrompt = PromptTemplates.GetVectorSearchUserPrompt(query, store.Description, memoryDescriptions);
+
+            var messages = new List<ChatMessage>
+            {
+                ChatMessage.CreateSystemMessage(systemPrompt),
+                ChatMessage.CreateUserMessage(userPrompt)
+            };
+            var response = await _client.CompleteChatAsync(messages, cancellationToken: token);
+            _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Augmented Search", response.Value);
+            string suggestion = response.Value.Content[0].Text ?? string.Empty;
+
+            if (string.IsNullOrEmpty(suggestion))
+            {
+                return;
+            }
+
+            var ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var result in ordered)
+            {
+                try
+                {
+                    string[] splits = result.Split("__");
+                    string identifier = splits[0];
+                    double weight = double.Parse(splits[1], NumberStyles.Any, CultureInfo.InvariantCulture);
+                    Guid id = Guid.Parse(identifier);
+                    ranking.Add((id, weight));
+                }
+                catch (Exception)
+                {
+                    Log.Error("Failed to parse a model response for augmented search!.");
+                }
+
+            }
+        });
+        return ranking;
     }
 }

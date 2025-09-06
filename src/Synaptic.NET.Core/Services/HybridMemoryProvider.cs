@@ -21,14 +21,16 @@ public class HybridMemoryProvider : IMemoryProvider
     private readonly ICurrentUserService _currentUserService;
     private readonly IMemoryStoreRouter _storeRouter;
     private readonly IMemoryAugmentationService _augmentationService;
+    private readonly IMemoryQueryResultReranker _reranker;
 
-    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient, IMemoryStoreRouter storeRouter, IMemoryAugmentationService augmentationService)
+    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient, IMemoryStoreRouter storeRouter, IMemoryAugmentationService augmentationService, IMemoryQueryResultReranker reranker)
     {
         _currentUserService = currentUserService;
         _dbContext = synapticDbContext;
         _qdrantMemoryClient = qdrantMemoryClient;
         _storeRouter = storeRouter;
         _augmentationService = augmentationService;
+        _reranker = reranker;
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync()
@@ -54,9 +56,66 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
     {
-        var vectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
-        // TODO: Add augmented search.
-        return vectorResults;
+        var userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
+
+        foreach (var group in _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group))
+        {
+            var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group.Id);
+            userVectorResults = userVectorResults.Concat(groupResults);
+        }
+
+        var resultList = userVectorResults.ToList();
+        if (resultList.Any())
+        {
+            var reranked = await _reranker.Rerank(resultList);
+            return reranked.OrderBy(r => r.Relevance).Take(limit);
+        }
+        var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
+        return augmentedResults;
+    }
+
+    private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, int limit = 10,
+        double relevanceThreshold = 0.5)
+    {
+        var memoryStores = _currentUserService.GetCurrentUser().Stores.ToList();
+        var groupStores = _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group).SelectMany(g => g.Stores).ToList();
+
+        var allStores = memoryStores.Concat(groupStores).ToList();
+
+        var storeRankings = await _storeRouter.RankStoresAsync(query, allStores);
+
+        var topScore = storeRankings.FirstOrDefault()?.Relevance ?? double.MinValue;
+
+        if (Math.Abs(topScore - double.MinValue) < 0.1)
+        {
+            return Enumerable.Empty<MemorySearchResult>();
+        }
+
+        storeRankings = storeRankings.Where(r => r.Relevance >= topScore * 0.5).ToList();
+
+        var rankedStores = allStores.Where(s => storeRankings.Any(r => r.Identifier == s.StoreId)).ToList();
+
+        var results = new List<MemorySearchResult>();
+        await Parallel.ForEachAsync(rankedStores, async (rankedStore, token) =>
+        {
+            if (results.Count >= limit)
+            {
+                return;
+            }
+            var rankings = await _augmentationService.RankMemoriesAsync(query, rankedStore, token);
+            foreach (var ranking in rankings.Where(r => r.Item2 >= relevanceThreshold))
+            {
+                if (rankedStore.Memories.FirstOrDefault(m => m.Identifier == ranking.Item1) is { } memory)
+                {
+                    results.Add(new MemorySearchResult
+                    {
+                        Memory = memory,
+                        Relevance = ranking.Item2
+                    });
+                }
+            }
+        });
+        return results.OrderBy(r => r.Relevance).Take(limit);
     }
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore store)

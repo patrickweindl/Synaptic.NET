@@ -32,4 +32,6 @@ public interface IMemoryAugmentationService
     /// <param name="memories">A collection of memories associated with the store to aid in title generation.</param>
     /// <returns>Returns a task that represents the asynchronous operation. The task result contains the generated store title as a string.</returns>
     Task<string> GenerateStoreTitleAsync(string storeDescription, List<Memory> memories);
+
+    Task<IEnumerable<(Guid, double)>> RankMemoriesAsync(string query, MemoryStore memoryStore, CancellationToken cancellationToken = default);
 }
