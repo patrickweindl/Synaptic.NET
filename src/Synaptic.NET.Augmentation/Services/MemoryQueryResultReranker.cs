@@ -11,13 +11,10 @@ namespace Synaptic.NET.Augmentation.Services;
 public class MemoryQueryResultReranker : IMemoryQueryResultReranker
 {
     private GptClientBase _client;
-    private IMemoryProvider _memoryProvider;
-    public MemoryQueryResultReranker(OpenAiClientFactory openAiClientFactory, SynapticServerSettings settings, IMemoryProvider memoryProvider)
+    public MemoryQueryResultReranker(OpenAiClientFactory openAiClientFactory, SynapticServerSettings settings)
     {
         _client = openAiClientFactory.GetClient(settings.OpenAiAugmentedSearchModel);
-        _memoryProvider = memoryProvider;
     }
-
 
     public async Task<IEnumerable<MemorySearchResult>> Rerank(IReadOnlyList<MemorySearchResult> results)
     {

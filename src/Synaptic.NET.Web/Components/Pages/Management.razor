@@ -1,0 +1,1369 @@
+@page "/management"
+@using Microsoft.AspNetCore.Authorization
+@using Synaptic.NET.Domain.Abstractions.Storage
+@using Synaptic.NET.Domain.Resources.Storage
+@using Synaptic.NET.Domain.Abstractions.Management
+@using System.Security.Claims
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IMemoryProvider MemoryProvider
+@inject ICurrentUserService CurrentUserService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Memory Management - Synaptic.NET</PageTitle>
+
+<div class="management-header">
+    <div class="container">
+        <div class="user-info">
+            <div class="avatar">
+                <span>@GetUserInitials()</span>
+            </div>
+            <div class="user-details">
+                <h1>Memory Management</h1>
+                <p class="user-subtitle">@GetUserEmail()</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="management-content">
+    <div class="container">
+        <div class="dashboard-grid">
+            <!-- Quick Stats -->
+            <div class="stats-section">
+                <h2>Overview</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🧠</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_memoryCount</div>
+                            <div class="stat-label">Memories</div>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable-card" @onclick="ShowMemoryStoresModal">
+                        <div class="stat-icon">🗂️</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_memoryStoreCount</div>
+                            <div class="stat-label">Memory Stores</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-section">
+                <div class="section-content">
+                    <div class="section-header">
+                        <h3>Memory Management</h3>
+                        <p>Search, view and manage your stored memories</p>
+                    </div>
+
+                    <!-- File Upload Section -->
+                    <div class="file-upload-section">
+                        <h4>📁 Upload Files</h4>
+                        <p>Upload PDF, Markdown, or Text files to add them to your memory stores.</p>
+                        <EditForm Model="_uploadForm" OnValidSubmit="HandleFileUpload" class="upload-form">
+                            <div class="upload-input-group">
+                                <InputFile OnChange="OnFileSelected" class="file-input" id="file-input" accept=".pdf,.md,.txt,.rtf"/>
+                                <label for="file-input" class="file-label">
+                                    <span class="file-icon">📎</span>
+                                    @if (_selectedFile == null)
+                                    {
+                                        <span>Choose file to upload</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@_selectedFile.Name</span>
+                                    }
+                                </label>
+                                <button type="submit" class="upload-button" disabled="@_isUploading">
+                                    @if (_isUploading)
+                                    {
+                                        <span>Processing...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Upload & Process</span>
+                                    }
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(_uploadMessage))
+                            {
+                                <div class="upload-message @(_uploadSuccess ? "success" : "error")">
+                                    @_uploadMessage
+                                </div>
+                            }
+                        </EditForm>
+                    </div>
+
+                    <!-- Search Section -->
+                    <div class="search-section">
+                        <h4>🔍 Search Memories</h4>
+                        <EditForm Model="_searchForm" OnValidSubmit="HandleSearch" class="search-form">
+                            <div class="search-input-group">
+                                <InputText @bind-Value="_searchForm.Query" placeholder="Search memories with AI..." class="search-input"/>
+                                <div class="search-options">
+                                    <div class="option-group">
+                                        <label>Limit:</label>
+                                        <InputNumber @bind-Value="_searchForm.Limit" class="number-input" min="1" max="50"/>
+                                    </div>
+                                    <div class="option-group">
+                                        <label>Relevance:</label>
+                                        <InputNumber @bind-Value="_searchForm.MinRelevance" class="number-input" min="0" max="1" step="0.01"/>
+                                    </div>
+                                </div>
+                                <button type="submit" class="search-button" disabled="@_isSearching">
+                                    @if (_isSearching)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>AI Search</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                        @if (!string.IsNullOrEmpty(_searchMessage))
+                        {
+                            <div class="search-message @(_searchSuccess ? "success" : "error")">
+                                @_searchMessage
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Memory Results -->
+                    @if (_memories.Any())
+                    {
+                        <div class="memories-grid">
+                            @foreach (var memory in _memories)
+                            {
+                                <div class="memory-card" @onclick="() => ShowMemoryDetail(memory)">
+                                    <div class="memory-header">
+                                        <span class="memory-store">@memory.Store?.Title</span>
+                                        <span class="memory-date">@memory.CreatedAt.ToString("MMM dd, yyyy")</span>
+                                        @if (memory.Relevance > 0)
+                                        {
+                                            <span class="memory-relevance">@($"{memory.Relevance:F2}")</span>
+                                        }
+                                    </div>
+                                    <div class="memory-content">
+                                        <h4>@memory.Title</h4>
+                                        <p>@(memory.Content.Length > 150 ? memory.Content[..150] + "..." : memory.Content)</p>
+                                    </div>
+                                    @if (memory.Tags.Any())
+                                    {
+                                        <div class="memory-tags">
+                                            @foreach (var tag in memory.Tags.Take(3))
+                                            {
+                                                <span class="tag">@tag</span>
+                                            }
+                                            @if (memory.Tags.Count > 3)
+                                            {
+                                                <span class="tag-more">+@(memory.Tags.Count - 3) more</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <span class="empty-icon">🧠</span>
+                            <h4>No memories found</h4>
+                            <p>Your memories will appear here. Try uploading files or searching with different terms.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Memory Detail Modal -->
+@if (_selectedMemoryDetail != null)
+{
+    <div class="modal-overlay" @onclick="CloseMemoryDetail">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@_selectedMemoryDetail.Title</h3>
+                <button class="modal-close" @onclick="CloseMemoryDetail">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="memory-detail-info">
+                    <div class="info-row">
+                        <strong>Store:</strong> <span>@_selectedMemoryDetail.Store?.Title</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Created:</strong> <span>@_selectedMemoryDetail.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                    </div>
+                    <div class="info-row">
+                        <strong>Updated:</strong> <span>@_selectedMemoryDetail.UpdatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                    </div>
+                    @if (_selectedMemoryDetail.Relevance > 0)
+                    {
+                        <div class="info-row">
+                            <strong>Relevance:</strong> <span class="relevance-score">@($"{_selectedMemoryDetail.Relevance:F3}")</span>
+                        </div>
+                    }
+                    @if (_selectedMemoryDetail.Tags.Any())
+                    {
+                        <div class="info-row">
+                            <strong>Tags:</strong>
+                            <div class="tags-container">
+                                @foreach (var tag in _selectedMemoryDetail.Tags)
+                                {
+                                    <span class="tag">@tag</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="memory-detail-content">
+                    <h4>Content</h4>
+                    <div class="content-text">@_selectedMemoryDetail.Content</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseMemoryDetail">Close</button>
+                <button class="btn btn-danger" @onclick="DeleteSelectedMemory" disabled="@_isDeletingMemory">
+                    @if (_isDeletingMemory)
+                    {
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <span>🗑️ Delete Memory</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Memory Stores Modal -->
+@if (_showMemoryStoresModal)
+{
+    <div class="modal-overlay" @onclick="CloseMemoryStoresModal">
+        <div class="modal-content memory-stores-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Memory Stores (@_memoryStores.Count)</h3>
+                <button class="modal-close" @onclick="CloseMemoryStoresModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (_memoryStores.Any())
+                {
+                    <div class="memory-stores-grid">
+                        @foreach (var store in _memoryStores)
+                        {
+                            <div class="memory-store-card">
+                                <div class="store-header">
+                                    <div class="store-info">
+                                        <div class="store-icon">🗂️</div>
+                                        <div class="store-details">
+                                            <h4>@store.Title</h4>
+                                            <span class="store-id">@store.StoreId</span>
+                                            <span class="memory-count">@store.Memories.Count memory@(store.Memories.Count != 1 ? "s" : "")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="store-actions">
+                                    <button class="delete-store-btn" @onclick="@(() => DeleteMemoryStore(store.StoreId))" disabled="@_isDeletingStore">
+                                        @if (_isDeletingStore && _deletingStoreId == store.StoreId)
+                                        {
+                                            <span>Deleting...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>🗑️ Delete Store</span>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">🗂️</span>
+                        <h4>No memory stores found</h4>
+                        <p>Your memory stores will appear here as you create memories.</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseMemoryStoresModal">Close</button>
+            </div>
+            @if (!string.IsNullOrEmpty(_storeActionMessage))
+            {
+                <div class="store-message @(_storeActionSuccess ? "success" : "error")">
+                    @_storeActionMessage
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .management-header {
+        background: linear-gradient(135deg, #1b6ec2 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 20px;
+        margin: -32px -32px 40px -32px;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .user-details h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 300;
+        color: white;
+    }
+
+    .user-subtitle {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+
+    .management-content {
+        padding: 0 0 60px 0;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .stats-section h2 {
+        color: #333;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        font-weight: 300;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    }
+
+    .clickable-card {
+        cursor: pointer;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 300;
+        color: #1b6ec2;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 1rem;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .main-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-content {
+        padding: 2rem;
+    }
+
+    .section-header h3 {
+        color: #333;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        font-weight: 300;
+    }
+
+    .section-header p {
+        color: #666;
+        margin: 0 0 2rem 0;
+        font-size: 1.1rem;
+    }
+
+    .file-upload-section, .search-section {
+        margin-bottom: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+    }
+
+    .file-upload-section h4, .search-section h4 {
+        margin: 0 0 1rem 0;
+        color: #333;
+        font-size: 1.3rem;
+        font-weight: 500;
+    }
+
+    .file-upload-section p {
+        margin: 0 0 1.5rem 0;
+        color: #666;
+    }
+
+    .upload-form, .search-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .upload-input-group, .search-input-group {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border: 2px dashed #1b6ec2;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #666;
+        font-size: 1rem;
+        min-width: 250px;
+    }
+
+    .file-label:hover {
+        border-color: #764ba2;
+        background: #f8f9fa;
+        color: #764ba2;
+    }
+
+    .file-icon {
+        font-size: 1.2rem;
+    }
+
+    .upload-button, .search-button {
+        padding: 1rem 2rem;
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .upload-button:hover:not(:disabled), .search-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(118, 75, 162, 0.3);
+    }
+
+    .upload-button:disabled, .search-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .search-input {
+        flex: 1;
+        min-width: 200px;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #1b6ec2;
+        box-shadow: 0 0 0 3px rgba(27, 110, 194, 0.1);
+    }
+
+    .search-options {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .option-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .option-group label {
+        font-size: 0.9rem;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .number-input {
+        width: 80px;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .number-input:focus {
+        outline: none;
+        border-color: #1b6ec2;
+        box-shadow: 0 0 0 3px rgba(27, 110, 194, 0.1);
+    }
+
+    .upload-message, .search-message {
+        padding: 1rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        margin-top: 1rem;
+    }
+
+    .upload-message.success, .search-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .upload-message.error, .search-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .memories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .memory-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .memory-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        border-color: #1b6ec2;
+    }
+
+    .memory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .memory-store {
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .memory-date {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .memory-relevance {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .memory-content h4 {
+        margin: 0 0 0.75rem 0;
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .memory-content p {
+        margin: 0;
+        color: #666;
+        line-height: 1.5;
+    }
+
+    .memory-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .tag {
+        background: #f8f9fa;
+        color: #495057;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .tag-more {
+        color: #6c757d;
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h4 {
+        margin: 0 0 1rem 0;
+        font-size: 1.5rem;
+        color: #495057;
+        font-weight: 300;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .memory-stores-modal {
+        max-width: 1000px;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 1.5rem;
+        font-weight: 300;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        background: #f8f9fa;
+        color: #495057;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .memory-detail-info {
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .info-row strong {
+        color: #495057;
+        min-width: 80px;
+        font-weight: 500;
+    }
+
+    .relevance-score {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .memory-detail-content h4 {
+        color: #333;
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .content-text {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        color: #495057;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .modal-footer {
+        padding: 2rem;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(118, 75, 162, 0.3);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        background: #c82333;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Memory Stores Modal */
+    .memory-stores-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .memory-store-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .memory-store-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    .store-header {
+        margin-bottom: 1rem;
+    }
+
+    .store-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .store-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .store-details h4 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .store-id {
+        font-size: 0.8rem;
+        color: #6c757d;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-family: monospace;
+    }
+
+    .memory-count {
+        font-size: 0.9rem;
+        color: #28a745;
+        font-weight: 500;
+    }
+
+    .store-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .delete-store-btn {
+        padding: 0.5rem 1rem;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .delete-store-btn:hover:not(:disabled) {
+        background: #c82333;
+        transform: translateY(-1px);
+    }
+
+    .delete-store-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .store-message {
+        padding: 1rem 2rem;
+        border-radius: 0 0 16px 16px;
+        margin: 0 -2rem -1rem -2rem;
+        font-size: 0.95rem;
+    }
+
+    .store-message.success {
+        background: #d4edda;
+        color: #155724;
+        border-top: 1px solid #c3e6cb;
+    }
+
+    .store-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border-top: 1px solid #f5c6cb;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .management-header {
+            padding: 40px 20px;
+        }
+
+        .user-details h1 {
+            font-size: 2rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .memories-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .memory-stores-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .upload-input-group, .search-input-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-options {
+            justify-content: space-between;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .container {
+            padding: 0 15px;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .file-upload-section, .search-section {
+            padding: 1.5rem;
+        }
+
+        .modal-body, .modal-header, .modal-footer {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+@code {
+    public class FileUploadForm
+    {
+        // Empty model for form binding
+    }
+
+    public class SearchForm
+    {
+        public string Query { get; set; } = string.Empty;
+        public int Limit { get; set; } = 10;
+        public double MinRelevance { get; set; } = 0.5;
+    }
+
+    public class MemoryDisplayItem : Memory
+    {
+        public double Relevance { get; set; }
+    }
+
+    private List<MemoryDisplayItem> _memories = [];
+    private List<MemoryStore> _memoryStores = [];
+    private int _memoryCount;
+    private int _memoryStoreCount;
+
+    private FileUploadForm _uploadForm = new();
+    private SearchForm _searchForm = new() { Limit = 10, MinRelevance = 0.5 };
+    private IBrowserFile? _selectedFile;
+    private bool _isUploading;
+    private bool _isSearching;
+    private string _uploadMessage = string.Empty;
+    private string _searchMessage = string.Empty;
+    private bool _uploadSuccess;
+    private bool _searchSuccess;
+
+    private MemoryDisplayItem? _selectedMemoryDetail;
+    private bool _isDeletingMemory;
+
+    // Memory stores modal variables
+    private bool _showMemoryStoresModal = false;
+    private bool _isDeletingStore = false;
+    private Guid _deletingStoreId = Guid.Empty;
+    private string _storeActionMessage = string.Empty;
+    private bool _storeActionSuccess = false;
+
+    private string _userEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                _userEmail = authState.User.FindFirst(ClaimTypes.Email)?.Value ?? authState.User.Identity.Name ?? "User";
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            _searchMessage = $"Error loading data: {ex.Message}";
+            _searchSuccess = false;
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Load memory stores
+            _memoryStores = await MemoryProvider.GetStoresAsync();
+            _memoryStoreCount = _memoryStores.Count;
+            _memoryCount = _memoryStores.Sum(s => s.Memories.Count);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _searchMessage = $"Error loading stores: {ex.Message}";
+            _searchSuccess = false;
+        }
+    }
+
+    private string GetUserInitials()
+    {
+        if (string.IsNullOrEmpty(_userEmail)) return "U";
+
+        var parts = _userEmail.Split(['@', '.', ' '], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return _userEmail[0].ToString().ToUpper();
+    }
+
+    private string GetUserEmail()
+    {
+        return _userEmail;
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _selectedFile = e.File;
+        _uploadMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task HandleFileUpload(EditContext context)
+    {
+        if (_selectedFile == null) return;
+
+        _isUploading = true;
+        _uploadMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            if (_selectedFile.Size > 100 * 1024 * 1024)
+            {
+                _uploadMessage = "File size must be less than 100MB";
+                _uploadSuccess = false;
+                return;
+            }
+
+            var extension = Path.GetExtension(_selectedFile.Name).ToLowerInvariant();
+            if (!new[] { ".pdf", ".txt", ".md", ".rtf" }.Contains(extension))
+            {
+                _uploadMessage = "Only PDF, TXT, MD, and RTF files are supported";
+                _uploadSuccess = false;
+                return;
+            }
+
+            // Read file content
+            string fileContent;
+            using var ms = new MemoryStream();
+            await _selectedFile.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024).CopyToAsync(ms);
+
+            if (extension == ".pdf")
+            {
+                fileContent = Convert.ToBase64String(ms.ToArray());
+            }
+            else
+            {
+                ms.Position = 0;
+                using var reader = new StreamReader(ms);
+                fileContent = await reader.ReadToEndAsync();
+            }
+
+            // Create memory entry from file content
+            var memory = new Memory
+            {
+                Identifier = Guid.NewGuid(),
+                Title = Path.GetFileNameWithoutExtension(_selectedFile.Name),
+                Description = $"Uploaded file: {_selectedFile.Name}",
+                Content = extension == ".pdf" ? "PDF content (base64 encoded)" : fileContent,
+                Tags = [extension.Replace(".", ""), "uploaded"],
+                ReferenceType = ReferenceType.Document,
+                Reference = _selectedFile.Name,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                Owner = CurrentUserService.GetCurrentUser().Id
+            };
+
+            var success = await MemoryProvider.CreateMemoryEntryAsync(memory);
+
+            if (success)
+            {
+                _uploadMessage = $"File '{_selectedFile.Name}' has been successfully uploaded and processed.";
+                _uploadSuccess = true;
+                _selectedFile = null;
+                await LoadData();
+            }
+            else
+            {
+                _uploadMessage = "Failed to create memory entry from file.";
+                _uploadSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadMessage = $"Error uploading file: {ex.Message}";
+            _uploadSuccess = false;
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSearch(EditContext context)
+    {
+        if (string.IsNullOrWhiteSpace(_searchForm.Query)) return;
+
+        _isSearching = true;
+        _searchMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var searchResults = await MemoryProvider.SearchAsync(_searchForm.Query, _searchForm.Limit, _searchForm.MinRelevance);
+
+            _memories = searchResults.Select(result => new MemoryDisplayItem
+            {
+                Identifier = result.Memory.Identifier,
+                Title = result.Memory.Title,
+                Description = result.Memory.Description,
+                Content = result.Memory.Content,
+                Tags = result.Memory.Tags,
+                ReferenceType = result.Memory.ReferenceType,
+                Reference = result.Memory.Reference,
+                CreatedAt = result.Memory.CreatedAt,
+                UpdatedAt = result.Memory.UpdatedAt,
+                Owner = result.Memory.Owner,
+                StoreId = result.Memory.StoreId,
+                Store = result.Memory.Store,
+                Relevance = result.Relevance
+            }).OrderByDescending(m => m.Relevance).ToList();
+
+            _searchMessage = $"Found {_memories.Count} memories matching your search";
+            _searchSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            _searchMessage = $"Search error: {ex.Message}";
+            _searchSuccess = false;
+        }
+        finally
+        {
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowMemoryDetail(MemoryDisplayItem memory)
+    {
+        _selectedMemoryDetail = memory;
+        StateHasChanged();
+    }
+
+    private void CloseMemoryDetail()
+    {
+        _selectedMemoryDetail = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteSelectedMemory()
+    {
+        if (_selectedMemoryDetail == null) return;
+
+        _isDeletingMemory = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await MemoryProvider.DeleteMemoryEntryAsync(_selectedMemoryDetail.Identifier);
+            if (success)
+            {
+                CloseMemoryDetail();
+                _memories.Remove(_selectedMemoryDetail);
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            _searchMessage = $"Error deleting memory: {ex.Message}";
+            _searchSuccess = false;
+        }
+        finally
+        {
+            _isDeletingMemory = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowMemoryStoresModal()
+    {
+        _showMemoryStoresModal = true;
+        _storeActionMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseMemoryStoresModal()
+    {
+        _showMemoryStoresModal = false;
+        _storeActionMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task DeleteMemoryStore(Guid storeIdentifier)
+    {
+        _isDeletingStore = true;
+        _deletingStoreId = storeIdentifier;
+        _storeActionMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var success = await MemoryProvider.DeleteCollectionAsync(storeIdentifier);
+
+            if (success)
+            {
+                _storeActionMessage = "Memory store deleted successfully";
+                _storeActionSuccess = true;
+                await LoadData();
+            }
+            else
+            {
+                _storeActionMessage = "Failed to delete memory store";
+                _storeActionSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _storeActionMessage = $"Error deleting store: {ex.Message}";
+            _storeActionSuccess = false;
+        }
+        finally
+        {
+            _isDeletingStore = false;
+            _deletingStoreId = Guid.Empty;
+            StateHasChanged();
+        }
+    }
+}

@@ -23,8 +23,10 @@ public class QdrantMemoryClient
         int port;
         if (settings.QdrantServerUrl.Contains(":"))
         {
-            ip = settings.QdrantServerUrl.Split(":").First();
-            port = int.Parse(settings.QdrantServerUrl.Split(":").Last());
+            var url = Uri.TryCreate(settings.QdrantServerUrl, UriKind.Absolute, out var uri) ? uri : throw new InvalidOperationException();
+
+            ip = $"{uri.Host}";
+            port = url.Port;
         }
         else
         {

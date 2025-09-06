@@ -36,6 +36,7 @@ public interface IManagedIdentity
     public string GetStorageDirectory(SynapticServerSettings settings)
     {
         Directory.CreateDirectory(Path.Join(settings.BaseDataPath, "storage"));
+        Directory.CreateDirectory(Path.Join(settings.BaseDataPath, "storage", Identifier));
         return Path.Join(settings.BaseDataPath, "storage", Identifier);
     }
 }

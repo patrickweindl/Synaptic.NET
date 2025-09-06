@@ -64,7 +64,7 @@ public class SynapticServerSettings
     public List<string> KnownProxies { get; }
     public int ServerPort => string.IsNullOrEmpty(_configuration?["Servers:Port"]) ? 8000 : int.Parse(_configuration["Servers:Port"]!);
     public List<string> AdminIdentifiers => string.IsNullOrEmpty(_configuration?["Security:Admins"]) ? new List<string>() : _configuration["Security:Admins"]?.Split(',').ToList() ?? new();
-    public string QdrantServerUrl => _configuration?["Servers:QdrantUrl"] ?? "http://localhost";
+    public string QdrantServerUrl => _configuration?["Servers:QdrantUrl"] ?? "http://localhost:6334";
 
     public OAuthSettings GitHubOAuthSettings => new()
     {
