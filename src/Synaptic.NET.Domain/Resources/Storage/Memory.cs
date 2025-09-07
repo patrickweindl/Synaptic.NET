@@ -81,7 +81,7 @@ public class Memory
     public required Guid Owner { get; set; }
 
     [ForeignKey(nameof(Owner))]
-    public required User OwnerUser { get; set; } = null!;
+    public User OwnerUser { get; set; } = null!;
 
     public Guid? GroupId { get; set; }
 

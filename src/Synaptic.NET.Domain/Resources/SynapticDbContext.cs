@@ -28,6 +28,11 @@ public class SynapticDbContext : DbContext
         CurrentGroupIds.AddRange(u.Memberships.Select(m => m.GroupId));
     }
 
+    public User? DbUser()
+    {
+        return Users.FirstOrDefault(u => u.Id == CurrentUserId);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<GroupMembership>()
@@ -44,15 +49,54 @@ public class SynapticDbContext : DbContext
             .HasForeignKey(gm => gm.GroupId);
 
         modelBuilder.Entity<User>()
+            .HasKey(u => u.Id);
+
+        modelBuilder.Entity<User>()
+            .HasMany(u => u.ApiKeys)
+            .WithOne(a => a.Owner)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
             .HasMany(u => u.Stores)
             .WithOne(s => s.OwnerUser)
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Group>()
+            .HasKey(g => g.Id);
+
+        modelBuilder.Entity<Group>()
             .HasMany(g => g.Stores)
             .WithOne(s => s.OwnerGroup)
             .HasForeignKey(s => s.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MemoryStore>()
+            .HasKey(m => m.StoreId);
+
+        modelBuilder.Entity<MemoryStore>()
+            .HasOne(m => m.OwnerUser)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.OwnerUser)
+            .WithMany()
+            .HasForeignKey(m => m.Owner)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.OwnerGroup)
+            .WithMany()
+            .HasForeignKey(m => m.GroupId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.Store)
+            .WithMany(s => s.Memories)
+            .HasForeignKey(m => m.StoreId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<MemoryStore>()
@@ -75,29 +119,7 @@ public class SynapticDbContext : DbContext
             .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
 
-        modelBuilder.Entity<Memory>().HasIndex(m => m.Owner);
-        modelBuilder.Entity<Memory>().HasIndex(m => m.GroupId);
-        modelBuilder.Entity<Memory>().HasIndex(m => m.StoreId);
 
-        modelBuilder.Entity<MemoryStore>().HasIndex(s => s.UserId);
-        modelBuilder.Entity<MemoryStore>().HasIndex(s => s.GroupId);
 
-        modelBuilder.Entity<Memory>()
-            .HasOne(m => m.OwnerUser)
-            .WithMany()
-            .HasForeignKey(m => m.Owner)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<Memory>()
-            .HasOne(m => m.OwnerGroup)
-            .WithMany()
-            .HasForeignKey(m => m.GroupId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<Memory>()
-            .HasOne(m => m.Store)
-            .WithMany(s => s.Memories)
-            .HasForeignKey(m => m.StoreId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

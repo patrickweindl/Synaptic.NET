@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Synaptic.NET.Domain.Resources;
 
@@ -10,9 +11,11 @@ using Synaptic.NET.Domain.Resources;
 namespace Synaptic.NET.Domain.Migrations
 {
     [DbContext(typeof(SynapticDbContext))]
-    partial class SynapticDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250907140318_FixMemoryRelationships")]
+    partial class FixMemoryRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");

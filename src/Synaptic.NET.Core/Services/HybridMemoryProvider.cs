@@ -153,6 +153,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore store)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var newStore = new MemoryStore
         {
             Title = collectionTitle,
@@ -163,11 +164,13 @@ public class HybridMemoryProvider : IMemoryProvider
         };
         _dbContext.MemoryStores.Add(newStore);
         store = newStore;
+        _dbContext.SaveChanges();
         return Task.FromResult(true);
     }
 
     public async Task<bool> CreateMemoryEntryAsync(Memory memory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStoreRoutingResult = await _storeRouter.RouteMemoryToStoreAsync(memory, _dbContext.MemoryStores);
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == targetStoreRoutingResult.Identifier);
 
@@ -180,7 +183,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        targetStore.Memories.Add(memory);
+        _dbContext.Memories.Add(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
         return true;
@@ -188,6 +191,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> CreateMemoryEntryAsync(Guid collectionIdentifier, Memory memory, string storeDescription = "")
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier);
         if (targetStore == null)
         {
@@ -196,7 +200,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        targetStore.Memories.Add(memory);
+        _dbContext.Memories.Add(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
         return true;
@@ -204,6 +208,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> CreateMemoryEntryAsync(string collectionTitle, Memory memory, string storeDescription = "")
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle);
         if (targetStore == null)
         {
@@ -211,7 +216,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        targetStore.Memories.Add(memory);
+        _dbContext.Memories.Add(memory);
         _dbContext.MemoryStores.Update(targetStore);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(), memory);
@@ -220,6 +225,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
@@ -246,6 +252,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
@@ -272,6 +279,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -300,6 +308,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -328,6 +337,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -364,6 +374,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
@@ -383,6 +394,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -402,6 +414,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -429,6 +442,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -456,6 +470,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -491,6 +506,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteCollectionAsync(Guid collectionIdentifier)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
@@ -510,6 +526,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteCollectionAsync(string collectionTitle)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
@@ -529,6 +546,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -547,6 +565,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid entryIdentifier)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -565,6 +584,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, string entryTitle)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Title == entryTitle && m.StoreId == collectionIdentifier);
 

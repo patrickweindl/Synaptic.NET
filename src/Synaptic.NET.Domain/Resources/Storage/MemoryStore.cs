@@ -31,7 +31,7 @@ public class MemoryStore
     public required Guid UserId { get; set; }
 
     [ForeignKey(nameof(UserId))]
-    public required User OwnerUser { get; set; }
+    public User OwnerUser { get; set; } = null!;
 
     public Guid? GroupId { get; set; }
 
