@@ -40,6 +40,7 @@ public static class MemoryReplacement
         {
             Identifier = memoryIdentifier,
             Owner = currentUserService.GetCurrentUser().Id,
+            OwnerUser = currentUserService.GetCurrentUser(),
             Title = memoryTitle,
             Content = content,
             CreatedAt = DateTime.UtcNow,

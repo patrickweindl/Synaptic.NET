@@ -1740,7 +1740,7 @@
 
             if (userWithApiKeys != null)
             {
-                _apiKeys = userWithApiKeys.ApiKeys;
+                _apiKeys = userWithApiKeys.ApiKeys.ToList();
                 _apiKeyCount = _apiKeys.Count;
             }
             else
@@ -1904,6 +1904,7 @@
                 CreatedAt = result.Memory.CreatedAt,
                 UpdatedAt = result.Memory.UpdatedAt,
                 Owner = result.Memory.Owner,
+                OwnerUser = result.Memory.OwnerUser,
                 StoreId = result.Memory.StoreId,
                 Store = result.Memory.Store,
                 Relevance = result.Relevance
@@ -2081,7 +2082,7 @@
             var apiKey = new ApiKey
             {
                 Id = Guid.NewGuid(),
-                Owner = CurrentUserService.GetCurrentUser(),
+                UserId = userWithApiKeys.Id,
                 Name = _createApiKeyForm.Name.Trim(),
                 Key = GenerateSecureApiKey(),
                 ExpiresAt = _createApiKeyForm.ExpirationDays == 0

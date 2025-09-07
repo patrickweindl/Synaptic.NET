@@ -39,7 +39,8 @@ public class WhenUsingQdrantClient
                 Content = "Test Content",
                 StoreId = Guid.NewGuid(),
                 CreatedAt = DateTimeOffset.UtcNow,
-                Owner = _currentUserService.GetCurrentUser().Id
+                Owner = _currentUserService.GetCurrentUser().Id,
+                OwnerUser = _currentUserService.GetCurrentUser()
             });
 
         var results = await qdrantClient.SearchAsync("Test", 10, -1, _currentUserService.GetCurrentUser().Id);

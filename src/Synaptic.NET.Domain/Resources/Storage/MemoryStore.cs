@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Synaptic.NET.Domain.Resources.Management;
 
@@ -27,10 +28,14 @@ public class MemoryStore
     [Description("A set of tags that can be used to categorize the store.")]
     public List<string> Tags { get; set; } = new();
 
-    public Guid? UserId { get; set; }
-    public User? OwnerUser { get; set; }
+    public required Guid UserId { get; set; }
+
+    [ForeignKey(nameof(UserId))]
+    public required User OwnerUser { get; set; }
 
     public Guid? GroupId { get; set; }
+
+    [ForeignKey(nameof(GroupId))]
     public Group? OwnerGroup { get; set; }
 
     [Description("A list of memories contained within the store")]

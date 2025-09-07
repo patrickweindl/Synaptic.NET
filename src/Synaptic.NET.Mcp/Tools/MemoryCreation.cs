@@ -38,6 +38,7 @@ public static class MemoryCreation
         Memory newMemory = new()
         {
             Owner = currentUserService.GetCurrentUser().Id,
+            OwnerUser = currentUserService.GetCurrentUser(),
             Identifier = Guid.NewGuid(),
             Description = memoryDescription,
             Title = memoryTitle,

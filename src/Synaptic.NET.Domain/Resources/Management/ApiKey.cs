@@ -9,8 +9,10 @@ public class ApiKey
     [Key]
     public required Guid Id { get; set; }
 
-    [ForeignKey(nameof(User))]
-    public required User Owner { get; set; }
+    public required Guid UserId { get; set; }
+
+    [ForeignKey(nameof(UserId))]
+    public User Owner { get; set; } = null!;
 
     [JsonPropertyName("api_key_name")]
     [MaxLength(512)]

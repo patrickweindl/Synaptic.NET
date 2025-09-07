@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.VectorData;
+using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Domain.Resources.Storage;
 
@@ -79,13 +80,20 @@ public class Memory
     [JsonPropertyName("owner")]
     public required Guid Owner { get; set; }
 
+    [ForeignKey(nameof(Owner))]
+    public required User OwnerUser { get; set; } = null!;
+
+    public Guid? GroupId { get; set; }
+
+    [ForeignKey(nameof(GroupId))]
+    public Group? OwnerGroup { get; set; }
+
     [NotMapped]
     [JsonIgnore]
     public TimeSpan Age => DateTime.UtcNow - CreatedAt;
 
-    [ForeignKey(nameof(MemoryStore.StoreId))]
     public Guid StoreId { get; set; }
 
-    [ForeignKey(nameof(MemoryStore))]
+    [ForeignKey(nameof(StoreId))]
     public MemoryStore Store { get; set; } = null!;
 }

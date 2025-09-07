@@ -29,6 +29,7 @@ public class VectorMemory : Memory
             ReferenceType = memory.ReferenceType,
             Reference = memory.Reference,
             Owner = memory.Owner,
+            OwnerUser = memory.OwnerUser,
             VectorStoreIdentifier = memory.StoreId.ToString(),
             VectorOwnerIdentifier = memory.Owner.ToString(),
             TitleEmbedding = titleEmbedding.Value.ToFloats(),

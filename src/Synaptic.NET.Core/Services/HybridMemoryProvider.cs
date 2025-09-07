@@ -158,7 +158,8 @@ public class HybridMemoryProvider : IMemoryProvider
             Title = collectionTitle,
             Description = storeDescription,
             StoreId = Guid.NewGuid(),
-            OwnerUser = _currentUserService.GetCurrentUser()
+            OwnerUser = _currentUserService.GetCurrentUser(),
+            UserId = _currentUserService.GetCurrentUser().Id
         };
         _dbContext.MemoryStores.Add(newStore);
         store = newStore;

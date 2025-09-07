@@ -23,6 +23,7 @@ public class MockUserService : ICurrentUserService
         Title = "test-memory-store",
         Description = "A memory store for testing purposes",
         Tags = ["Testing", "Unit Test"],
-        OwnerUser = s_testUser
+        OwnerUser = s_testUser,
+        UserId = s_testUser.Id
     };
 }

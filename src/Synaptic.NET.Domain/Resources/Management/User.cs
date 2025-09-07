@@ -30,8 +30,7 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
     [JsonPropertyName("user_role")]
     public IdentityRole Role { get; set; } = IdentityRole.Guest;
 
-    [JsonPropertyName("api_keys")]
-    public List<ApiKey> ApiKeys { get; set; } = new();
+    public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
 

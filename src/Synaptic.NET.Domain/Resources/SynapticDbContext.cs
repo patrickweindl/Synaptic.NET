@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
 
@@ -6,15 +7,25 @@ namespace Synaptic.NET.Domain.Resources;
 
 public class SynapticDbContext : DbContext
 {
+    public Guid CurrentUserId { get; set; } = Guid.Empty;
+    public List<Guid> CurrentGroupIds { get; } = new();
     public DbSet<User> Users => Set<User>();
     public DbSet<Group> Groups => Set<Group>();
-    public DbSet<GroupMembership> GroupMemberships => Set<GroupMembership>();
     public DbSet<MemoryStore> MemoryStores => Set<MemoryStore>();
     public DbSet<Memory> Memories => Set<Memory>();
 
-    public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
+    public SynapticDbContext(DbContextOptions<SynapticDbContext> options, ICurrentUserService? currentUserService = null)
         : base(options)
-    { }
+    {
+        if (currentUserService == null)
+        {
+            return;
+        }
+
+        var u = currentUserService.GetCurrentUser();
+        CurrentUserId = u.Id;
+        CurrentGroupIds.AddRange(u.Memberships.Select(m => m.GroupId));
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,9 +55,24 @@ public class SynapticDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<MemoryStore>()
-            .HasMany(s => s.Memories)
-            .WithOne(m => m.Store)
-            .HasForeignKey(m => m.StoreId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasQueryFilter(s =>
+                CurrentUserId == Guid.Empty
+                || s.UserId == CurrentUserId
+                || (s.GroupId.HasValue && CurrentGroupIds.Contains(s.GroupId.Value))
+            );
+
+        modelBuilder.Entity<Memory>()
+            .HasQueryFilter(m =>
+                CurrentUserId == Guid.Empty
+                || m.Owner == CurrentUserId
+                || (m.GroupId.HasValue && CurrentGroupIds.Contains(m.GroupId.Value))
+            );
+
+        modelBuilder.Entity<Memory>().HasIndex(m => m.Owner);
+        modelBuilder.Entity<Memory>().HasIndex(m => m.GroupId);
+        modelBuilder.Entity<Memory>().HasIndex(m => m.StoreId);
+
+        modelBuilder.Entity<MemoryStore>().HasIndex(s => s.UserId);
+        modelBuilder.Entity<MemoryStore>().HasIndex(s => s.GroupId);
     }
 }

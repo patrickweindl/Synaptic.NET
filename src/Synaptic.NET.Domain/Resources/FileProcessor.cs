@@ -75,7 +75,8 @@ public class FileProcessor
             StoreId = Guid.NewGuid(),
             Title = FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName)),
             Description = description,
-            OwnerUser = user
+            OwnerUser = user,
+            UserId = user.Id
         };
 
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, base64String.Length, chunkResults.Sum(s => s.Summary.Length));
@@ -124,12 +125,13 @@ public class FileProcessor
 
         string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
         StoreDescription = description;
-        var targetStore = new MemoryStore()
+        var targetStore = new MemoryStore
         {
             StoreId = Guid.NewGuid(),
             Title = FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName)),
             Description = description,
-            OwnerUser = user
+            OwnerUser = user,
+            UserId = user.Id
         };
 
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, fileContent.Length, chunkResults.Sum(s => s.Summary.Length));
@@ -223,6 +225,7 @@ public class FileProcessor
             UpdatedAt = DateTime.UnixEpoch,
             Reference = fileName,
             Owner = currentUser.Id,
+            OwnerUser = currentUser,
             ReferenceType = (int)ReferenceType.Document,
             Tags = new List<string>()
         };
