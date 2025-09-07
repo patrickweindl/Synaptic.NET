@@ -16,31 +16,17 @@ namespace Synaptic.NET.Integration.Tests;
 
 public class WhenUsingHybridMemoryProvider
 {
-    private readonly ICurrentUserService _currentUserService = new MockUserService();
-    private readonly IMemoryProvider _memoryProvider;
-    private readonly TestSettings _testSettings;
-    private readonly SynapticDbContext _dbContext;
-    private readonly QdrantMemoryClient _qdrantMemoryClient;
+    private IntegrationTestBuilder _builder;
 
     public WhenUsingHybridMemoryProvider()
     {
-        _testSettings = TestSettings.FromFile();
-        _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
-        _dbContext.Database.EnsureCreated();
-        OpenAiClientFactory factory = new(_testSettings.OpenAiApiKey);
-        IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider();
-        IMemoryAugmentationService memoryAugmentationService = new MemoryAugmentationService(_testSettings, factory, _currentUserService, testMetricsCollectorProvider);
-        IMemoryStoreRouter storeRouter = new WeightedMemoryStoreRouter(_currentUserService, testMetricsCollectorProvider, factory, _testSettings);
-        IMemoryQueryResultReranker reranker = new MemoryQueryResultReranker(factory, _testSettings);
-        _qdrantMemoryClient = new QdrantMemoryClient(_testSettings, memoryAugmentationService);
-
-        _memoryProvider = new HybridMemoryProvider(_currentUserService, _dbContext, _qdrantMemoryClient, storeRouter, memoryAugmentationService, reranker);
+        _builder = new IntegrationTestBuilder();
     }
 
     [Fact]
     public async Task ShouldCreateMemories()
     {
-        Skip.If(string.IsNullOrEmpty(_testSettings.OpenAiApiKey));
+        Skip.If(_builder.ShouldSkipIntegrationTest());
 
         var newMemory = new Memory
         {
@@ -49,15 +35,15 @@ public class WhenUsingHybridMemoryProvider
             Content = "Test Content for a unit test that tests both Qdrant and EF storage.",
             StoreId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
-            Owner = _currentUserService.GetCurrentUser().Id
+            Owner = _builder.CurrentUserService.GetCurrentUser().Id
         };
 
-        await _memoryProvider.CreateMemoryEntryAsync(newMemory);
+        await _builder.MemoryProvider.CreateMemoryEntryAsync(newMemory);
 
-        Assert.True(_dbContext.MemoryStores.ToList().Count > 0);
-        Assert.True(_dbContext.Memories.ToList().Count > 0);
+        Assert.True(_builder.DbContext.MemoryStores.ToList().Count > 0);
+        Assert.True(_builder.DbContext.Memories.ToList().Count > 0);
 
-        var searchResult = await _memoryProvider.SearchAsync("Test", 10, -1);
+        var searchResult = await _builder.MemoryProvider.SearchAsync("Test", 10, -1);
         Assert.True(searchResult.Any());
     }
 }

@@ -21,6 +21,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Synaptic.NET.Augmentation\Synaptic.NET.Augmentation.csproj" />
       <ProjectReference Include="..\..\src\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
+      <ProjectReference Include="..\..\src\Synaptic.NET.Mcp\Synaptic.NET.Mcp.csproj" />
       <ProjectReference Include="..\..\src\Synaptic.NET.OpenAI\Synaptic.NET.OpenAI.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Core.Tests\Synaptic.NET.Core.Tests.csproj" />
     </ItemGroup>

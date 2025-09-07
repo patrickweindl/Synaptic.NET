@@ -13,13 +13,13 @@ namespace Synaptic.NET.Mcp.Tools;
 /// </summary>
 [McpServerToolType]
 [PublicAPI]
-public class MemoryCreation
+public static class MemoryCreation
 {
     [McpServerTool(Name = ToolConstants.CreateMemoryToolName, Destructive = false, OpenWorld = false, Title = ToolConstants.CreateMemoryToolTitle)]
     [Description("Creates a memory within the memory stores.")]
-    public async Task<bool> CreateMemory(
-        [Description("The identifier of the memory to create.")]
-        string memoryIdentifier,
+    public static async Task<bool> CreateMemory(
+        [Description("The title of the memory to create.")]
+        string memoryTitle,
         [Description("A short description in one sentence (less than 35 tokens / 20 words) of the memory content.")]
         string memoryDescription,
         [Description("The new content of the memory as a logical unit. Should not exceed 250 tokens / 150 words. If the information can not be condensed to this size or multiple logically closed chunks need to be created, create multiple memories.")]
@@ -40,7 +40,7 @@ public class MemoryCreation
             Owner = currentUserService.GetCurrentUser().Id,
             Identifier = Guid.NewGuid(),
             Description = memoryDescription,
-            Title = memoryIdentifier,
+            Title = memoryTitle,
             Content = content,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UnixEpoch,
