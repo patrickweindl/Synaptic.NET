@@ -54,6 +54,36 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         return output;
     }
 
+    public async Task<string> GenerateStoreDescriptionAsync(string storeIdentifier, List<string> records)
+    {
+        string memoryString = string.Join(Environment.NewLine, records.Select(m => m));
+
+        if (_client.GetEncoder().CountTokens(memoryString) > MaxTokensForSummarization)
+        {
+            memoryString = memoryString.Substring(0, MaxTokensForSummarization);
+        }
+        var systemPrompt = PromptTemplates.GetStoreSummarySystemPrompt();
+        var userPrompt = PromptTemplates.GetStoreSummaryUserPrompt(storeIdentifier, memoryString);
+
+        List<ChatMessage> messages = new()
+        {
+            ChatMessage.CreateSystemMessage(systemPrompt),
+            ChatMessage.CreateUserMessage(userPrompt)
+        };
+
+        DateTime start = DateTime.UtcNow;
+        Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
+            storeIdentifier, start);
+        var response = await _client.CompleteChatAsync(messages);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Summary", response.Value);
+        string output = response.Value.Content[0].Text.Trim();
+        Log.Information(
+            "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
+            DateTime.UtcNow - start, output);
+
+        return output;
+    }
+
     private const int MaxTokensForSummarization = 100000;
     public async Task<string> GenerateStoreDescriptionAsync(string storeIdentifier, List<Memory> records)
     {

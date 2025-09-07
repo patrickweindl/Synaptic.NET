@@ -20,16 +20,9 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Synaptic.NET.Augmentation\Synaptic.NET.Augmentation.csproj" />
-      <ProjectReference Include="..\..\src\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
       <ProjectReference Include="..\..\src\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
       <ProjectReference Include="..\..\src\Synaptic.NET.OpenAI\Synaptic.NET.OpenAI.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Remove="testSettings.json" />
-      <Content Include="testSettings.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
+      <ProjectReference Include="..\Synaptic.NET.Core.Tests\Synaptic.NET.Core.Tests.csproj" />
     </ItemGroup>
 
 </Project>

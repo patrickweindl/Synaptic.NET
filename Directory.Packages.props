@@ -17,6 +17,7 @@
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.6" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />

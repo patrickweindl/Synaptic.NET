@@ -84,11 +84,20 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
 
     public async Task<MemoryStoreRoutingResult> RouteMemoryToStoreAsync(Memory memory, IEnumerable<MemoryStore> availableStores)
     {
-        var storeChunks = availableStores.Chunk(3);
+        var availableStoresList = availableStores.ToList();
+        if (availableStoresList.Count == 0)
+        {
+            return new MemoryStoreRoutingResult(Guid.NewGuid(), 1);
+        }
+        var storeChunks = availableStoresList.Chunk(3);
         var rankingTasks = storeChunks.Select(async c => await RankMemoryStoreChunk(memory, c));
         var result = await Task.WhenAll(rankingTasks);
         var ranking = result.SelectMany(r => r).ToList();
         ranking = ranking.OrderByDescending(r => r.Relevance).ToList();
+        if (ranking.Count == 0)
+        {
+            return new MemoryStoreRoutingResult(Guid.NewGuid(), 1);
+        }
         return new MemoryStoreRoutingResult(ranking[0].Identifier, ranking[0].Relevance);
     }
 

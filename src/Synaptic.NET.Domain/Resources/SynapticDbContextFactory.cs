@@ -12,4 +12,11 @@ public class SynapticDbContextFactory : IDesignTimeDbContextFactory<SynapticDbCo
 
         return new SynapticDbContext(optionsBuilder.Options);
     }
+
+    public SynapticDbContext CreateInMemoryDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<SynapticDbContext>();
+        optionsBuilder.UseInMemoryDatabase("InMemoryDbForTesting");
+        return new SynapticDbContext(optionsBuilder.Options);
+    }
 }

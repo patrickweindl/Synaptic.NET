@@ -1293,18 +1293,18 @@
             _uploadProgress.Progress = 0.9;
             StateHasChanged();
 
-            await MemoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(_selectedFile.Name), processor.StoreDescription, out var memoryStore);
+            if (results == null)
+            {
+                _uploadProgress.Message = "The memory store was null";
+                _uploadProgress.Progress = 1;
+                return;
+            }
 
             _uploadProgress.Message = "Saving memories to database...";
             _uploadProgress.Progress = 0.95;
             StateHasChanged();
-            var saveTasks = results.Select(async result =>
-            {
-                result.memory.ReferenceType = (int)ReferenceType.Document;
-                result.memory.Reference = result.referenceName;
-                await MemoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, result.memory, memoryStore.Description);
-            });
-            await Task.WhenAll(saveTasks);
+
+            await MemoryProvider.CreateCollectionAsync(results);
 
             _uploadProgress.Progress = 1.0;
             _uploadProgress.Message = "Upload completed successfully!";

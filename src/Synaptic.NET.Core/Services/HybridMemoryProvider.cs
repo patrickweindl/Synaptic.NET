@@ -130,6 +130,27 @@ public class HybridMemoryProvider : IMemoryProvider
         return concatResults;
     }
 
+    public async Task<MemoryStore?> CreateCollectionAsync(MemoryStore store)
+    {
+        if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == store.StoreId) is { } existingStore)
+        {
+            foreach (var memory in store.Memories)
+            {
+                existingStore.Memories.Add(memory);
+
+            }
+            await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser(), store);
+            _dbContext.MemoryStores.Update(existingStore);
+
+            await _dbContext.SaveChangesAsync();
+            return existingStore;
+        }
+        _dbContext.MemoryStores.Add(store);
+        await _dbContext.SaveChangesAsync();
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUserService.GetCurrentUser(), store);
+        return store;
+    }
+
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore store)
     {
         var newStore = new MemoryStore
@@ -151,7 +172,9 @@ public class HybridMemoryProvider : IMemoryProvider
 
         if (targetStore == null)
         {
-            return false;
+            string title = await _augmentationService.GenerateStoreTitleAsync(string.Empty, [memory]);
+            string description = await _augmentationService.GenerateStoreDescriptionAsync(title, [memory]);
+            await CreateCollectionAsync(title, description, out targetStore);
         }
 
         memory.StoreId = targetStore.StoreId;

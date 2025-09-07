@@ -18,7 +18,7 @@ public class MemoryCreation
     [McpServerTool(Name = ToolConstants.CreateMemoryToolName, Destructive = false, OpenWorld = false, Title = ToolConstants.CreateMemoryToolTitle)]
     [Description("Creates a memory within the memory stores.")]
     public async Task<bool> CreateMemory(
-        [Description("The identifier of the memory to replace. If it does not exist, a new memory will be created.")]
+        [Description("The identifier of the memory to create.")]
         string memoryIdentifier,
         [Description("A short description in one sentence (less than 35 tokens / 20 words) of the memory content.")]
         string memoryDescription,
@@ -29,7 +29,8 @@ public class MemoryCreation
         [Description("Optional: a list of tags for the memory, useful for later retrieval.")]
         List<string>? tags,
         ICurrentUserService currentUserService,
-        IMemoryProvider memoryProvider)
+        IMemoryProvider memoryProvider,
+        IMemoryStoreRouter memoryStoreRouter)
     {
         Log.Logger.Information("[MCP Tool Call] Create memory");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());

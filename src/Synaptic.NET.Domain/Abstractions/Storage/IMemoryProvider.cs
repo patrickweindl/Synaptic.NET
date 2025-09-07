@@ -47,6 +47,13 @@ public interface IMemoryProvider
     /// <summary>
     /// Creates a new memory collection with the provided title.
     /// </summary>
+    /// <param name="store">The memory store to create.</param>
+    /// <returns>The created memory store, returning a value if the collection was successfully created, otherwise null.</returns>
+    Task<MemoryStore?> CreateCollectionAsync(MemoryStore store);
+
+    /// <summary>
+    /// Creates a new memory collection with the provided title.
+    /// </summary>
     /// <param name="collectionTitle">The title of the collection to create.</param>
     /// <param name="storeDescription">An optional description of the collection to be created.</param>
     /// <param name="memoryStore">The created memory store if successful.</param>

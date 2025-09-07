@@ -66,18 +66,29 @@ public class FileProcessor
         var chunkTasks = base64EncodedChunks.Select(async chunk => await CreateMemorySummaryFromBase64EncodedString(fileName, chunk));
         var chunkResults = (await Task.WhenAll(chunkTasks)).SelectMany(s => s).ToList();
 
+        var descriptions = await CreateMemoryDescriptionsFromSummaries(chunkResults);
+
+        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
+        StoreDescription = description;
+        var targetStore = new MemoryStore()
+        {
+            StoreId = Guid.NewGuid(),
+            Title = FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName)),
+            Description = description,
+            OwnerUser = user
+        };
+
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, base64String.Length, chunkResults.Sum(s => s.Summary.Length));
         Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {base64String.Length} characters.";
 
-        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, fileName, summary));
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, targetStore, descriptions, fileName, summary));
         var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
         Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
 
-        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, returnMemories.Select(m => m.Item2).ToList());
-        StoreDescription = description;
+        targetStore.Memories = returnMemories;
 
-        Result = returnMemories;
+        Result = targetStore;
         Completed = true;
         Progress = 1;
     }
@@ -109,17 +120,30 @@ public class FileProcessor
         var chunkTasks = chunks.Select(async chunk => await CreateMemorySummaryFromRawString(fileName, chunk));
         var chunkResults = (await Task.WhenAll(chunkTasks)).SelectMany(s => s).ToList();
 
+        var descriptions = await CreateMemoryDescriptionsFromSummaries(chunkResults);
+
+        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
+        StoreDescription = description;
+        var targetStore = new MemoryStore()
+        {
+            StoreId = Guid.NewGuid(),
+            Title = FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName)),
+            Description = description,
+            OwnerUser = user
+        };
+
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, fileContent.Length, chunkResults.Sum(s => s.Summary.Length));
         Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {fileContent.Length} characters.";
 
-        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, fileName, summary));
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, targetStore, descriptions, fileName, summary));
         var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
-        Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
-        Result = returnMemories;
+        targetStore.Memories = returnMemories;
 
-        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, returnMemories.Select(m => m.Item2).ToList());
-        StoreDescription = description;
+        Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
+        Result = targetStore;
+
+
         Completed = true;
         Progress = 100;
     }
@@ -168,25 +192,46 @@ public class FileProcessor
         return returnSummaries;
     }
 
-    private async Task<(string, Memory)> CreateReturnMemory(User currentUser, string fileName, MemorySummary summary)
+    private async Task<Dictionary<string, string>> CreateMemoryDescriptionsFromSummaries(List<MemorySummary> summaries)
     {
+        ConcurrentDictionary<string, string> descriptions = new();
+
+        var summaryTasks = summaries.Select(async s =>
+        {
+            descriptions[s.Identifier] = await GenerateDescriptionFromSummary(s);
+        });
+        await Task.WhenAll(summaryTasks);
+        return descriptions.ToDictionary(d => d.Key, d => d.Value);
+    }
+
+    private async Task<string> GenerateDescriptionFromSummary(MemorySummary summary)
+    {
+        return await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
+    }
+
+    private async Task<Memory> CreateReturnMemory(User currentUser, MemoryStore memoryStore, Dictionary<string, string> descriptions, string fileName, MemorySummary summary)
+    {
+        string description = descriptions.TryGetValue(summary.Identifier, out string? value) ? value : await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
         Memory mem = new()
         {
+            StoreId = memoryStore.StoreId,
             Identifier = Guid.NewGuid(),
             Title = summary.Identifier,
-            Description = await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary),
+            Description = description,
             Content = summary.Summary,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UnixEpoch,
             Reference = fileName,
-            Owner = currentUser.Id
+            Owner = currentUser.Id,
+            ReferenceType = (int)ReferenceType.Document,
+            Tags = new List<string>()
         };
-        return (fileName, mem);
+        return mem;
     }
 
     public string Message { get; private set; } = string.Empty;
     public bool Completed { get; private set; }
     public double Progress { get; private set; }
-    public List<(string referenceName, Memory memory)> Result { get; private set; } = new();
+    public MemoryStore? Result { get; private set; }
     public string StoreDescription { get; private set; } = string.Empty;
 }

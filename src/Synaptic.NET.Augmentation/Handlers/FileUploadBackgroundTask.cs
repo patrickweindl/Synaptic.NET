@@ -4,7 +4,6 @@ using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.BackgroundTasks;
 using Synaptic.NET.Domain.Helpers;
-using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Augmentation.Handlers;
 
@@ -49,20 +48,21 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Saving memories to store...", 0.9);
 
-            if (fileProcessor.Result.Count > 0)
+            if (fileProcessor.Result?.Memories.Count > 0)
             {
-                await memoryProvider.CreateCollectionAsync(FileProcessingHelper.SanitizeFileName(FileName), fileProcessor.StoreDescription, out var memoryStore);
+                var resultStore = fileProcessor.Result;
+                await memoryProvider.CreateCollectionAsync(resultStore.Title, fileProcessor.StoreDescription, out var memoryStore);
 
-                var saveTasks = fileProcessor.Result.Select(async m =>
+                var saveTasks = fileProcessor.Result.Memories.Select(async m =>
                 {
-                    await memoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, m.memory);
+                    await memoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, m, resultStore.Description);
                 });
                 await Task.WhenAll(saveTasks);
 
                 var result = new FileUploadResult
                 {
                     FileName = FileName,
-                    MemoryCount = fileProcessor.Result.Count,
+                    MemoryCount = fileProcessor.Result.Memories.Count,
                     StoreIdentifier = FileProcessingHelper.SanitizeFileName(FileName),
                     StoreDescription = fileProcessor.StoreDescription
                 };
