@@ -1,6 +1,4 @@
-using Microsoft.SemanticKernel.Memory;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
-using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Resources.Configuration;
 using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.OpenAI;

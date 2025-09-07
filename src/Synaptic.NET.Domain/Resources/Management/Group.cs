@@ -14,11 +14,13 @@ public class Group : IManagedIdentity
 
     [Required]
     [JsonPropertyName("group_identifier")]
+    [MaxLength(512)]
     public required string Identifier { get; set; }
 
     public IdentityRole Role => IdentityRole.Group;
 
     [JsonPropertyName("group_name")]
+    [MaxLength(256)]
     public string DisplayName { get; set; } = string.Empty;
 
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();

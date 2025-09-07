@@ -1,16 +1,4 @@
-using Synaptic.NET.Augmentation.Services;
-using Synaptic.NET.Core;
-using Synaptic.NET.Core.Providers;
-using Synaptic.NET.Core.Services;
-using Synaptic.NET.Core.Tests;
-using Synaptic.NET.Core.Tests.Mocks;
-using Synaptic.NET.Domain.Abstractions.Augmentation;
-using Synaptic.NET.Domain.Abstractions.Management;
-using Synaptic.NET.Domain.Abstractions.Storage;
-using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Storage;
-using Synaptic.NET.OpenAI;
-using Synaptic.NET.Qdrant;
 
 namespace Synaptic.NET.Integration.Tests;
 

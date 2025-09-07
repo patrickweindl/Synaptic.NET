@@ -10,4 +10,8 @@
       <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="ApiKeyAuthentication\" />
+    </ItemGroup>
 </Project>

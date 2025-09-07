@@ -1,4 +1,3 @@
-using Microsoft.SemanticKernel.Memory;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Abstractions.Augmentation;

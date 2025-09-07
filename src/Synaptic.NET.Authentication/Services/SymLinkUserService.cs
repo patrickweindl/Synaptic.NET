@@ -33,7 +33,7 @@ public class SymLinkUserService : ISymLinkUserService
                 Log.Logger.Error(e, "Malformed symLinkUsers.json file, deleting and recreating.");
                 File.Delete(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"));
                 File.Create(Path.Join(_settings.BaseDataPath, "symLinkUsers.json")).Close();
-                File.WriteAllText(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"), JsonSerializer.Serialize(new List<SymLinkUserInfo>(), new JsonSerializerOptions { WriteIndented = true}));
+                File.WriteAllText(Path.Join(_settings.BaseDataPath, "symLinkUsers.json"), JsonSerializer.Serialize(new List<SymLinkUserInfo>(), new JsonSerializerOptions { WriteIndented = true }));
             }
 
         }

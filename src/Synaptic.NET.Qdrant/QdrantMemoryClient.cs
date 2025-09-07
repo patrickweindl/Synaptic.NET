@@ -59,7 +59,7 @@ public class QdrantMemoryClient
         {
             VectorProperty = m => m.ContentEmbedding,
             Filter = m => m.VectorOwnerIdentifier == userId
-        },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+        }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<VectorMemory>
@@ -92,7 +92,7 @@ public class QdrantMemoryClient
         {
             VectorProperty = m => m.ContentEmbedding,
             Filter = m => m.VectorStoreIdentifier == collectionIdentifier.ToString() && m.VectorOwnerIdentifier == userIdentifier.ToString()
-        },cancellationToken: cancellationToken).ToListAsync(cancellationToken);
+        }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<VectorMemory>
         {

@@ -87,7 +87,10 @@ public static class AuthenticationServices
                         return Task.CompletedTask;
                     }
                 };
-            }).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+            })
+            .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+                ApiKeyAuthenticationSchemeOptions.DefaultScheme, options => { })
+            .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
             {
                 options.LoginPath = "/account/login";
                 options.LogoutPath = "/account/logout";

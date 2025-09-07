@@ -13,10 +13,12 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
     public Guid Id { get; set; }
 
     [JsonPropertyName("user_identifier")]
+    [MaxLength(512)]
     [Required]
     public required string Identifier { get; set; }
 
     [JsonPropertyName("display_name")]
+    [MaxLength(256)]
     public string DisplayName { get; set; } = string.Empty;
 
     [JsonIgnore]
@@ -27,6 +29,9 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
 
     [JsonPropertyName("user_role")]
     public IdentityRole Role { get; set; } = IdentityRole.Guest;
+
+    [JsonPropertyName("api_keys")]
+    public List<ApiKey> ApiKeys { get; set; } = new();
 
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
 
