@@ -42,6 +42,7 @@ To explore functionality with a default setup:
   - [ ] Observable results for memory creation and search for frontend
   - [ ] Group permissions for users
 - [x] Qdrant
+- [x] Entity Framework Core
 - [x] OpenAI
 - [ ] Builder pattern for AppHost
 - [ ] Docker support
