@@ -2,31 +2,34 @@
 Synaptic.NET is a fully .NET-based solution to provide an ASP.NET server with MCP, RESTful API functionalities, a Blazor web interface,
 a RAG base via Qdrant and OpenAI API communication — all secured via OAuth2.
 
-This repository acts as a starting point to dive into setting up MCP+RESTful RAG systems with a basic implementation through Qdrant.
+This repository acts as a starting point to dive into setting up MCP + RESTful RAG systems through a hybrid approach with EF and Qdrant with a basic implementation for your own project.
 
 ## Getting Started
 To explore functionality with a default setup:
 1) Setup a local Qdrant instance (see [Qdrant](https://github.com/qdrant/qdrant))
 2) Clone the repository
 3) Adjust the `appsettings.json` file in src/Synaptic.NET.AppHost to match your local setup for ports and forwarding
-4) Build the solution
-5) Run the solution in HTTPS configuration (HTTP is available but should be used only when running the solution behind a reverse proxy)
+4) Make sure you provide an OpenAI API key in either the `appsettings.json` file or environment variables
+5) Make sure you have an application configured in either GitHub, Microsoft or Google for OAuth2 authentication and carry over your application credentials to the `appsettings.json` file or environment variables
+6) Build the solution
+7) Run the solution in HTTPS configuration (HTTP is available but should be used only when running the solution behind a reverse proxy as per certifications)
 
 *If you are getting an error when opening the Blazor web UI that no secure connection can be established:*
 
 *Option A: run the server in HTTP behind a reverse proxy with a certbot, preferably with an openly accessible domain name that is included in the appsettings.json.*
 
-*Option B: run the server in HTTPS with a self-signed certificate and make sure you are not connected to any SSH tunnels.*
+*Option B: run the server in HTTPS with a self-signed certificate (`dotnet dev-certs https --trust`) and make sure you are not connected to any SSH tunnels.*
 
 ## Features
 
 - [x] Blazor Web UI
     - [x] Login/Logout
     - [x] User Management
-    - [ ] Dashboard
-    - [ ] Search
-    - [ ] Observable results
-    - [ ] File Upload
+    - [x] Dashboard
+    - [x] Search
+    - [x] Observable file creation results
+    - [ ] Observable search results
+    - [x] File Upload
     - [ ] Memory Management
 - [x] MCP
   - [x] Memory Endpoints

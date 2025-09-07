@@ -12,7 +12,7 @@
         "MemoryRoutingModel": "gpt-5-mini",
         "MemoryAugmentationModel": "gpt-5-mini",
         "RagCreationModel": "gpt-5-mini",
-        "ApiKey": "sk-"
+        "ApiKey": "sk-..."
     },
     "OAuth": {
         "GitHub": {
@@ -41,7 +41,7 @@
     "Security": {
         "TokenLifetime": "08:00:00",
         "TrustInternal": "True",
-        "Admins": "comma-separated-list-of-admin-overrides"
+        "Admins": "comma-separated-list-of-admin-overrides-which-are-added-as-admins-on-startup"
     },
     "Backup": {
         "Enable": "false",
@@ -51,7 +51,7 @@
         "Url": "https://localhost:8001",
         "KnownProxies": "127.0.0.1,192.168.178.2",
         "Port": "8001",
-        "Qdrant": "http://localhost:6333"
+        "Qdrant": "http://localhost:6334"
     },
     "AllowedHosts": "*"
 }
