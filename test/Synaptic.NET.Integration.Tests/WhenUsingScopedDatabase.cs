@@ -2,17 +2,16 @@ using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Integration.Tests;
 
-public class WhenUsingHybridMemoryProvider
+public class WhenUsingScopedDatabase
 {
-    private IntegrationTestBuilder _builder;
-
-    public WhenUsingHybridMemoryProvider()
+    private readonly IntegrationTestBuilder _builder;
+    public WhenUsingScopedDatabase()
     {
         _builder = new IntegrationTestBuilder();
     }
 
     [Fact]
-    public async Task ShouldCreateMemories()
+    public async Task ShouldNotLeakUserInformation()
     {
         Skip.If(_builder.ShouldSkipIntegrationTest());
 
@@ -35,5 +34,16 @@ public class WhenUsingHybridMemoryProvider
 
         var searchResult = await _builder.MemoryProvider.SearchAsync("Test", 10, -1);
         Assert.True(searchResult.Any());
+
+        Guid otherTestGuid = Guid.Parse("00000001-0000-abcd-0000-000000000000");
+        string otherUser = "otherUserId";
+        string otherUserName = "Other User";
+        var otherBuilder = new IntegrationTestBuilder(otherTestGuid, otherUserName, otherUser);
+
+        var otherSearchResult = await otherBuilder.MemoryProvider.SearchAsync("Test", 10, -1);
+        Assert.False(otherSearchResult.Any());
+
+        Assert.False(otherBuilder.DbContext.MemoryStores.Any());
+        Assert.False(otherBuilder.DbContext.Memories.Any());
     }
 }

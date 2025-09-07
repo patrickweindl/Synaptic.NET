@@ -22,8 +22,12 @@ public class IntegrationTestBuilder
     private readonly QdrantMemoryClient _qdrantMemoryClient;
     private readonly IMemoryStoreRouter _storeRouter;
 
-    public IntegrationTestBuilder()
+    public IntegrationTestBuilder(Guid? overrideGuid = null, string? overrideDisplayName = null, string? overrideUserId = null)
     {
+        if (overrideGuid != null && overrideDisplayName != null && overrideUserId != null)
+        {
+            _currentUserService = new MockUserService(overrideGuid, overrideDisplayName, overrideUserId);
+        }
         _testSettings = TestSettings.FromFile();
         _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _dbContext.Database.EnsureCreated();
