@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
@@ -59,14 +60,20 @@ public class SynapticDbContext : DbContext
                 CurrentUserId == Guid.Empty
                 || s.UserId == CurrentUserId
                 || (s.GroupId.HasValue && CurrentGroupIds.Contains(s.GroupId.Value))
-            );
+            )
+            .Property(p => p.Tags)
+            .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
 
         modelBuilder.Entity<Memory>()
             .HasQueryFilter(m =>
                 CurrentUserId == Guid.Empty
                 || m.Owner == CurrentUserId
                 || (m.GroupId.HasValue && CurrentGroupIds.Contains(m.GroupId.Value))
-            );
+            )
+            .Property(p => p.Tags)
+            .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
 
         modelBuilder.Entity<Memory>().HasIndex(m => m.Owner);
         modelBuilder.Entity<Memory>().HasIndex(m => m.GroupId);
@@ -74,5 +81,23 @@ public class SynapticDbContext : DbContext
 
         modelBuilder.Entity<MemoryStore>().HasIndex(s => s.UserId);
         modelBuilder.Entity<MemoryStore>().HasIndex(s => s.GroupId);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.OwnerUser)
+            .WithMany()
+            .HasForeignKey(m => m.Owner)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.OwnerGroup)
+            .WithMany()
+            .HasForeignKey(m => m.GroupId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Memory>()
+            .HasOne(m => m.Store)
+            .WithMany(s => s.Memories)
+            .HasForeignKey(m => m.StoreId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
