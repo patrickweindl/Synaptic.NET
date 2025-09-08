@@ -35,27 +35,32 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync()
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var result = await _dbContext.MemoryStores.ToDictionaryAsync(s => s.StoreId, s => s.Description);
         return result;
     }
 
     public async Task<List<MemoryStore>> GetStoresAsync()
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         return await _dbContext.MemoryStores.ToListAsync();
     }
 
     public Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier));
     }
 
     public Task<MemoryStore?> GetCollectionAsync(string collectionTitle)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle));
     }
 
     public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
 
         foreach (var group in _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group))
@@ -77,10 +82,10 @@ public class HybridMemoryProvider : IMemoryProvider
     private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, int limit = 10,
         double relevanceThreshold = 0.5)
     {
-        var memoryStores = _currentUserService.GetCurrentUser().Stores.ToList();
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var groupStores = _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group).SelectMany(g => g.Stores).ToList();
 
-        var allStores = memoryStores.Concat(groupStores).ToList();
+        var allStores = _dbContext.MemoryStores.Concat(groupStores).ToList();
 
         var storeRankings = (await _storeRouter.RankStoresAsync(query, allStores)).ToList();
 
@@ -105,6 +110,7 @@ public class HybridMemoryProvider : IMemoryProvider
     private async Task<IEnumerable<MemorySearchResult>> AugmentedSearchInStore(MemoryStore chunk, string query, int limit = 10, double relevanceThreshold = 0.5,
         CancellationToken token = default)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var results = new List<MemorySearchResult>();
         var vectorResults = await _qdrantMemoryClient.SearchInStoreAsync(query, limit, relevanceThreshold, chunk.StoreId, _currentUserService.GetCurrentUser().Id, token);
 
@@ -132,6 +138,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<MemoryStore?> CreateCollectionAsync(MemoryStore store)
     {
+        _dbContext.Attach(_currentUserService.GetCurrentUser());
         if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == store.StoreId) is { } existingStore)
         {
             foreach (var memory in store.Memories)
@@ -508,7 +515,6 @@ public class HybridMemoryProvider : IMemoryProvider
     {
         _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
-            .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
         if (targetStore == null)

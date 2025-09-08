@@ -65,6 +65,25 @@ public class WhenUsingDatabaseContext
     }
 
     [Fact]
+    public void ShouldSaveApiKeysViaContext()
+    {
+        _dbContext.ApiKeys.Add(new ApiKey()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Unit Test Key2",
+            Key = "TestKey2",
+            UserId = _currentUserService.GetCurrentUser().Id,
+            Owner = _currentUserService.GetCurrentUser()
+        });
+
+        _dbContext.SaveChanges();
+
+
+        Assert.True(_dbContext.ApiKeys.FirstOrDefault(k => k.Name == "Unit Test Key2") != null);
+        Assert.NotNull(_dbContext.ApiKeys.FirstOrDefault(k => k.Name == "Unit Test Key2")?.Owner);
+    }
+
+    [Fact]
     public void ShouldAddMemoryStore()
     {
         _dbContext.Attach(_currentUserService.GetCurrentUser());

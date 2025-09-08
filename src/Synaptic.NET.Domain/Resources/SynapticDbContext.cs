@@ -11,7 +11,20 @@ public class SynapticDbContext : DbContext
     public List<Guid> CurrentGroupIds { get; } = new();
     public DbSet<User> Users => Set<User>();
     public DbSet<Group> Groups => Set<Group>();
+
+    /// <summary>
+    /// Provides scoped access to the current user's API keys.
+    /// </summary>
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
+    /// <summary>
+    /// Provides scoped access to the current user's stores.
+    /// </summary>
     public DbSet<MemoryStore> MemoryStores => Set<MemoryStore>();
+
+    /// <summary>
+    /// Provides scoped access to the current user's memories.
+    /// </summary>
     public DbSet<Memory> Memories => Set<Memory>();
 
     public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
@@ -24,6 +37,7 @@ public class SynapticDbContext : DbContext
         CurrentUserId = user.Id;
         CurrentGroupIds.Clear();
         CurrentGroupIds.AddRange(user.Memberships.Select(m => m.GroupId));
+        Attach(user);
     }
 
     public User? DbUser()
@@ -117,7 +131,16 @@ public class SynapticDbContext : DbContext
             .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
 
+        modelBuilder.Entity<ApiKey>()
+            .HasOne(a => a.Owner)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-
+        modelBuilder.Entity<ApiKey>()
+            .HasQueryFilter(a =>
+                CurrentUserId == Guid.Empty
+                || a.UserId == CurrentUserId
+            );
     }
 }

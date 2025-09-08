@@ -1733,21 +1733,9 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            var userWithApiKeys = await DbContext.Users
-                .Include(u => u.ApiKeys)
-                .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
-
-            if (userWithApiKeys != null)
-            {
-                _apiKeys = userWithApiKeys.ApiKeys.ToList();
-                _apiKeyCount = _apiKeys.Count;
-            }
-            else
-            {
-                _apiKeys = [];
-                _apiKeyCount = 0;
-            }
+            DbContext.Attach(CurrentUserService.GetCurrentUser());
+            _apiKeys = DbContext.ApiKeys.ToList();
+            _apiKeyCount = _apiKeys.Count;
         }
         catch (Exception ex)
         {
@@ -2059,10 +2047,7 @@
 
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            var userWithApiKeys = await DbContext.Users
-                .Include(u => u.ApiKeys)
-                .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+            var userWithApiKeys = DbContext.DbUser();
 
             if (userWithApiKeys == null)
             {
@@ -2071,8 +2056,9 @@
                 return;
             }
 
+            bool refuse = DbContext.ApiKeys.ToList().Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase));
             // Check for duplicate names
-            if (userWithApiKeys.ApiKeys.Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase)))
+            if (refuse)
             {
                 _apiKeyActionMessage = "An API key with this name already exists";
                 _apiKeyActionSuccess = false;
@@ -2082,6 +2068,7 @@
             var apiKey = new ApiKey
             {
                 Id = Guid.NewGuid(),
+                Owner = userWithApiKeys,
                 UserId = userWithApiKeys.Id,
                 Name = _createApiKeyForm.Name.Trim(),
                 Key = GenerateSecureApiKey(),
@@ -2090,7 +2077,7 @@
                     : DateTimeOffset.UtcNow.AddDays(_createApiKeyForm.ExpirationDays)
             };
 
-            userWithApiKeys.ApiKeys.Add(apiKey);
+            DbContext.ApiKeys.Add(apiKey);
             await DbContext.SaveChangesAsync();
 
             // Show the new key in the one-time display modal
@@ -2125,22 +2112,19 @@
 
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            var userWithApiKeys = await DbContext.Users
-                .Include(u => u.ApiKeys)
-                .FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+            var currentUser = DbContext.DbUser();
 
-            if (userWithApiKeys == null)
+            if (currentUser == null)
             {
                 _apiKeyActionMessage = "User not found";
                 _apiKeyActionSuccess = false;
                 return;
             }
 
-            var keyToRemove = userWithApiKeys.ApiKeys.FirstOrDefault(k => k.Key == apiKey.Key);
+            var keyToRemove = DbContext.ApiKeys.FirstOrDefault(k => k.Key == apiKey.Key);
             if (keyToRemove != null)
             {
-                userWithApiKeys.ApiKeys.Remove(keyToRemove);
+                DbContext.ApiKeys.Remove(keyToRemove);
                 await DbContext.SaveChangesAsync();
 
                 _apiKeyActionMessage = $"API key '{apiKey.Name}' deleted successfully";

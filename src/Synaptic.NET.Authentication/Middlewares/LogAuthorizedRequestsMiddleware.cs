@@ -12,12 +12,6 @@ public class LogAuthorizedRequestsMiddleware : IAppMiddleware
         bool isAuthorizedEndpoint = endpoint?.Metadata.GetMetadata<IAuthorizeData>() != null &&
                                      endpoint?.Metadata.GetMetadata<AllowAnonymousAttribute>() == null;
 
-        if (Debugger.IsAttached)
-        {
-            Log.Logger.Debug($"[Debug Request] {context.Request.Method} {context.Request.Path}");
-            Console.WriteLine($"[Debug Request] {context.Request.Method} {context.Request.Path}");
-        }
-
         if (isAuthorizedEndpoint)
         {
             Log.Information("Authorized request received: {Method} {Path}",
