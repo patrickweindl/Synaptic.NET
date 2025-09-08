@@ -111,11 +111,21 @@ public class WellKnownController : ControllerBase
             registration_endpoint = $"{_settings.ServerUrl}/register",
             response_types_supported = new[]
             {
-                ""
+                "code",
+                "code token"
+            },
+            code_challenge_methods_supported = new[]
+            {
+                "S256", "plain"
             },
             grant_types_supported = new[]
             {
-                ""
+                "authorization_code"
+            },
+            token_endpoint_auth_signing_alg_values_supported = new[]
+            {
+                "HS256",
+                "RS256"
             }
         };
     }
