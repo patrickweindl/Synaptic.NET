@@ -112,7 +112,7 @@ public class AuthController : ControllerBase
             Log.Information($"[Authorization] Received authorize GET with query {queryString}.");
             if (inputQuery.TryGetValue("client_id", out string? clientId) && !string.IsNullOrEmpty(clientId) && _registrations.TryGetValue(clientId, out _))
             {
-                Log.Information("[Authorization] Client registration removed.");
+                Log.Debug("[Authorization] Registered client via PKCE, redirecting.");
             }
         }
         string redirectUri = string.IsNullOrEmpty(queryString)
@@ -145,7 +145,7 @@ public class AuthController : ControllerBase
         }
         _codeBasedAuthProvider.AddCodeIdentityProvider(code, redirectUri.Provider);
 
-        Log.Information($"[Authorization] OAuth callback received with state: {state}, redirecting to {redirectUri.Uri}.");
+        Log.Debug($"[Authorization] OAuth callback received with state: {state}, redirecting to {redirectUri.Uri}.");
         return Redirect($"{redirectUri.Uri}?state={state}&code={code}");
     }
 
@@ -206,7 +206,7 @@ public class AuthController : ControllerBase
 
         if (_registrations.TryRemove(clientId, out var originalRequest))
         {
-            Log.Information("[Authentication Token] Client registration removed. OG: " + JsonSerializer.Serialize(originalRequest.Item1) + "");
+            Log.Debug("[Authentication Token] Client registration removed.");
         }
 
         clientId = provider switch
