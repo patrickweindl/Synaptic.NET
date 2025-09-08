@@ -10,7 +10,7 @@ To explore functionality with a default setup:
 2) Clone the repository
 3) Adjust the `appsettings.json` file in src/Synaptic.NET.AppHost to match your local setup for ports and forwarding
 4) Make sure you provide an OpenAI API key in either the `appsettings.json` file or environment variables
-5) Make sure you have an application configured in either GitHub, Microsoft or Google for OAuth2 authentication and carry over your application credentials to the `appsettings.json` file or environment variables
+5) Make sure you have an application configured in either GitHub, Microsoft or Google for OAuth2 authentication and carry over your application credentials to the `appsettings.json` file or environment variables, make sure the redirect-URI is exactly `https://your-uri/oauth-callback`
 6) Build the solution
 7) Run the solution in HTTPS configuration (HTTP is available but should be used only when running the solution behind a reverse proxy as per certifications)
 
@@ -22,25 +22,45 @@ To explore functionality with a default setup:
 
 ## Features
 
-- [x] Blazor Web UI
-    - [x] Login/Logout
-    - [x] User Management
-    - [x] Dashboard
-    - [x] Search
-    - [x] Observable file creation results
-    - [ ] Observable search results
-    - [x] File Upload
-    - [ ] Memory Management
-- [x] MCP
-  - [x] Memory Endpoints
-  - [x] Common Tools
-- [ ] RESTful API
-    - [ ] Memory Endpoints
-    - [ ] Common Tools
-- [x] Backend
-  - [x] OAuth2
-  - [ ] Observable results for memory creation and search for frontend
-  - [ ] Group permissions for users
+### Blazor Web UI
+
+- [x] Login/Logout
+- [x] User Management
+- [x] Dashboard
+- [x] Search
+- [x] Observable file creation results
+- [ ] Observable search results
+- [x] File Upload
+- [ ] Memory Management
+### MCP
+- [x] Memory Endpoints
+- [x] Common Tools
+### RESTful API
+- [ ] Memory Endpoints
+- [ ] Common Tools
+### Backend
+- [x] Authentication/Authorization
+  - [x] VSCode Authenticated MCP
+    - [x] GitHub
+    - [x] MS
+    - [x] Google
+  - [x] Claude Authenticated MCP
+    - [x] GitHub
+    - [x] MS
+    - [x] Google
+  - [ ] Claude Code Authenticated MCP
+    - [ ] GitHub
+    - [ ] MS
+    - [ ] Google
+  - [ ] CustomGPT Authenticated RestAPI Access
+    - [ ] GitHub
+    - [ ] MS
+    - [ ] Google
+  - [ ] EntraID
+- [ ] Observable results for memory creation and search for frontend
+- [ ] Group permissions for users
+- [ ] Restricted access for guests
+### Others
 - [x] Qdrant
 - [x] Entity Framework Core
 - [x] OpenAI

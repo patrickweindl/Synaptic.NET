@@ -57,12 +57,12 @@ public class SynapticServerSettings
     public string OpenAiAugmentedSearchModel => _configuration?["OpenAi:AugmentedSearchModel"] ?? "gpt-5-mini";
     public string OpenAiApiKey { get; set; }
     public string JwtKey => _configuration?["Jwt:Key"] ?? _generatedJwtKey;
-    public string JwtIssuer => _configuration?["Jwt:Issuer"] ?? "mneme";
+    public string JwtIssuer => _configuration?["Jwt:Issuer"] ?? "https://localhost:8001/";
     public TimeSpan JwtTokenLifetime => string.IsNullOrEmpty(_configuration?["Security:TokenLifetime"]) ? TimeSpan.FromHours(1) : TimeSpan.Parse(_configuration["Security:TokenLifetime"]!);
     public bool TrustInternalRequests => !string.IsNullOrEmpty(_configuration?["Security:TrustInternal"]) && bool.Parse(_configuration["Security:TrustInternal"] ?? "False");
     public bool EnableBackup => !string.IsNullOrEmpty(_configuration?["Backup:Enable"]) && bool.Parse(_configuration["Backup:Enable"] ?? "False");
     public string BackupPath => _configuration?["Backup:Path"] ?? string.Empty;
-    public string ServerUrl => _configuration?["Servers:Url"] ?? "127.0.0.1";
+    public string ServerUrl => _configuration?["Servers:Url"] ?? "https://localhost:8001/";
     public List<string> KnownProxies { get; }
     public int ServerPort => string.IsNullOrEmpty(_configuration?["Servers:Port"]) ? 8000 : int.Parse(_configuration["Servers:Port"]!);
     public List<string> AdminIdentifiers => string.IsNullOrEmpty(_configuration?["Security:Admins"]) ? new List<string>() : _configuration["Security:Admins"]?.Split(',').ToList() ?? new();

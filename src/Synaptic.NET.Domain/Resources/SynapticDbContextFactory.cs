@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Synaptic.NET.Domain.Abstractions.Management;
 
 namespace Synaptic.NET.Domain.Resources;
 
@@ -14,10 +13,10 @@ public class SynapticDbContextFactory : IDesignTimeDbContextFactory<SynapticDbCo
         return new SynapticDbContext(optionsBuilder.Options);
     }
 
-    public SynapticDbContext CreateInMemoryDbContext(ICurrentUserService? currentUserService = null)
+    public SynapticDbContext CreateInMemoryDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<SynapticDbContext>();
         optionsBuilder.UseInMemoryDatabase("InMemoryDbForTesting");
-        return new SynapticDbContext(optionsBuilder.Options, currentUserService);
+        return new SynapticDbContext(optionsBuilder.Options);
     }
 }

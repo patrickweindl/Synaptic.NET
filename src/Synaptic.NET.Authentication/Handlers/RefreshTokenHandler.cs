@@ -57,9 +57,9 @@ public class RefreshTokenHandler : IRefreshTokenHandler
         return returnString;
     }
 
-    public bool ValidateRefreshToken(string refreshToken, [MaybeNullWhen(false)] out ClaimsIdentity? claimsIdentity)
+    public bool ValidateRefreshToken(string refreshToken, [MaybeNullWhen(false)] out ClaimsIdentity claimsIdentity)
     {
-        if (s_refreshTokens.TryRemove(refreshToken, out var tokenData))
+        if (s_refreshTokens.TryGetValue(refreshToken, out var tokenData))
         {
             claimsIdentity = new ClaimsIdentity();
             claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, tokenData.UserId));

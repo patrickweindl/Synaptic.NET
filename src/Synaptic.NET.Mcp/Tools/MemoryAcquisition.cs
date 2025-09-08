@@ -4,18 +4,23 @@ using JetBrains.Annotations;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
+using Synaptic.NET.Domain.Constants;
 
 namespace Synaptic.NET.Mcp.Tools;
 
 /// <summary>
 /// Provides tools for memory acquisition, using Dependency Injection for the individual methods.
 /// </summary>
-[McpServerResourceType]
+[McpServerToolType]
 [PublicAPI]
 public static class MemoryAcquisition
 {
-    [McpServerResource(Name = "FreeTextSearchResource", MimeType = "application/json")]
-    [Description("Search memories with a free text query.")]
+    [McpServerTool(
+        Name = ToolConstants.GetMemoryToolName,
+        Title = ToolConstants.GetMemoryToolTitle,
+        Destructive = false,
+        OpenWorld = false)]
+    [Description(ToolConstants.GetMemoryToolDescription)]
     public static async Task<string> FreeTextSearchAsync(
         [Description("The free text query.")] string query,
         [Description("The maximum count of memories to return")] int limit,
@@ -31,8 +36,12 @@ public static class MemoryAcquisition
         return JsonSerializer.Serialize(memories);
     }
 
-    [McpServerResource(Name = "GetPinnedMemoriesResource", MimeType = "application/json")]
-    [Description("Retrieve all pinned memories")]
+    [McpServerTool(
+        Name = ToolConstants.GetCurrentlyRelevantMemoriesToolName,
+        Title = ToolConstants.GetCurrentlyRelevantMemoriesToolTitle,
+        Destructive = false,
+        OpenWorld = false)]
+    [Description(ToolConstants.GetCurrentlyRelevantMemoriesToolDescription)]
     public static async Task<string> GetPinnedMemoriesAsync(ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
         Log.Logger.Information("[MCP Tool Call] Get pinned memories");
@@ -42,8 +51,12 @@ public static class MemoryAcquisition
         return JsonSerializer.Serialize(pinnedMemories);
     }
 
-    [McpServerResource(Name = "GetStoreIdentifiersandDescriptionsResource", MimeType = "application/json")]
-    [Description("Retrieve memory store identifiers with short descriptions")]
+    [McpServerTool(
+        Name = ToolConstants.GetStoreIdsAndDescriptionsToolName,
+        Title = ToolConstants.GetStoreIdsAndDescriptionsToolTitle,
+        Destructive = false,
+        OpenWorld = false)]
+    [Description(ToolConstants.GetStoreIdsAndDescriptionsToolDescription)]
     public static async Task<string> GetMemoryStoreIdentifiersAndDescriptions(
         ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {

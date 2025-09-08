@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,20 +30,60 @@ public class AuthController : ControllerBase
         _codeBasedAuthProvider = codeBasedAuthProvider;
     }
 
+    [HttpHead("/")]
+    [AllowAnonymous]
+    public IActionResult Head()
+    {
+        return Ok();
+    }
+
+    [HttpHead("/mcp")]
+    [AllowAnonymous]
+    public IActionResult McpHead()
+    {
+        return Ok();
+    }
+
+    [HttpOptions("register")]
+    [AllowAnonymous]
+    public IActionResult RegisterOptions([FromBody] object? body)
+    {
+        var expiredKvps = _registrations.Where(kvp => kvp.Value.Item2 < DateTimeOffset.UtcNow).ToList();
+        foreach (var kvp in expiredKvps)
+        {
+            _registrations.TryRemove(kvp.Key, out _);
+        }
+        Guid registrationId = Guid.NewGuid();
+        _registrations[registrationId.ToString()] = (body, DateTimeOffset.UtcNow.AddHours(0.5));
+
+        return StatusCode(201, BuildRegistrationResponse(registrationId.ToString()));
+    }
+
+    private static ConcurrentDictionary<string, (object?, DateTimeOffset)> _registrations = new();
+
+    private object BuildRegistrationResponse(string registrationId)
+    {
+        Log.Logger.Information($"[Authorization] New registration with {registrationId}.");
+        return new
+        {
+            client_id = registrationId,
+            redirect_uris = new[] { $"{_settings.ServerUrl}/authorize" }
+        };
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public IActionResult Registration([FromBody] object? body)
     {
-        var bodyJson = JsonSerializer.Serialize(body);
-        Log.Information($"Registration request, body: {bodyJson}.");
-
-        var response = new
+        var expiredKvps = _registrations.Where(kvp => kvp.Value.Item2 < DateTimeOffset.UtcNow).ToList();
+        foreach (var kvp in expiredKvps)
         {
-            redirect_uris = $"{_settings.ServerUrl}/authorize",
-            client_id = _settings.GitHubOAuthSettings.ClientId
-        };
+            _registrations.TryRemove(kvp.Key, out _);
+        }
+        Guid registrationId = Guid.NewGuid();
+        _registrations[registrationId.ToString()] = (body, DateTimeOffset.UtcNow.AddHours(0.5));
 
-        return StatusCode(201, response);
+        return StatusCode(201, BuildRegistrationResponse(registrationId.ToString()));
     }
 
     [HttpGet("login")]
@@ -69,10 +110,10 @@ public class AuthController : ControllerBase
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             queryString = string.Join("&", inputQuery.Where(k => k.Key != null && k.Value != null).Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
             Log.Information($"[Authorization] Received authorize GET with query {queryString}.");
-        }
-        if (body != null)
-        {
-            Log.Information($"[Authorization] Received authorize GET with body {JsonSerializer.Serialize(body)}.");
+            if (inputQuery.TryGetValue("client_id", out string? clientId) && !string.IsNullOrEmpty(clientId) && _registrations.TryGetValue(clientId, out _))
+            {
+                Log.Information("[Authorization] Client registration removed.");
+            }
         }
         string redirectUri = string.IsNullOrEmpty(queryString)
             ? "/oauth-select"
@@ -104,7 +145,7 @@ public class AuthController : ControllerBase
         }
         _codeBasedAuthProvider.AddCodeIdentityProvider(code, redirectUri.Provider);
 
-        Log.Information($"[Authorization] OAuth callback received with state: {state}, redirecting to {redirectUri}.");
+        Log.Information($"[Authorization] OAuth callback received with state: {state}, redirecting to {redirectUri.Uri}.");
         return Redirect($"{redirectUri.Uri}?state={state}&code={code}");
     }
 
@@ -159,7 +200,13 @@ public class AuthController : ControllerBase
                 Log.Error($"[Authentication Token] No provider found for code: {code}");
                 return StatusCode(401, "Invalid code");
             }
+            Log.Warning("[Authentication Token] Could not find original provider for code. Assuming GitHub.");
             provider = "github";
+        }
+
+        if (_registrations.TryRemove(clientId, out var originalRequest))
+        {
+            Log.Information("[Authentication Token] Client registration removed. OG: " + JsonSerializer.Serialize(originalRequest.Item1) + "");
         }
 
         clientId = provider switch

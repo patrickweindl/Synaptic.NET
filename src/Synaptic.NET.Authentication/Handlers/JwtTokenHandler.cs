@@ -51,7 +51,7 @@ public class JwtTokenHandler : ISecurityTokenHandler
 
         HttpRequestMessage userRequest = new(HttpMethod.Get, "https://graph.microsoft.com/v1.0/me");
         userRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        userRequest.Headers.UserAgent.ParseAdd("mneme-auth");
+        userRequest.Headers.UserAgent.ParseAdd("synaptic-auth");
 
         HttpResponseMessage userResponse = await _authenticationClient.SendAsync(userRequest);
         JsonDocument userJson = JsonDocument.Parse(await userResponse.Content.ReadAsStringAsync());
@@ -103,7 +103,7 @@ public class JwtTokenHandler : ISecurityTokenHandler
 
         HttpRequestMessage userRequest = new(HttpMethod.Get, "https://www.googleapis.com/oauth2/v1/userinfo?alt=json");
         userRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        userRequest.Headers.UserAgent.ParseAdd("mneme-auth");
+        userRequest.Headers.UserAgent.ParseAdd("synaptic-auth");
 
         HttpResponseMessage userResponse = await _authenticationClient.SendAsync(userRequest);
         JsonDocument userJson = JsonDocument.Parse(await userResponse.Content.ReadAsStringAsync());
@@ -154,7 +154,7 @@ public class JwtTokenHandler : ISecurityTokenHandler
 
         HttpRequestMessage userRequest = new(HttpMethod.Get, "https://api.github.com/user");
         userRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-        userRequest.Headers.UserAgent.ParseAdd("mneme-auth");
+        userRequest.Headers.UserAgent.ParseAdd("synaptic-auth");
 
         HttpResponseMessage userResponse = await _authenticationClient.SendAsync(userRequest);
         JsonDocument userJson = JsonDocument.Parse(await userResponse.Content.ReadAsStringAsync());

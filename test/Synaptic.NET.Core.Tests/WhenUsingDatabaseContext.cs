@@ -16,13 +16,17 @@ public class WhenUsingDatabaseContext
 
     public WhenUsingDatabaseContext()
     {
-
         _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
+        _dbContext.Database.EnsureCreated();
+        _dbContext.SetCurrentUser(_currentUserService.GetCurrentUser());
+
         Guid otherGuid = Guid.Parse("00000000-0000-0000-0000-000000000001");
         string otherUser = "otherUserId";
         string otherUserName = "Other User";
         _otherCurrentUserService = new MockUserService(otherGuid, otherUser, otherUserName);
-        _otherDbContext = new SynapticDbContextFactory().CreateInMemoryDbContext(_otherCurrentUserService);
+        _otherDbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
+        _otherDbContext.Database.EnsureCreated();
+        _otherDbContext.SetCurrentUser(_otherCurrentUserService.GetCurrentUser());
     }
 
     [Fact]

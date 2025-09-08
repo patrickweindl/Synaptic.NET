@@ -7,7 +7,7 @@ public static class TokenCostConverter
 {
     public static double ConvertToCostInDollar(this MetricsEvent<long> tokenEvent)
     {
-        if (!tokenEvent.Operation.Contains("Token incurrence"))
+        if (tokenEvent.Operation == null || !tokenEvent.Operation.Contains("Token incurrence"))
         {
             return 0;
         }

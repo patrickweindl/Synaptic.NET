@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Synaptic.NET.Core;
 
@@ -10,6 +11,12 @@ public class LogAuthorizedRequestsMiddleware : IAppMiddleware
         Endpoint? endpoint = context.GetEndpoint();
         bool isAuthorizedEndpoint = endpoint?.Metadata.GetMetadata<IAuthorizeData>() != null &&
                                      endpoint?.Metadata.GetMetadata<AllowAnonymousAttribute>() == null;
+
+        if (Debugger.IsAttached)
+        {
+            Log.Logger.Debug($"[Debug Request] {context.Request.Method} {context.Request.Path}");
+            Console.WriteLine($"[Debug Request] {context.Request.Method} {context.Request.Path}");
+        }
 
         if (isAuthorizedEndpoint)
         {

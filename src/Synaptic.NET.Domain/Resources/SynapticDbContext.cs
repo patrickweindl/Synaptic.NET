@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
 
@@ -15,17 +14,16 @@ public class SynapticDbContext : DbContext
     public DbSet<MemoryStore> MemoryStores => Set<MemoryStore>();
     public DbSet<Memory> Memories => Set<Memory>();
 
-    public SynapticDbContext(DbContextOptions<SynapticDbContext> options, ICurrentUserService? currentUserService = null)
+    public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
         : base(options)
     {
-        if (currentUserService == null)
-        {
-            return;
-        }
+    }
 
-        var u = currentUserService.GetCurrentUser();
-        CurrentUserId = u.Id;
-        CurrentGroupIds.AddRange(u.Memberships.Select(m => m.GroupId));
+    public void SetCurrentUser(User user)
+    {
+        CurrentUserId = user.Id;
+        CurrentGroupIds.Clear();
+        CurrentGroupIds.AddRange(user.Memberships.Select(m => m.GroupId));
     }
 
     public User? DbUser()

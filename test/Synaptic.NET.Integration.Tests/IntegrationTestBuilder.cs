@@ -29,8 +29,9 @@ public class IntegrationTestBuilder
             _currentUserService = new MockUserService(overrideGuid, overrideDisplayName, overrideUserId);
         }
         _testSettings = TestSettings.FromFile();
-        _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext(_currentUserService);
+        _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _dbContext.Database.EnsureCreated();
+        _dbContext.SetCurrentUser(_currentUserService.GetCurrentUser());
         OpenAiClientFactory factory = new(_testSettings.OpenAiApiKey);
         IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider();
         IMemoryAugmentationService memoryAugmentationService = new MemoryAugmentationService(_testSettings, factory, _currentUserService, testMetricsCollectorProvider);

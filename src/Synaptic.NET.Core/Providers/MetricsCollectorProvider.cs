@@ -5,7 +5,7 @@ namespace Synaptic.NET.Core.Providers;
 
 public sealed class MetricsCollectorProvider : IMetricsCollectorProvider, IDisposable
 {
-    public const string ServiceName = "mneme-api";
+    public const string ServiceName = "synaptic-api";
 
     private readonly CancellationTokenSource _tokenSource = new();
     public MetricsCollectorProvider()

@@ -109,6 +109,7 @@ public class CurrentUserService : ICurrentUserService
             _dbContext.SaveChanges();
         }
 
+        _dbContext.SetCurrentUser(user);
         return user;
     }
 }

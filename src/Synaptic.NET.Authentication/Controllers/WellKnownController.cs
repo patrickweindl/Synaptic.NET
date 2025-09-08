@@ -15,7 +15,7 @@ public class WellKnownController : ControllerBase
 
     [HttpGet("/")]
     [AllowAnonymous]
-    public IActionResult Index()
+    public IActionResult GetHead()
     {
         return LocalRedirect("/home");
     }
@@ -52,52 +52,33 @@ public class WellKnownController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("/.well-known/oauth-protected-resource/mcp")]
+    [AllowAnonymous]
+    public IActionResult GetProtectedMcpResource()
+    {
+        return Ok(BuildProtectedResource());
+    }
+
     [HttpGet("/.well-known/oauth-protected-resource")]
     [AllowAnonymous]
     public IActionResult GetProtectedResource()
     {
-        var resource = new
-        {
-            resource = _settings.JwtIssuer,
-            authorization_servers = new[]
-            {
-                $"{_settings.JwtIssuer}/authorize", $"{_settings.JwtIssuer}", $"{_settings.JwtIssuer}/token",
-            },
-            bearer_methods_supported = new[] { "header" },
-            resource_name = "mneme API"
-        };
-        return Ok(resource);
+        return Ok(BuildProtectedResource());
     }
 
     [HttpGet("/.well-known/openid-configuration")]
     [AllowAnonymous]
     public IActionResult GetOpenIdConfiguration()
     {
-        var response = new
-        {
-            issuer = _settings.JwtIssuer,
-            authorization_endpoint = $"{_settings.ServerUrl}/authorize",
-            token_endpoint = $"{_settings.ServerUrl}/token",
-            registration_endpoint = $"{_settings.ServerUrl}/register"
-        };
-        return Ok(response);
+        return Ok(BuildOAuthConfiguration());
     }
-
 
     [HttpGet("/.well-known/oauth-authorization-server")]
     [AllowAnonymous]
     public IActionResult Get()
     {
-        var response = new
-        {
-            issuer = _settings.JwtIssuer,
-            authorization_endpoint = $"{_settings.ServerUrl}/authorize",
-            token_endpoint = $"{_settings.ServerUrl}/token",
-            registration_endpoint = $"{_settings.ServerUrl}/register"
-        };
-        return Ok(response);
+        return Ok(BuildOAuthConfiguration());
     }
-
 
     [HttpGet("/.well-known/oauth-authorization-server/authorize")]
     [AllowAnonymous]
@@ -118,5 +99,38 @@ public class WellKnownController : ControllerBase
             ? "/oauth-select"
             : $"/oauth-select?{queryString}";
         return LocalRedirect(redirectUri);
+    }
+
+    private object BuildOAuthConfiguration()
+    {
+        return new
+        {
+            issuer = _settings.JwtIssuer,
+            authorization_endpoint = $"{_settings.ServerUrl}/authorize",
+            token_endpoint = $"{_settings.ServerUrl}/token",
+            registration_endpoint = $"{_settings.ServerUrl}/register",
+            response_types_supported = new[]
+            {
+                ""
+            },
+            grant_types_supported = new[]
+            {
+                ""
+            }
+        };
+    }
+
+    private object BuildProtectedResource()
+    {
+        return new
+        {
+            resource = _settings.JwtIssuer,
+            authorization_servers = new[]
+            {
+                $"{_settings.JwtIssuer}"
+            },
+            bearer_methods_supported = new[] { "header" },
+            resource_name = _settings.ServerUrl
+        };
     }
 }
