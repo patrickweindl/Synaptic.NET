@@ -48,10 +48,10 @@ To explore functionality with a default setup:
     - [x] GitHub
     - [x] MS
     - [x] Google
-  - [ ] Claude Code Authenticated MCP
-    - [ ] GitHub
-    - [ ] MS
-    - [ ] Google
+  - [x] Claude Code Authenticated MCP
+    - [x] GitHub
+    - [x] MS
+    - [x] Google
   - [ ] CustomGPT Authenticated RestAPI Access
     - [ ] GitHub
     - [ ] MS
