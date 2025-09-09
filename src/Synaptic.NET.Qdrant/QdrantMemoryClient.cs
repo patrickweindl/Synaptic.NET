@@ -118,7 +118,7 @@ public class QdrantMemoryClient
     {
         var deletionTasks = memoryStore.Memories.Select(async m =>
         {
-            using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
+            using var collection = _store.GetCollection<Guid, VectorMemory>(userIdentifier.ToString());
             await collection.EnsureCollectionExistsAsync(cancellationToken);
             await collection.DeleteAsync(m.Identifier, cancellationToken);
         });
@@ -128,14 +128,14 @@ public class QdrantMemoryClient
 
     public async Task DeleteMemoryAsync(Guid userIdentifier, Guid memoryIdentifier, CancellationToken cancellationToken = default)
     {
-        using var collection = _store.GetCollection<Guid, Memory>(userIdentifier.ToString());
+        using var collection = _store.GetCollection<Guid, VectorMemory>(userIdentifier.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
         await collection.DeleteAsync(memoryIdentifier, cancellationToken);
     }
 
     public async Task UpsertMemoryAsync(IManagedIdentity identity, Memory memory, CancellationToken cancellationToken = default)
     {
-        using var collection = _store.GetCollection<Guid, Memory>(identity.Id.ToString());
+        using var collection = _store.GetCollection<Guid, VectorMemory>(identity.Id.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
         await _client.CreateAliasAsync(identity.DisplayName, identity.Id.ToString(), cancellationToken: cancellationToken);
 
