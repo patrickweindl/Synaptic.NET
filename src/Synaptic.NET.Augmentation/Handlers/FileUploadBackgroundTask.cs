@@ -7,6 +7,7 @@ using Synaptic.NET.Domain.Helpers;
 
 namespace Synaptic.NET.Augmentation.Handlers;
 
+//TODO: Use the background tasks instead of directly using a FileProcessor in the Management page.
 public class FileUploadBackgroundTask : BackgroundTaskItem
 {
     public string FileName { get; set; } = string.Empty;

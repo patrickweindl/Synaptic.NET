@@ -85,7 +85,7 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.Attach(_currentUserService.GetCurrentUser());
         var groupStores = _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group).SelectMany(g => g.Stores).ToList();
 
-        var allStores = _dbContext.MemoryStores.Concat(groupStores).ToList();
+        var allStores = _dbContext.MemoryStores.ToList().Concat(groupStores).ToList();
 
         var storeRankings = (await _storeRouter.RankStoresAsync(query, allStores)).ToList();
 
