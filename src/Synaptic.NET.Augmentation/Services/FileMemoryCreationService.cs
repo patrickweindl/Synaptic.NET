@@ -19,7 +19,7 @@ public class FileMemoryCreationService : IFileMemoryCreationService
     private readonly IMemoryAugmentationService _memoryAugmentationService;
     public FileMemoryCreationService(ICurrentUserService currentUserService, IMemoryAugmentationService memoryAugmentationService, IMetricsCollectorProvider metricsCollectorProvider, OpenAiClientFactory openAiClientFactory, SynapticServerSettings serverSettings)
     {
-        _gptClient = openAiClientFactory.GetClient(serverSettings.OpenAiRagCreationModel);
+        _gptClient = openAiClientFactory.GetClient(serverSettings.OpenAiSettings.RagCreationModel);
         _metricsCollectorProvider = metricsCollectorProvider;
         _currentUserService = currentUserService;
         _memoryAugmentationService = memoryAugmentationService;

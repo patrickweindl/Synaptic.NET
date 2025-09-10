@@ -25,12 +25,12 @@ public class TestSettings : SynapticServerSettings
         var testSettings = new TestSettings();
         if (!string.IsNullOrEmpty(fileSettings?.OpenAiTestApiKey) && fileSettings.OpenAiTestApiKey != "sk-...")
         {
-            testSettings.OpenAiApiKey = testSettings.OpenAiTestApiKey;
+            testSettings.OpenAiSettings.ApiKey = testSettings.OpenAiTestApiKey;
         }
 
         if (!string.IsNullOrEmpty(fileSettings?.QdrantTestUrl))
         {
-            testSettings.QdrantServerUrl = fileSettings.QdrantTestUrl;
+            testSettings.ServerSettings.QdrantUrl = fileSettings.QdrantTestUrl;
         }
 
         return testSettings;

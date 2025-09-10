@@ -26,7 +26,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         IMetricsCollectorProvider metricsCollectorProvider)
     {
         _currentUserService = currentUserService;
-        _client = clientFactory.GetClient(settings.OpenAiMemoryAugmentationModel);
+        _client = clientFactory.GetClient(settings.OpenAiSettings.MemoryAugmentationModel);
         _metricsCollectorProvider = metricsCollectorProvider;
     }
 

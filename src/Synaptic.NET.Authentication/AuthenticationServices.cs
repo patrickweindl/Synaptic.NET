@@ -66,7 +66,7 @@ public static class AuthenticationServices
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.JwtKey)),
                     ValidateIssuer = true,
-                    ValidIssuer = configuration.JwtIssuer,
+                    ValidIssuer = configuration.ServerSettings.JwtIssuer,
                     ValidateAudience = false
                 };
                 options.Events = new JwtBearerEvents

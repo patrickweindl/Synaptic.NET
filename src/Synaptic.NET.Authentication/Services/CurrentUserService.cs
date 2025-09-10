@@ -102,7 +102,7 @@ public class CurrentUserService : ICurrentUserService
             _dbContext.SaveChanges();
         }
 
-        if (_settings.AdminIdentifiers.Contains(identifier))
+        if (_settings.ServerSettings.AdminIdentifiers.Contains(identifier))
         {
             user.Role = IdentityRole.Admin;
             _dbContext.Users.Update(user);

@@ -30,7 +30,7 @@ public class AccountController : Controller
 
         var queryParams = new Dictionary<string, string>
         {
-            ["redirect_uri"] = $"{_configuration.ServerUrl}/account/callback"
+            ["redirect_uri"] = $"{_configuration.ServerSettings.ServerUrl}/account/callback"
         };
 
         var queryString = string.Join("&", queryParams.Select(kvp =>
@@ -56,11 +56,11 @@ public class AccountController : Controller
                 new KeyValuePair<string, string>("code", code),
                 new KeyValuePair<string, string>("client_id", GetClientIdFromState(state)),
                 new KeyValuePair<string, string>("client_secret", GetClientSecretFromState(state)),
-                new KeyValuePair<string, string>("redirect_uri", $"{_configuration.ServerUrl}/oauth-callback")
+                new KeyValuePair<string, string>("redirect_uri", $"{_configuration.ServerSettings.ServerUrl}/oauth-callback")
             });
 
             using var httpClient = new HttpClient();
-            var tokenResponse = await httpClient.PostAsync($"{_configuration.ServerUrl}/token", tokenRequest);
+            var tokenResponse = await httpClient.PostAsync($"{_configuration.ServerSettings.ServerUrl}/token", tokenRequest);
 
             if (!tokenResponse.IsSuccessStatusCode)
             {
@@ -123,15 +123,15 @@ public class AccountController : Controller
         if (string.IsNullOrEmpty(state) ||
             !_redirectUriProvider.GetRedirectUri(state, out var redirectSettings))
         {
-            return _configuration.GitHubOAuthSettings.ClientId;
+            return _configuration.GitHubOAuthProviderSettings.ClientId;
         }
 
         return redirectSettings.Provider switch
         {
-            "github" => _configuration.GitHubOAuthSettings.ClientId,
-            "google" => _configuration.GoogleOAuthSettings.ClientId,
-            "microsoft" => _configuration.MicrosoftOAuthSettings.ClientId,
-            _ => _configuration.GitHubOAuthSettings.ClientId
+            "github" => _configuration.GitHubOAuthProviderSettings.ClientId,
+            "google" => _configuration.GoogleOAuthProviderSettings.ClientId,
+            "microsoft" => _configuration.MicrosoftOAuthProviderSettings.ClientId,
+            _ => _configuration.GitHubOAuthProviderSettings.ClientId
         };
     }
 
@@ -140,15 +140,15 @@ public class AccountController : Controller
         if (string.IsNullOrEmpty(state) ||
             !_redirectUriProvider.GetRedirectUri(state, out var redirectSettings))
         {
-            return _configuration.GitHubOAuthSettings.ClientSecret;
+            return _configuration.GitHubOAuthProviderSettings.ClientSecret;
         }
 
         return redirectSettings.Provider switch
         {
-            "github" => _configuration.GitHubOAuthSettings.ClientSecret,
-            "google" => _configuration.GoogleOAuthSettings.ClientSecret,
-            "microsoft" => _configuration.MicrosoftOAuthSettings.ClientSecret,
-            _ => _configuration.GitHubOAuthSettings.ClientSecret
+            "github" => _configuration.GitHubOAuthProviderSettings.ClientSecret,
+            "google" => _configuration.GoogleOAuthProviderSettings.ClientSecret,
+            "microsoft" => _configuration.MicrosoftOAuthProviderSettings.ClientSecret,
+            _ => _configuration.GitHubOAuthProviderSettings.ClientSecret
         };
     }
 }

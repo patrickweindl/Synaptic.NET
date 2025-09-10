@@ -11,7 +11,7 @@ public class MemoryQueryResultReranker : IMemoryQueryResultReranker
     private GptClientBase _client;
     public MemoryQueryResultReranker(OpenAiClientFactory openAiClientFactory, SynapticServerSettings settings)
     {
-        _client = openAiClientFactory.GetClient(settings.OpenAiAugmentedSearchModel);
+        _client = openAiClientFactory.GetClient(settings.OpenAiSettings.MemoryAugmentationModel);
     }
 
     public async Task<IEnumerable<MemorySearchResult>> Rerank(IReadOnlyList<MemorySearchResult> results)

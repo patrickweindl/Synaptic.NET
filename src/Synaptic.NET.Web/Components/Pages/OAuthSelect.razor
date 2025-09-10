@@ -19,7 +19,7 @@
     </div>
 
     <div class="providers">
-        @if (Settings.GitHubOAuthSettings.Enabled)
+        @if (Settings.GitHubOAuthProviderSettings.Enabled)
         {
             <a href="#" class="provider-button github" @onclick="@(() => RedirectToProvider("github"))">
                 <div class="provider-icon">
@@ -32,7 +32,7 @@
             </a>
         }
 
-        @if (Settings.MicrosoftOAuthSettings.Enabled)
+        @if (Settings.MicrosoftOAuthProviderSettings.Enabled)
         {
             <a href="#" class="provider-button microsoft" @onclick="@(() => RedirectToProvider("microsoft"))">
                 <div class="provider-icon">
@@ -45,7 +45,7 @@
             </a>
         }
 
-        @if (Settings.GoogleOAuthSettings.Enabled)
+        @if (Settings.GoogleOAuthProviderSettings.Enabled)
         {
             <a href="#" class="provider-button google" @onclick="@(() => RedirectToProvider("google"))">
                 <div class="provider-icon">
@@ -112,7 +112,7 @@
 
         if (!parameters.ContainsKey("redirect_uri"))
         {
-            parameters.TryAdd("redirect_uri", $"{Settings.ServerUrl}/account/callback");
+            parameters.TryAdd("redirect_uri", $"{Settings.ServerSettings.ServerUrl}/account/callback");
         }
 
         RedirectUriProvider.AddRedirectUri(parameters["state"], new RedirectSettings
@@ -123,7 +123,7 @@
                 config.Value.AuthUrl.Contains("google") ? "google" : "unknown"
         });
 
-        parameters["redirect_uri"] = $"{Settings.ServerUrl}/oauth-callback";
+        parameters["redirect_uri"] = $"{Settings.ServerSettings.ServerUrl}/oauth-callback";
 
         if (config.Value.AuthUrl.ToLowerInvariant().Contains("google") && parameters.FirstOrDefault(k => k.Key == "scope") is { } scopeKvp)
         {
@@ -182,12 +182,12 @@
     {
         return provider switch
         {
-            "github" when Settings.GitHubOAuthSettings.Enabled =>
-                (Settings.GitHubOAuthSettings.OAuthUrl, Settings.GitHubOAuthSettings.ClientId),
-            "microsoft" when Settings.MicrosoftOAuthSettings.Enabled =>
-                (Settings.MicrosoftOAuthSettings.OAuthUrl, Settings.MicrosoftOAuthSettings.ClientId),
-            "google" when Settings.GoogleOAuthSettings.Enabled =>
-                (Settings.GoogleOAuthSettings.OAuthUrl, Settings.GoogleOAuthSettings.ClientId),
+            "github" when Settings.GitHubOAuthProviderSettings.Enabled =>
+                (Settings.GitHubOAuthProviderSettings.OAuthUrl, Settings.GitHubOAuthProviderSettings.ClientId),
+            "microsoft" when Settings.MicrosoftOAuthProviderSettings.Enabled =>
+                (Settings.MicrosoftOAuthProviderSettings.OAuthUrl, Settings.MicrosoftOAuthProviderSettings.ClientId),
+            "google" when Settings.GoogleOAuthProviderSettings.Enabled =>
+                (Settings.GoogleOAuthProviderSettings.OAuthUrl, Settings.GoogleOAuthProviderSettings.ClientId),
             _ => null
         };
     }

@@ -19,21 +19,21 @@ public class QdrantMemoryClient
     private readonly IMemoryAugmentationService _memoryAugmentationService;
     public QdrantMemoryClient(SynapticServerSettings settings, IMemoryAugmentationService augmentationService)
     {
-        _embeddingGenerator = new OpenAIClient(settings.OpenAiApiKey)
-            .GetEmbeddingClient(settings.OpenAiEmbeddingModel);
+        _embeddingGenerator = new OpenAIClient(settings.OpenAiSettings.ApiKey)
+            .GetEmbeddingClient(settings.OpenAiSettings.EmbeddingModel);
 
         string ip;
         int port;
-        if (settings.QdrantServerUrl.Contains(":"))
+        if (settings.ServerSettings.QdrantUrl.Contains(":"))
         {
-            var url = Uri.TryCreate(settings.QdrantServerUrl, UriKind.Absolute, out var uri) ? uri : throw new InvalidOperationException();
+            var url = Uri.TryCreate(settings.ServerSettings.QdrantUrl, UriKind.Absolute, out var uri) ? uri : throw new InvalidOperationException();
 
             ip = $"{uri.Host}";
             port = url.Port;
         }
         else
         {
-            ip = settings.QdrantServerUrl;
+            ip = settings.ServerSettings.QdrantUrl;
             port = 6334;
         }
 

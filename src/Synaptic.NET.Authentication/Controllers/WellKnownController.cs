@@ -24,7 +24,7 @@ public class WellKnownController : ControllerBase
     [AllowAnonymous]
     public IActionResult GetMicrosoftIdentityAssociation()
     {
-        if (!_settings.MicrosoftOAuthSettings.Enabled)
+        if (!_settings.MicrosoftOAuthProviderSettings.Enabled)
         {
             return NotFound();
         }
@@ -34,19 +34,19 @@ public class WellKnownController : ControllerBase
             associatedApplications = new List<object>()
         };
 
-        if (_settings.MicrosoftOAuthSettings.Enabled)
+        if (_settings.MicrosoftOAuthProviderSettings.Enabled)
         {
-            response.associatedApplications.Add(new { applicationId = _settings.MicrosoftOAuthSettings.ClientId });
+            response.associatedApplications.Add(new { applicationId = _settings.MicrosoftOAuthProviderSettings.ClientId });
         }
 
-        if (_settings.GitHubOAuthSettings.Enabled)
+        if (_settings.GitHubOAuthProviderSettings.Enabled)
         {
-            response.associatedApplications.Add(new { applicationId = _settings.GitHubOAuthSettings.ClientId });
+            response.associatedApplications.Add(new { applicationId = _settings.GitHubOAuthProviderSettings.ClientId });
         }
 
-        if (_settings.GoogleOAuthSettings.Enabled)
+        if (_settings.GoogleOAuthProviderSettings.Enabled)
         {
-            response.associatedApplications.Add(new { applicationId = _settings.GoogleOAuthSettings.ClientId });
+            response.associatedApplications.Add(new { applicationId = _settings.GoogleOAuthProviderSettings.ClientId });
         }
 
         return Ok(response);
@@ -105,10 +105,10 @@ public class WellKnownController : ControllerBase
     {
         return new
         {
-            issuer = _settings.JwtIssuer,
-            authorization_endpoint = $"{_settings.ServerUrl}/authorize",
-            token_endpoint = $"{_settings.ServerUrl}/token",
-            registration_endpoint = $"{_settings.ServerUrl}/register",
+            issuer = _settings.ServerSettings.JwtIssuer,
+            authorization_endpoint = $"{_settings.ServerSettings.ServerUrl}/authorize",
+            token_endpoint = $"{_settings.ServerSettings.ServerUrl}/token",
+            registration_endpoint = $"{_settings.ServerSettings.ServerUrl}/register",
             response_types_supported = new[]
             {
                 "code",
@@ -134,13 +134,13 @@ public class WellKnownController : ControllerBase
     {
         return new
         {
-            resource = _settings.JwtIssuer,
+            resource = _settings.ServerSettings.JwtIssuer,
             authorization_servers = new[]
             {
-                $"{_settings.JwtIssuer}"
+                $"{_settings.ServerSettings.JwtIssuer}"
             },
             bearer_methods_supported = new[] { "header" },
-            resource_name = _settings.ServerUrl
+            resource_name = _settings.ServerSettings.ServerUrl
         };
     }
 }

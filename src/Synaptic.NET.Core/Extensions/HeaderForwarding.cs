@@ -9,7 +9,7 @@ public static class HeaderForwarding
 {
     internal static void ConfigureHeaderForwarding(this WebApplication app, SynapticServerSettings configuration)
     {
-        List<string> knownProxies = configuration.KnownProxies;
+        List<string> knownProxies = configuration.ServerSettings.KnownProxies;
         List<IPAddress> knownProxyIps = knownProxies.Select(IPAddress.Parse).ToList();
         if (knownProxies.Count > 0)
         {

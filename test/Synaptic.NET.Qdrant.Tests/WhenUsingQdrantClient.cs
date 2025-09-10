@@ -20,7 +20,7 @@ public class WhenUsingQdrantClient
     public WhenUsingQdrantClient()
     {
         _testSettings = TestSettings.FromFile();
-        OpenAiClientFactory factory = new(_testSettings.OpenAiApiKey);
+        OpenAiClientFactory factory = new(_testSettings.OpenAiSettings.ApiKey);
         _testMetricsCollectorProvider = new MetricsCollectorProvider();
         _memoryAugmentationService =
             new MemoryAugmentationService(_testSettings, factory, _currentUserService, _testMetricsCollectorProvider);
@@ -28,7 +28,7 @@ public class WhenUsingQdrantClient
     [Fact]
     public async Task ShouldAcceptAndRetrieveMemory()
     {
-        Skip.If(string.IsNullOrEmpty(_testSettings.OpenAiApiKey));
+        Skip.If(string.IsNullOrEmpty(_testSettings.OpenAiSettings.ApiKey));
         var qdrantClient = new QdrantMemoryClient(_testSettings, _memoryAugmentationService);
 
         await qdrantClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(),

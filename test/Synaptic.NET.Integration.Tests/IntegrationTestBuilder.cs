@@ -32,7 +32,7 @@ public class IntegrationTestBuilder
         _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _dbContext.Database.EnsureCreated();
         _dbContext.SetCurrentUser(_currentUserService.GetCurrentUser());
-        OpenAiClientFactory factory = new(_testSettings.OpenAiApiKey);
+        OpenAiClientFactory factory = new(_testSettings.OpenAiSettings.ApiKey);
         IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider();
         IMemoryAugmentationService memoryAugmentationService = new MemoryAugmentationService(_testSettings, factory, _currentUserService, testMetricsCollectorProvider);
         _storeRouter = new WeightedMemoryStoreRouter(_currentUserService, testMetricsCollectorProvider, factory, _testSettings);
@@ -51,6 +51,6 @@ public class IntegrationTestBuilder
 
     public bool ShouldSkipIntegrationTest()
     {
-        return string.IsNullOrEmpty(_testSettings.OpenAiApiKey);
+        return string.IsNullOrEmpty(_testSettings.OpenAiSettings.ApiKey);
     }
 }

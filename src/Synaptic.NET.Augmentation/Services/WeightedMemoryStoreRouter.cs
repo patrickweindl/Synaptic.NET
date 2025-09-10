@@ -21,7 +21,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
     {
         _currentUserService = currentUserService;
         _metricsCollectorProvider = metricsCollectorProvider;
-        _chatClient = gptClientFactory.GetClient(settings.OpenAiMemoryRoutingModel);
+        _chatClient = gptClientFactory.GetClient(settings.OpenAiSettings.MemoryRoutingModel);
     }
 
     public async Task<IEnumerable<MemoryStoreRoutingResult>> RankStoresAsync(string query, IEnumerable<MemoryStore> availableStores)

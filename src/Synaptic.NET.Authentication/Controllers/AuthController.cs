@@ -67,7 +67,7 @@ public class AuthController : ControllerBase
         return new
         {
             client_id = registrationId,
-            redirect_uris = new[] { $"{_settings.ServerUrl}/authorize" }
+            redirect_uris = new[] { $"{_settings.ServerSettings.ServerUrl}/authorize" }
         };
     }
 
@@ -163,7 +163,7 @@ public class AuthController : ControllerBase
         [FromForm(Name = "code_verifier")] string codeVerifier,
         [FromForm(Name = "refresh_token")] string refreshToken = "")
     {
-        if (string.IsNullOrEmpty(_settings.JwtIssuer))
+        if (string.IsNullOrEmpty(_settings.ServerSettings.JwtIssuer))
         {
             Log.Error("Missing JWT Issuer");
             return StatusCode(500);
@@ -190,7 +190,7 @@ public class AuthController : ControllerBase
             }
 
             _refreshTokenHandler.InvalidateRefreshToken(refreshToken);
-            return Ok(_tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
+            return Ok(_tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
 
         }
         if (!_codeBasedAuthProvider.GetIdentityProviderByCode(code, out string? provider))
@@ -211,24 +211,24 @@ public class AuthController : ControllerBase
 
         clientId = provider switch
         {
-            "github" => _settings.GitHubOAuthSettings.ClientId,
-            "google" => _settings.GoogleOAuthSettings.ClientId,
-            "microsoft" => _settings.MicrosoftOAuthSettings.ClientId,
+            "github" => _settings.GitHubOAuthProviderSettings.ClientId,
+            "google" => _settings.GoogleOAuthProviderSettings.ClientId,
+            "microsoft" => _settings.MicrosoftOAuthProviderSettings.ClientId,
             _ => clientId
         };
         clientSecret = provider switch
         {
-            "github" => _settings.GitHubOAuthSettings.ClientSecret,
-            "google" => _settings.GoogleOAuthSettings.ClientSecret,
-            "microsoft" => _settings.MicrosoftOAuthSettings.ClientSecret,
+            "github" => _settings.GitHubOAuthProviderSettings.ClientSecret,
+            "google" => _settings.GoogleOAuthProviderSettings.ClientSecret,
+            "microsoft" => _settings.MicrosoftOAuthProviderSettings.ClientSecret,
             _ => clientSecret
         };
 
         VerificationResult validationResult = provider switch
         {
-            "google" => await _tokenHandler.VerifyGoogleAuthentication(_settings, clientId, clientSecret, code, $"{_settings.ServerUrl}/oauth-callback", grantType,
+            "google" => await _tokenHandler.VerifyGoogleAuthentication(_settings, clientId, clientSecret, code, $"{_settings.ServerSettings.ServerUrl}/oauth-callback", grantType,
                 codeVerifier),
-            "microsoft" => await _tokenHandler.VerifyMicrosoftAuthentication(_settings, clientId, clientSecret, code, $"{_settings.ServerUrl}/oauth-callback", grantType,
+            "microsoft" => await _tokenHandler.VerifyMicrosoftAuthentication(_settings, clientId, clientSecret, code, $"{_settings.ServerSettings.ServerUrl}/oauth-callback", grantType,
                 codeVerifier),
             "github" => await _tokenHandler.VerifyGitHubAuthentication(_settings, clientId, clientSecret, code, grantType,
                 codeVerifier),
@@ -246,7 +246,7 @@ public class AuthController : ControllerBase
         }
 
         var identity = ClaimsHelper.ClaimsIdentityFromUserNameAndId(validationResult.UserName, validationResult.UserId);
-        AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.JwtIssuer, _settings.JwtTokenLifetime, identity);
+        AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, identity);
         return Ok(token);
     }
 }
