@@ -1,3 +1,4 @@
+using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Domain.Abstractions.Management;
@@ -21,4 +22,16 @@ public interface ICurrentUserService
     /// </summary>
     /// <returns>A <see cref="User"/> object representing the current user.</returns>
     User GetCurrentUser();
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <exception cref="UnauthorizedAccessException"></exception>
+    void LockoutUserIfGuest()
+    {
+        if (GetCurrentUser().Role <= IdentityRole.Guest)
+        {
+            throw new UnauthorizedAccessException("Guests cannot access this tool.");
+        }
+    }
 }

@@ -23,7 +23,6 @@ To explore functionality with a default setup:
 ## Features
 
 ### Blazor Web UI
-
 - [x] Login/Logout
 - [x] User Management
 - [x] Dashboard
@@ -32,6 +31,7 @@ To explore functionality with a default setup:
 - [ ] Observable search results
 - [x] File Upload
 - [ ] Memory Management
+- [ ] Background Memory Upload
 ### MCP
 - [x] Memory Endpoints
 - [x] Common Tools
@@ -59,7 +59,8 @@ To explore functionality with a default setup:
   - [ ] EntraID
 - [ ] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users
-- [ ] Restricted access for guests
+- [x] Restricted access for guests
+- [ ] Sharing memory stores with groups
 ### Others
 - [x] Qdrant
 - [x] Entity Framework Core

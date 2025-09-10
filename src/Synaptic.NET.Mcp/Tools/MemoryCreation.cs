@@ -32,6 +32,7 @@ public static class MemoryCreation
         IMemoryProvider memoryProvider,
         IMemoryStoreRouter memoryStoreRouter)
     {
+        currentUserService.LockoutUserIfGuest();
         Log.Logger.Information("[MCP Tool Call] Create memory");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
 

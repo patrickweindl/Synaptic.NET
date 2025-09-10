@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Attributes;
 using Synaptic.NET.Domain.Resources.Storage;
@@ -16,10 +17,12 @@ namespace Synaptic.NET.RestApi.Controllers;
 public class MemoryController : ControllerBase
 {
     private readonly IMemoryProvider _memory;
+    private readonly ICurrentUserService _currentUserService;
 
-    public MemoryController(IMemoryProvider memory)
+    public MemoryController(IMemoryProvider memory, ICurrentUserService currentUserService)
     {
         _memory = memory;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet("stores/ids")]
@@ -29,6 +32,7 @@ public class MemoryController : ControllerBase
     [ProducesResponseType(200, Type = typeof(IReadOnlyDictionary<Guid, string>))]
     public async Task<ActionResult<IReadOnlyDictionary<Guid, string>>> GetStoreIdsAndDescriptions()
     {
+        _currentUserService.LockoutUserIfGuest();
         var dict = await _memory.GetStoreIdentifiersAndDescriptionsAsync();
         return Ok(dict);
     }
@@ -40,6 +44,7 @@ public class MemoryController : ControllerBase
     [ProducesResponseType(200, Type = typeof(List<MemoryStore>))]
     public async Task<ActionResult<List<MemoryStore>>> GetStores()
     {
+        _currentUserService.LockoutUserIfGuest();
         var stores = await _memory.GetStoresAsync();
         return Ok(stores);
     }
@@ -55,6 +60,7 @@ public class MemoryController : ControllerBase
         [FromQuery, SwaggerParameter("The GUID of the memory store to retrieve, must be applicable to any of the available stores.")]
         Guid id)
     {
+        _currentUserService.LockoutUserIfGuest();
         var store = await _memory.GetCollectionAsync(id);
         if (store is null)
         {
@@ -63,7 +69,6 @@ public class MemoryController : ControllerBase
         return Ok(store);
     }
 
-    // GET: api/memory/stores/by-title/{title}
     [HttpGet("stores/by-title/{title}")]
     [EndpointSummary("Gets a memory store by its title.")]
     [EndpointDescription("This endpoint will retrieve a memory store by its title.")]
@@ -73,6 +78,7 @@ public class MemoryController : ControllerBase
     [AssistantConstraint("The title must match an existing memory store title exactly.")]
     public async Task<ActionResult<MemoryStore>> GetStoreByTitle(string title)
     {
+        _currentUserService.LockoutUserIfGuest();
         var store = await _memory.GetCollectionAsync(title);
         if (store is null)
         {
@@ -81,8 +87,6 @@ public class MemoryController : ControllerBase
         return Ok(store);
     }
 
-    // POST: api/memory/stores
-    // Creates a store by providing a MemoryStore body (Id optional) OR title/description via query/body
     [HttpPost("stores")]
     [EndpointSummary("Creates a new memory store.")]
     [EndpointDescription("This endpoint will create a new memory store using the provided MemoryStore object.")]
@@ -93,6 +97,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores with body: {\"Title\": \"My Store\", \"Description\": \"A store for important memories\"}")]
     public async Task<ActionResult<MemoryStore>> CreateStore([FromBody] MemoryStore store)
     {
+        _currentUserService.LockoutUserIfGuest();
         var created = await _memory.CreateCollectionAsync(store);
         if (created is null)
         {
@@ -101,7 +106,6 @@ public class MemoryController : ControllerBase
         return CreatedAtAction(nameof(GetStoreById), new { id = created.StoreId }, created);
     }
 
-    // Alternative: POST: api/memory/stores/by-title?title=...&description=...
     [HttpPost("stores/by-title")]
     [EndpointSummary("Creates a new memory store by title and description.")]
     [EndpointDescription("This endpoint will create a new memory store using query parameters for title and optional description.")]
@@ -113,6 +117,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores/by-title?title=ProjectNotes&description=Notes for the current project")]
     public async Task<ActionResult<MemoryStore>> CreateStoreByTitle([FromQuery] string title, [FromQuery] string description = "")
     {
+        _currentUserService.LockoutUserIfGuest();
         var success = await _memory.CreateCollectionAsync(title, description, out var created);
         if (!success)
         {
@@ -121,7 +126,6 @@ public class MemoryController : ControllerBase
         return CreatedAtAction(nameof(GetStoreById), new { id = created.StoreId }, created);
     }
 
-    // PUT: api/memory/stores/{id} (Replace)
     [HttpPut("stores/{id:guid}")]
     [EndpointSummary("Replaces an existing memory store.")]
     [EndpointDescription("This endpoint will completely replace an existing memory store with the provided data.")]
@@ -131,6 +135,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing store - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceStore(Guid id, [FromBody] MemoryStore newStore)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.ReplaceCollectionAsync(id, newStore);
         if (!ok)
         {
@@ -139,7 +144,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PUT: api/memory/stores/by-title/{title} (Replace)
     [HttpPut("stores/by-title/{title}")]
     [EndpointSummary("Replaces an existing memory store by title.")]
     [EndpointDescription("This endpoint will completely replace an existing memory store identified by title with the provided data.")]
@@ -149,6 +153,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing store - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceStoreByTitle(string title, [FromBody] MemoryStore newStore)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.ReplaceCollectionAsync(title, newStore);
         if (!ok)
         {
@@ -157,7 +162,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PATCH: api/memory/stores/{id} (Update)
     [HttpPatch("stores/{id:guid}")]
     [EndpointSummary("Updates an existing memory store.")]
     [EndpointDescription("This endpoint will partially update an existing memory store with the provided data.")]
@@ -167,6 +171,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateStore(Guid id, [FromBody] MemoryStore updated)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.UpdateCollectionAsync(id, updated);
         if (!ok)
         {
@@ -175,7 +180,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PATCH: api/memory/stores/by-title/{title} (Update)
     [HttpPatch("stores/by-title/{title}")]
     [EndpointSummary("Updates an existing memory store by title.")]
     [EndpointDescription("This endpoint will partially update an existing memory store identified by title with the provided data.")]
@@ -185,6 +189,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateStoreByTitle(string title, [FromBody] MemoryStore updated)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.UpdateCollectionAsync(title, updated);
         if (!ok)
         {
@@ -193,7 +198,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/memory/stores/{id}
     [HttpDelete("stores/{id:guid}")]
     [EndpointSummary("Deletes a memory store.")]
     [EndpointDescription("This endpoint will permanently delete a memory store and all its contents.")]
@@ -203,6 +207,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will delete all memory entries in the store.")]
     public async Task<IActionResult> DeleteStore(Guid id)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.DeleteCollectionAsync(id);
         if (!ok)
         {
@@ -211,7 +216,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/memory/stores/by-title/{title}
     [HttpDelete("stores/by-title/{title}")]
     [EndpointSummary("Deletes a memory store by title.")]
     [EndpointDescription("This endpoint will permanently delete a memory store identified by title and all its contents.")]
@@ -221,6 +225,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will delete all memory entries in the store.")]
     public async Task<IActionResult> DeleteStoreByTitle(string title)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.DeleteCollectionAsync(title);
         if (!ok)
         {
@@ -229,9 +234,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // -------- Entries --------
-
-    // POST: api/memory/entries (auto-routing)
     [HttpPost("entries")]
     [EndpointSummary("Creates a memory entry with automatic store routing.")]
     [EndpointDescription("This endpoint will create a memory entry and automatically determine the best store for it.")]
@@ -241,6 +243,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/entries with body: {\"Title\": \"Meeting Notes\", \"Content\": \"Discussed project timeline\"}")]
     public async Task<IActionResult> CreateEntry([FromBody] Memory memory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.CreateMemoryEntryAsync(memory);
         if (!ok)
         {
@@ -249,7 +252,6 @@ public class MemoryController : ControllerBase
         return Accepted();
     }
 
-    // POST: api/memory/stores/{storeId}/entries
     [HttpPost("stores/{storeId:guid}/entries")]
     [AssistantConstraint("The store identifier must be applicable to any of the available stores.")]
     public async Task<IActionResult> CreateEntryInStore(
@@ -261,6 +263,7 @@ public class MemoryController : ControllerBase
         [AssistantInstruction("If the store has to be created and this parameter is empty, the description will be created from the initially added memory.")]
         [FromQuery] string storeDescription = "")
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.CreateMemoryEntryAsync(storeId, memory, storeDescription);
         if (!ok)
         {
@@ -269,7 +272,6 @@ public class MemoryController : ControllerBase
         return Accepted();
     }
 
-    // POST: api/memory/stores/by-title/{title}/entries
     [HttpPost("stores/by-title/{title}/entries")]
     [EndpointSummary("Creates a memory entry in a specific store identified by title.")]
     [EndpointDescription("This endpoint will create a memory entry in the specified store, creating the store if it doesn't exist.")]
@@ -280,6 +282,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores/by-title/ProjectNotes/entries?storeDescription=Project related notes")]
     public async Task<IActionResult> CreateEntryInStoreByTitle(string title, [FromBody] Memory memory, [FromQuery] string storeDescription = "")
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.CreateMemoryEntryAsync(title, memory, storeDescription);
         if (!ok)
         {
@@ -288,7 +291,6 @@ public class MemoryController : ControllerBase
         return Accepted();
     }
 
-    // PUT: api/memory/entries/{entryId} (Replace)
     [HttpPut("entries/{entryId:guid}")]
     [EndpointSummary("Replaces an existing memory entry.")]
     [EndpointDescription("This endpoint will completely replace an existing memory entry with new data.")]
@@ -298,6 +300,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntry(Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.ReplaceMemoryEntryAsync(entryId, newMemory);
         if (!ok)
         {
@@ -306,7 +309,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PUT: api/memory/stores/{storeId}/entries/{entryId} (Replace)
     [HttpPut("stores/{storeId:guid}/entries/{entryId:guid}")]
     [EndpointSummary("Replaces an existing memory entry in a specific store.")]
     [EndpointDescription("This endpoint will completely replace an existing memory entry within the specified store.")]
@@ -316,6 +318,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntryInStore(Guid storeId, Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.ReplaceMemoryEntryAsync(storeId, entryId, newMemory);
         if (!ok)
         {
@@ -324,7 +327,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PUT: api/memory/stores/by-title/{title}/entries/{entryId} (Replace)
     [HttpPut("stores/by-title/{title}/entries/{entryId:guid}")]
     [EndpointSummary("Replaces an existing memory entry in a store identified by title.")]
     [EndpointDescription("This endpoint will completely replace an existing memory entry within the store identified by title.")]
@@ -334,6 +336,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntryInStoreByTitle(string title, Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.ReplaceMemoryEntryAsync(title, entryId, newMemory);
         if (!ok)
         {
@@ -342,7 +345,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PATCH: api/memory/entries/{entryId} (Update)
     [HttpPatch("entries/{entryId:guid}")]
     [EndpointSummary("Updates an existing memory entry.")]
     [EndpointDescription("This endpoint will partially update an existing memory entry with the provided data.")]
@@ -352,6 +354,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntry(Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.UpdateMemoryEntryAsync(entryId, newMemory);
         if (!ok)
         {
@@ -360,7 +363,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PATCH: api/memory/stores/{storeId}/entries/{entryId} (Update)
     [HttpPatch("stores/{storeId:guid}/entries/{entryId:guid}")]
     [EndpointSummary("Updates an existing memory entry in a specific store.")]
     [EndpointDescription("This endpoint will partially update an existing memory entry within the specified store.")]
@@ -370,6 +372,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntryInStore(Guid storeId, Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.UpdateMemoryEntryAsync(storeId, entryId, newMemory);
         if (!ok)
         {
@@ -378,7 +381,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // PATCH: api/memory/stores/by-title/{title}/entries/{entryId} (Update)
     [HttpPatch("stores/by-title/{title}/entries/{entryId:guid}")]
     [EndpointSummary("Updates an existing memory entry in a store identified by title.")]
     [EndpointDescription("This endpoint will partially update an existing memory entry within the store identified by title.")]
@@ -388,6 +390,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntryInStoreByTitle(string title, Guid entryId, [FromBody] Memory newMemory)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.UpdateMemoryEntryAsync(title, entryId, newMemory);
         if (!ok)
         {
@@ -396,7 +399,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/memory/entries/{entryId}
     [HttpDelete("entries/{entryId:guid}")]
     [EndpointSummary("Deletes a memory entry.")]
     [EndpointDescription("This endpoint will permanently delete a memory entry from any store.")]
@@ -406,6 +408,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry.")]
     public async Task<IActionResult> DeleteEntry(Guid entryId)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.DeleteMemoryEntryAsync(entryId);
         if (!ok)
         {
@@ -414,7 +417,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/memory/stores/{storeId}/entries/{entryId}
     [HttpDelete("stores/{storeId:guid}/entries/{entryId:guid}")]
     [EndpointSummary("Deletes a memory entry from a specific store.")]
     [EndpointDescription("This endpoint will permanently delete a memory entry from the specified store.")]
@@ -424,6 +426,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry from the specified store.")]
     public async Task<IActionResult> DeleteEntryInStore(Guid storeId, Guid entryId)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.DeleteMemoryEntryAsync(storeId, entryId);
         if (!ok)
         {
@@ -432,7 +435,6 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/memory/stores/{storeId}/entries/by-title/{entryTitle}
     [HttpDelete("stores/{storeId:guid}/entries/by-title/{entryTitle}")]
     [EndpointSummary("Deletes a memory entry from a store by entry title.")]
     [EndpointDescription("This endpoint will permanently delete a memory entry identified by title from the specified store.")]
@@ -442,6 +444,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry from the specified store.")]
     public async Task<IActionResult> DeleteEntryInStoreByTitle(Guid storeId, string entryTitle)
     {
+        _currentUserService.LockoutUserIfGuest();
         var ok = await _memory.DeleteMemoryEntryAsync(storeId, entryTitle);
         if (!ok)
         {
@@ -450,26 +453,24 @@ public class MemoryController : ControllerBase
         return NoContent();
     }
 
-    // -------- Search --------
-
-    // GET: api/memory/search?query=...&limit=10&relevanceThreshold=0.5
     [HttpGet("search")]
     [EndpointSummary("Searches memory entries across all stores.")]
     [EndpointDescription("This endpoint will search for memory entries matching the query across all available stores using semantic search.")]
     [Produces("application/json")]
-    [ProducesResponseType(200, Type = typeof(IEnumerable<MemorySearchResult>))]
+    [ProducesResponseType(200, Type = typeof(IEnumerable<ContextMemory>))]
     [ProducesResponseType(400, Description = "Query parameter is empty or invalid.")]
     [AssistantConstraint("The query parameter must not be empty or whitespace.")]
     [AssistantInstruction("Use limit to control the number of results returned (default: 10). Use relevanceThreshold to filter results by relevance score (default: 0.5).")]
     [AssistantExample("GET /api/memory/search?query=project meetings&limit=5&relevanceThreshold=0.7")]
-    public async Task<ActionResult<IEnumerable<MemorySearchResult>>> Search([FromQuery] string query, [FromQuery] int limit = 10, [FromQuery] double relevanceThreshold = 0.5)
+    public async Task<ActionResult<IEnumerable<ContextMemory>>> Search([FromQuery] string query, [FromQuery] int limit = 10, [FromQuery] double relevanceThreshold = 0.5)
     {
+        _currentUserService.LockoutUserIfGuest();
         if (string.IsNullOrWhiteSpace(query))
         {
             return BadRequest("Query must not be empty.");
         }
 
         var results = await _memory.SearchAsync(query, limit, relevanceThreshold);
-        return Ok(results);
+        return Ok(results.Select(m => new ContextMemory(m.Memory)));
     }
 }

@@ -10,6 +10,7 @@
 @using Synaptic.NET.Domain.Resources
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Cryptography
+@using Synaptic.NET.Domain.Enums
 @attribute [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 @rendermode InteractiveServer
 @inject IMemoryProvider MemoryProvider
@@ -1777,6 +1778,12 @@
         _uploadProgress = new UploadProgress();
         StateHasChanged();
 
+        if (CurrentUserService.GetCurrentUser().Role <= IdentityRole.Guest)
+        {
+            _uploadMessage = "Guests are not permitted to create memories from files";
+            _isUploading = false;
+            return;
+        }
         try
         {
             if (_selectedFile.Size > 100 * 1024 * 1024)

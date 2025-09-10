@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
+using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Mcp.Resources;
 
@@ -16,13 +17,14 @@ public static class MemoryResources
 {
     [McpServerResource(Name = "GetPinnedMemoriesResource", MimeType = "application/json")]
     [Description("Retrieve all pinned memories")]
-    public static async Task<string> GetPinnedMemoriesAsync(ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
+    public static async Task<IEnumerable<ContextMemory>> GetPinnedMemoriesAsync(ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
+        currentUserService.LockoutUserIfGuest();
         Log.Logger.Information("[MCP Tool Call] Get pinned memories");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
         var stores = await memoryProvider.GetStoresAsync();
-        var pinnedMemories = stores.SelectMany(s => s.Memories).Where(m => m.Pinned).ToList();
-        return JsonSerializer.Serialize(pinnedMemories);
+        var pinnedMemories = stores.SelectMany(s => s.Memories).Where(m => m.Pinned).Select(m => new ContextMemory(m)).ToList();
+        return pinnedMemories;
     }
 
     [McpServerResource(Name = "GetStoreIdentifiersandDescriptionsResource", MimeType = "application/json")]
@@ -30,6 +32,7 @@ public static class MemoryResources
     public static async Task<string> GetMemoryStoreIdentifiersAndDescriptions(
         ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
+        currentUserService.LockoutUserIfGuest();
         Log.Logger.Information("[MCP Tool Call] Get memory store identifiers and descriptions");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
         return JsonSerializer.Serialize(await memoryProvider.GetStoreIdentifiersAndDescriptionsAsync());

@@ -33,6 +33,7 @@ public static class MemoryUpdate
         ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
+        currentUserService.LockoutUserIfGuest();
         Log.Logger.Information("[MCP Tool Call] Replace memory");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
 
