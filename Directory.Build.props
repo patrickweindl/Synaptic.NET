@@ -52,6 +52,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="PdfPig" />
     <PackageReference Include="OpenAI" />
     <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions" />

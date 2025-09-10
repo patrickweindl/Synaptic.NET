@@ -19,10 +19,14 @@ public static class DomainServices
         builder.Services.AddSingleton(configuration);
 
         Directory.CreateDirectory(configuration.BaseDataPath);
-        string basePath = configuration.BaseDataPath;
+        var lambdaSettings = configuration;
         builder.Services.AddDbContext<SynapticDbContext>(options =>
-            options.UseSqlite($"Data Source={Path.Join(basePath, "synaptic.db")}"));
-
+            options.UseNpgsql($"" +
+                              $"Server={lambdaSettings.ServerSettings.PostgresUrl};" +
+                              $"Port={lambdaSettings.ServerSettings.PostgresPort};" +
+                              $"Database={lambdaSettings.ServerSettings.PostgresDatabase};" +
+                              $"User Id={lambdaSettings.ServerSettings.PostgresUserName};" +
+                              $"Password={lambdaSettings.ServerSettings.PostgresPassword}"));
         return builder;
     }
 
