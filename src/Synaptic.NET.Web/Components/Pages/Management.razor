@@ -296,13 +296,40 @@
                                     <div class="store-info">
                                         <div class="store-icon">🗂️</div>
                                         <div class="store-details">
-                                            <h4>@store.Title</h4>
+                                            <div class="store-title-row">
+                                                <h4>@store.Title</h4>
+                                                @if (store.GroupId == null || store.GroupId == Guid.Empty || store.OwnerGroup == null)
+                                                {
+                                                    <span class="ownership-badge user-owned">👤 Personal</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="ownership-badge group-owned">👥 Group</span>
+                                                }
+                                            </div>
                                             <span class="store-id">@store.StoreId</span>
                                             <span class="memory-count">@store.Memories.Count memory@(store.Memories.Count != 1 ? "s" : "")</span>
+                                            @if (store.OwnerGroup != null)
+                                            {
+                                                <span class="group-name">Group: @store.OwnerGroup.DisplayName</span>
+                                            }
                                         </div>
                                     </div>
                                 </div>
                                 <div class="store-actions">
+                                    @if (store.GroupId == null || store.GroupId == Guid.Empty || store.OwnerGroup == null)
+                                    {
+                                        <button class="publish-store-btn" @onclick="@(() => ShowPublishModal(store))" disabled="@_isPublishing">
+                                            @if (_isPublishing && _publishingStoreId == store.StoreId)
+                                            {
+                                                <span>Publishing...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>🚀 Publish to Group</span>
+                                            }
+                                        </button>
+                                    }
                                     <button class="delete-store-btn" @onclick="@(() => DeleteMemoryStore(store.StoreId))" disabled="@_isDeletingStore">
                                         @if (_isDeletingStore && _deletingStoreId == store.StoreId)
                                         {
@@ -508,6 +535,94 @@
             <div class="modal-footer">
                 <button class="btn btn-primary" @onclick="CloseNewApiKeyModal">I've saved the key</button>
             </div>
+        </div>
+    </div>
+}
+
+<!-- Publish Memory Store Modal -->
+@if (_showPublishModal)
+{
+    <div class="modal-overlay" @onclick="ClosePublishModal">
+        <div class="modal-content publish-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>🚀 Publish Memory Store to Group</h3>
+                <button class="modal-close" @onclick="ClosePublishModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (_selectedStore != null)
+                {
+                    <div class="publish-info">
+                        <div class="store-preview">
+                            <div class="store-icon">🗂️</div>
+                            <div class="store-details">
+                                <h4>@_selectedStore.Title</h4>
+                                <span class="memory-count">@_selectedStore.Memories.Count memory@(_selectedStore.Memories.Count != 1 ? "s" : "")</span>
+                            </div>
+                        </div>
+
+                        <div class="warning-section">
+                            <div class="warning-icon">⚠️</div>
+                            <div class="warning-text">
+                                <h4>Publishing will transfer ownership</h4>
+                                <p>This memory store will be transferred to the selected group and will no longer be owned by you personally. Group members will be able to access this memory store.</p>
+                            </div>
+                        </div>
+
+                        @if (_userGroups.Any())
+                        {
+                            <div class="group-selection">
+                                <h4>Select a group to publish to:</h4>
+                                <div class="groups-list">
+                                    @foreach (var group in _userGroups)
+                                    {
+                                        <div class="group-option @(_selectedGroupId == group.Id ? "selected" : "")" @onclick="@(() => SelectGroup(group.Id))">
+                                            <div class="group-icon">👥</div>
+                                            <div class="group-info">
+                                                <span class="group-name">@group.DisplayName</span>
+                                                <span class="group-id">@group.Identifier</span>
+                                            </div>
+                                            @if (_selectedGroupId == group.Id)
+                                            {
+                                                <div class="check-icon">✅</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <span class="empty-icon">👥</span>
+                                <h4>No groups found</h4>
+                                <p>You are not a member of any groups. You need to be part of a group to publish memory stores.</p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="ClosePublishModal">Cancel</button>
+                @if (_userGroups.Any())
+                {
+                    <button class="btn btn-primary" @onclick="ConfirmPublish" disabled="@(_selectedGroupId == Guid.Empty || _isPublishing)">
+                        @if (_isPublishing)
+                        {
+                            <span>Publishing...</span>
+                        }
+                        else
+                        {
+                            <span>🚀 Publish to Group</span>
+                        }
+                    </button>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(_publishMessage))
+            {
+                <div class="publish-message @(_publishSuccess ? "success" : "error")">
+                    @_publishMessage
+                </div>
+            }
         </div>
     </div>
 }
@@ -1131,11 +1246,40 @@
         font-size: 1.5rem;
     }
 
+    .store-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+
     .store-details h4 {
-        margin: 0 0 0.5rem 0;
+        margin: 0;
         color: #333;
         font-size: 1.1rem;
         font-weight: 500;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ownership-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .ownership-badge.user-owned {
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+    }
+
+    .ownership-badge.group-owned {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
     }
 
     .store-id {
@@ -1152,9 +1296,42 @@
         font-weight: 500;
     }
 
+    .group-name {
+        font-size: 0.85rem;
+        color: #495057;
+        font-weight: 500;
+        display: block;
+        margin-top: 0.25rem;
+    }
+
     .store-actions {
         display: flex;
         justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    .publish-store-btn {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #1b6ec2, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .publish-store-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+    }
+
+    .publish-store-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
     }
 
     .delete-store-btn {
@@ -1567,6 +1744,119 @@
         font-style: italic;
     }
 
+    /* Publish Modal Styles */
+    .publish-modal {
+        max-width: 700px;
+    }
+
+    .publish-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .store-preview {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+    }
+
+    .group-selection h4 {
+        margin: 0 0 1rem 0;
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .groups-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .group-option {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .group-option:hover {
+        border-color: #1b6ec2;
+        background: #f8f9fa;
+    }
+
+    .group-option.selected {
+        border-color: #1b6ec2;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+        box-shadow: 0 4px 12px rgba(27, 110, 194, 0.1);
+    }
+
+    .group-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .group-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .group-name {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .group-id {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-family: monospace;
+    }
+
+    .check-icon {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .publish-message {
+        padding: 1rem 2rem;
+        border-radius: 0 0 16px 16px;
+        margin: 0 -2rem -1rem -2rem;
+        font-size: 0.95rem;
+    }
+
+    .publish-message.success {
+        background: #d4edda;
+        color: #155724;
+        border-top: 1px solid #c3e6cb;
+    }
+
+    .publish-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border-top: 1px solid #f5c6cb;
+    }
+
     /* Responsive Design */
     @@media (max-width: 768px) {
         .management-header {
@@ -1691,6 +1981,16 @@
     private ApiKey? _newApiKey = null;
     private bool _keyCopied = false;
 
+    // Publish modal variables
+    private bool _showPublishModal = false;
+    private MemoryStore? _selectedStore = null;
+    private List<Group> _userGroups = [];
+    private Guid _selectedGroupId = Guid.Empty;
+    private bool _isPublishing = false;
+    private Guid _publishingStoreId = Guid.Empty;
+    private string _publishMessage = string.Empty;
+    private bool _publishSuccess = false;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -1720,6 +2020,9 @@
 
             // Load API keys for current user
             await LoadApiKeys();
+
+            // Load user groups
+            await LoadUserGroups();
 
             StateHasChanged();
         }
@@ -2208,5 +2511,88 @@
             // For now, we'll just set the copied flag to true
             // In a real Blazor app, you'd use IJSRuntime to call JavaScript clipboard API
         });
+    }
+
+    // Publish Memory Store Methods
+    private async Task LoadUserGroups()
+    {
+        try
+        {
+            var currentUser = CurrentUserService.GetCurrentUser();
+            _userGroups = DbContext.DbUser()?.Memberships?.Select(m => m.Group).ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            _publishMessage = $"Error loading groups: {ex.Message}";
+            _publishSuccess = false;
+        }
+    }
+
+    private void ShowPublishModal(MemoryStore store)
+    {
+        _selectedStore = store;
+        _selectedGroupId = Guid.Empty;
+        _publishMessage = string.Empty;
+        _showPublishModal = true;
+        StateHasChanged();
+    }
+
+    private void ClosePublishModal()
+    {
+        _showPublishModal = false;
+        _selectedStore = null;
+        _selectedGroupId = Guid.Empty;
+        _publishMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void SelectGroup(Guid groupId)
+    {
+        _selectedGroupId = groupId;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmPublish()
+    {
+        if (_selectedStore == null || _selectedGroupId == Guid.Empty) return;
+
+        _isPublishing = true;
+        _publishingStoreId = _selectedStore.StoreId;
+        _publishMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var success = await MemoryProvider.PublishMemoryStoreToGroup(_selectedStore.StoreId, _selectedGroupId);
+
+            if (success)
+            {
+                _publishMessage = $"Memory store '{_selectedStore.Title}' has been successfully published to the group.";
+                _publishSuccess = true;
+
+                // Refresh the data
+                await LoadData();
+
+                // Close modal after a brief delay
+                await Task.Delay(2000);
+                ClosePublishModal();
+            }
+            else
+            {
+                _publishMessage = "Failed to publish memory store. You may not have permission to publish to this group, or the memory store may not exist.";
+                _publishSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _publishMessage = $"Error publishing memory store: {ex.Message}";
+            _publishSuccess = false;
+        }
+        finally
+        {
+            _isPublishing = false;
+            _publishingStoreId = Guid.Empty;
+            StateHasChanged();
+        }
     }
 }

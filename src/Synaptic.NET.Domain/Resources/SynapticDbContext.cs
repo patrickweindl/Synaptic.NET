@@ -49,7 +49,7 @@ public class SynapticDbContext : DbContext
 
     public User? DbUser()
     {
-        var user = Users.FirstOrDefault(u => u.Id == CurrentUserId);
+        var user = Users.Include(u => u.Memberships).FirstOrDefault(u => u.Id == CurrentUserId);
         if (user != null)
         {
             SetCurrentUser(user);
@@ -71,6 +71,8 @@ public class SynapticDbContext : DbContext
             .HasOne(gm => gm.Group)
             .WithMany(g => g.Memberships)
             .HasForeignKey(gm => gm.GroupId);
+
+        modelBuilder.Entity<GroupMembership>().Navigation(m => m.Group).AutoInclude();
 
         modelBuilder.Entity<User>()
             .HasKey(u => u.Id);

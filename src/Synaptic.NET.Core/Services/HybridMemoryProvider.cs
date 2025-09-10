@@ -633,10 +633,13 @@ public class HybridMemoryProvider : IMemoryProvider
 
         store.GroupId = groupId;
         store.OwnerGroup = group;
-        group.Stores.Add(store);
-        _dbContext.Groups.Update(group);
-        await _dbContext.SaveChangesAsync();
-        _dbContext.MemoryStores.Remove(store);
+        _dbContext.MemoryStores.Update(store);
+        foreach (var memory in store.Memories)
+        {
+            memory.GroupId = groupId;
+            memory.OwnerGroup = group;
+            _dbContext.Memories.Update(memory);
+        }
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(group, store);
         await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, store);

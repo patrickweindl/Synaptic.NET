@@ -60,7 +60,7 @@ To explore functionality with a default setup:
 - [ ] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users
 - [x] Restricted access for guests
-- [ ] Sharing memory stores with groups
+- [x] Sharing memory stores with groups
 ### Others
 - [x] Qdrant
 - [x] Entity Framework Core
