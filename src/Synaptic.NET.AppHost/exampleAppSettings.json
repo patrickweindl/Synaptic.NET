@@ -51,7 +51,12 @@
         "Url": "https://localhost:8001",
         "KnownProxies": "127.0.0.1,192.168.178.2",
         "Port": "8001",
-        "Qdrant": "http://localhost:6334"
+        "Qdrant": "http://localhost:6334",
+        "PostgresUrl": "localhost",
+        "PostgresPort": "5432",
+        "PostgresUser": "postgres",
+        "PostgresPassword": "admin",
+        "PostgresDatabase": "postgres"
     },
     "AllowedHosts": "*"
 }
