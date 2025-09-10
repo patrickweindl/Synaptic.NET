@@ -120,7 +120,7 @@ public class WhenUsingDatabaseContext
             Identifier = Guid.NewGuid(),
             Owner = _currentUserService.GetCurrentUser().Id,
             StoreId = _dbContext.MemoryStores.FirstOrDefault(s => s.Title == "Test Store")?.StoreId ?? Guid.NewGuid(),
-            UpdatedAt = DateTimeOffset.UnixEpoch,
+            UpdatedAt = DateTimeOffset.UtcNow,
             CreatedAt = DateTimeOffset.UtcNow
         });
 

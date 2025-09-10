@@ -10,7 +10,7 @@ public class OAuthProviderSettings
     private string _clientIdEnvVar => $"OAUTH__{_providerName.ToUpper()}__CLIENTID";
     private string _clientSecretEnvVar => $"OAUTH__{_providerName.ToUpper()}__CLIENTSECRET";
     private string _oAuthUrlEnvVar => $"OAUTH__{_providerName.ToUpper()}__OAUTHURL";
-    public OAuthProviderSettings(string providerName)
+    private OAuthProviderSettings(string providerName)
     {
         _providerName = providerName;
         _enabledEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => Enabled = bool.Parse(s));
@@ -28,7 +28,7 @@ public class OAuthProviderSettings
             if (configuration.GetSection("OAuth").GetSection(providerName).Exists())
             {
                 var oauthSection = configuration.GetSection("OAuth").GetSection(providerName);
-                oauthSection.AssignValueIfAvailable(s => Enabled = bool.Parse(s), "Enabled");
+                oauthSection.AssignValueIfAvailable(s => Enabled = bool.Parse(s), "Enable");
                 oauthSection.AssignValueIfAvailable(s => ClientId = s, "ClientId");
                 oauthSection.AssignValueIfAvailable(s => ClientSecret = s, "ClientSecret");
                 oauthSection.AssignValueIfAvailable(s => OAuthUrl = s, "OAuthUrl");

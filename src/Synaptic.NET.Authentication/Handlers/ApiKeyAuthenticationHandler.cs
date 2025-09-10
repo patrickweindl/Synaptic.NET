@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Management;
 
@@ -80,7 +81,8 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SynapticDbContext>();
-
+        var userService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
+        dbContext.SetCurrentUser(userService);
         var foundUser = await dbContext.Users
             .Include(u => u.ApiKeys)
             .FirstOrDefaultAsync(u => u.ApiKeys.Any(ak =>

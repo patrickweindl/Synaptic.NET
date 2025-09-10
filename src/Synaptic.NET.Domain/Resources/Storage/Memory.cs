@@ -48,7 +48,7 @@ public class Memory
     public List<string> Tags { get; set; } = [];
 
     [VectorStoreData(StorageName = "reference_type")]
-    [Description("The type of the reference, e.g. conversation, document, memory, codebase, homepage or none. Defaults to none.")]
+    [Description("The type of the reference: none (0), conversation (1), document (2), memory (3), codebase (4), homepage (5). Defaults to none.")]
     [JsonPropertyName("reference_type")]
     [Range(0, 5)]
     public int ReferenceType { get; set; }
@@ -81,7 +81,7 @@ public class Memory
     public required Guid Owner { get; set; }
 
     [ForeignKey(nameof(Owner))]
-    public User OwnerUser { get; set; } = null!;
+    public User? OwnerUser { get; set; }
 
     public Guid? GroupId { get; set; }
 
@@ -95,5 +95,5 @@ public class Memory
     public Guid StoreId { get; set; }
 
     [ForeignKey(nameof(StoreId))]
-    public MemoryStore Store { get; set; } = null!;
+    public MemoryStore? Store { get; set; }
 }

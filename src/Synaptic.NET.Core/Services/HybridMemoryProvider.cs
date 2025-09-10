@@ -31,36 +31,32 @@ public class HybridMemoryProvider : IMemoryProvider
         _storeRouter = storeRouter;
         _augmentationService = augmentationService;
         _reranker = reranker;
+        _dbContext.SetCurrentUser(currentUserService);
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var result = await _dbContext.MemoryStores.ToDictionaryAsync(s => s.StoreId, s => s.Description);
         return result;
     }
 
     public async Task<List<MemoryStore>> GetStoresAsync()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
-        return await _dbContext.MemoryStores.ToListAsync();
+        return _dbContext.MemoryStores.ToList();
     }
 
     public Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier));
     }
 
     public Task<MemoryStore?> GetCollectionAsync(string collectionTitle)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle));
     }
 
     public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
 
         foreach (var group in _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group))
@@ -70,19 +66,51 @@ public class HybridMemoryProvider : IMemoryProvider
         }
 
         var resultList = userVectorResults.ToList();
+        List<MemorySearchResult> results;
         if (resultList.Any())
         {
-            var reranked = await _reranker.Rerank(resultList);
-            return reranked.OrderBy(r => r.Relevance).Take(limit);
+            var reranked = (await _reranker.Rerank(resultList)).ToList();
+            Log.Information($"[Memory Search] Vector search was sufficiently returning results. Reranking results with {reranked.Count} results.");
+            results = reranked.OrderBy(r => r.Relevance).Take(limit).ToList();
         }
-        var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
-        return augmentedResults;
+        else
+        {
+            Log.Information($"[Memory Search] Vector search did not result in any results. Falling back to augmented search...");
+            var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
+            results = augmentedResults.OrderBy(r => r.Relevance).Take(limit).ToList();
+        }
+
+        foreach (var result in results)
+        {
+            if (result.Memory.Store != null)
+            {
+                continue;
+            }
+
+            if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == result.Memory.StoreId) is not
+                { } existingStore)
+            {
+                continue;
+            }
+
+            result.Memory.Store = existingStore;
+
+            if (_dbContext.DbUser() is not { } user || user.Id != _currentUserService.GetCurrentUser().Id)
+            {
+                continue;
+            }
+
+            if (result.Memory.OwnerUser == null)
+            {
+                result.Memory.OwnerUser = user;
+            }
+        }
+        return results;
     }
 
     private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, int limit = 10,
         double relevanceThreshold = 0.5)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var groupStores = _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group).SelectMany(g => g.Stores).ToList();
 
         var allStores = _dbContext.MemoryStores.ToList().Concat(groupStores).ToList();
@@ -110,7 +138,6 @@ public class HybridMemoryProvider : IMemoryProvider
     private async Task<IEnumerable<MemorySearchResult>> AugmentedSearchInStore(MemoryStore chunk, string query, int limit = 10, double relevanceThreshold = 0.5,
         CancellationToken token = default)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var results = new List<MemorySearchResult>();
         var vectorResults = await _qdrantMemoryClient.SearchInStoreAsync(query, limit, relevanceThreshold, chunk.StoreId, _currentUserService.GetCurrentUser().Id, token);
 
@@ -138,7 +165,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<MemoryStore?> CreateCollectionAsync(MemoryStore store)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == store.StoreId) is { } existingStore)
         {
             foreach (var memory in store.Memories)
@@ -160,7 +186,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public Task<bool> CreateCollectionAsync(string collectionTitle, string storeDescription, [MaybeNullWhen(false)] out MemoryStore store)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var newStore = new MemoryStore
         {
             Title = collectionTitle,
@@ -177,7 +202,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> CreateMemoryEntryAsync(Memory memory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStoreRoutingResult = await _storeRouter.RouteMemoryToStoreAsync(memory, _dbContext.MemoryStores);
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == targetStoreRoutingResult.Identifier);
 
@@ -198,7 +222,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> CreateMemoryEntryAsync(Guid collectionIdentifier, Memory memory, string storeDescription = "")
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier);
         if (targetStore == null)
         {
@@ -215,7 +238,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> CreateMemoryEntryAsync(string collectionTitle, Memory memory, string storeDescription = "")
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = _dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle);
         if (targetStore == null)
         {
@@ -232,7 +254,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
@@ -259,7 +280,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
@@ -286,7 +306,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -315,7 +334,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -344,7 +362,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> ReplaceMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -381,7 +398,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
@@ -401,7 +417,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -421,7 +436,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -434,7 +448,7 @@ public class HybridMemoryProvider : IMemoryProvider
         existingMemory.Description = newMemory.Description;
         existingMemory.Content = newMemory.Content;
         existingMemory.Pinned = newMemory.Pinned;
-        existingMemory.Tags = newMemory.Tags;
+        existingMemory.Tags = existingMemory.Tags.Concat(newMemory.Tags).Distinct().ToList();
         existingMemory.ReferenceType = newMemory.ReferenceType;
         existingMemory.Reference = newMemory.Reference;
         existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
@@ -449,7 +463,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var existingMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -477,7 +490,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> UpdateMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -513,7 +525,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteCollectionAsync(Guid collectionIdentifier)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
@@ -532,7 +543,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteCollectionAsync(string collectionTitle)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetStore = await _dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
@@ -552,7 +562,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
@@ -571,7 +580,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid entryIdentifier)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
@@ -590,7 +598,6 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, string entryTitle)
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
         var targetMemory = await _dbContext.Memories
             .FirstOrDefaultAsync(m => m.Title == entryTitle && m.StoreId == collectionIdentifier);
 

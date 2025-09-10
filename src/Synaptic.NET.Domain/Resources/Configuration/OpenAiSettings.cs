@@ -31,12 +31,11 @@ public class OpenAiSettings
             openAiSection.AssignValueIfAvailable(s => EmbeddingModel = s, "EmbeddingModel");
             openAiSection.AssignValueIfAvailable(s => MemoryRoutingModel = s, "MemoryRoutingModel");
             openAiSection.AssignValueIfAvailable(s => MemoryAugmentationModel = s, "MemoryAugmentationModel");
-            openAiSection.AssignValueIfAvailable(s => RagCreationModel = s, "RagCreationModel");
             openAiSection.AssignValueIfAvailable(s => EmbeddingDimensions = int.Parse(s), "EmbeddingDimensions");
-            string? configApiKey = openAiSection.GetValue<string>("ApiKey");
+            openAiSection.AssignValueIfAvailable(s => RagCreationModel = s, "RagCreationModel");
         }
     }
-    public string EmbeddingModel { get; private set; } = "text-embedding-3-small";
+    public string EmbeddingModel { get; private set; } = "text-embedding-3-large";
     public string MemoryRoutingModel { get; private set; } = "gpt-4o";
     public string MemoryAugmentationModel { get; private set; } = "gpt-5-mini";
     public string RagCreationModel { get; private set; } = "gpt-5-mini";

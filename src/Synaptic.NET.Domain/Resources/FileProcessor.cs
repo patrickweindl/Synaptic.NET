@@ -145,7 +145,6 @@ public class FileProcessor
         Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
         Result = targetStore;
 
-
         Completed = true;
         Progress = 100;
     }
@@ -165,9 +164,9 @@ public class FileProcessor
             returnSummaries.Add(summary);
         }
         Progress += 0.9 / _chunksCount;
-        _chunksFinished++;
         Message =
             $"Finished chunk {_chunksFinished + 1} of {_chunksCount} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
+        _chunksFinished++;
         return returnSummaries;
     }
 
@@ -222,7 +221,7 @@ public class FileProcessor
             Description = description,
             Content = summary.Summary,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UnixEpoch,
+            UpdatedAt = DateTime.UtcNow,
             Reference = fileName,
             Owner = currentUser.Id,
             OwnerUser = currentUser,

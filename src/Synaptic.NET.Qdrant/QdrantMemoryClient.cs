@@ -137,7 +137,7 @@ public class QdrantMemoryClient
     {
         using var collection = _store.GetCollection<Guid, VectorMemory>(identity.Id.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
-        await _client.CreateAliasAsync(identity.DisplayName, identity.Id.ToString(), cancellationToken: cancellationToken);
+        await _client.CreateAliasAsync(identity.Identifier, identity.Id.ToString(), cancellationToken: cancellationToken);
 
         if (string.IsNullOrEmpty(memory.Description))
         {

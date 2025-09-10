@@ -1733,7 +1733,7 @@
     {
         try
         {
-            DbContext.Attach(CurrentUserService.GetCurrentUser());
+            DbContext.SetCurrentUser(CurrentUserService);
             _apiKeys = DbContext.ApiKeys.ToList();
             _apiKeyCount = _apiKeys.Count;
         }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
 
@@ -32,6 +33,11 @@ public class SynapticDbContext : DbContext
     {
     }
 
+    public void SetCurrentUser(ICurrentUserService currentUserService)
+    {
+        SetCurrentUser(currentUserService.GetCurrentUser());
+    }
+
     public void SetCurrentUser(User user)
     {
         CurrentUserId = user.Id;
@@ -42,7 +48,12 @@ public class SynapticDbContext : DbContext
 
     public User? DbUser()
     {
-        return Users.FirstOrDefault(u => u.Id == CurrentUserId);
+        var user = Users.FirstOrDefault(u => u.Id == CurrentUserId);
+        if (user != null)
+        {
+            SetCurrentUser(user);
+        }
+        return user;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -75,6 +86,15 @@ public class SynapticDbContext : DbContext
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<User>()
+            .Navigation(u => u.ApiKeys).AutoInclude();
+
+        modelBuilder.Entity<User>()
+            .Navigation(u => u.Memberships).AutoInclude();
+
+        modelBuilder.Entity<User>()
+            .Navigation(u => u.Stores).AutoInclude();
+
         modelBuilder.Entity<Group>()
             .HasKey(g => g.Id);
 
@@ -93,6 +113,9 @@ public class SynapticDbContext : DbContext
             .HasForeignKey(m => m.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<MemoryStore>()
+            .Navigation(s => s.Memories).AutoInclude();
+
         modelBuilder.Entity<Memory>()
             .HasOne(m => m.OwnerUser)
             .WithMany()
@@ -110,6 +133,9 @@ public class SynapticDbContext : DbContext
             .WithMany(s => s.Memories)
             .HasForeignKey(m => m.StoreId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Memory>()
+            .Navigation(m => m.Store).AutoInclude();
 
         modelBuilder.Entity<MemoryStore>()
             .HasQueryFilter(s =>

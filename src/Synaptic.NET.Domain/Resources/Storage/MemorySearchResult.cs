@@ -1,5 +1,8 @@
 namespace Synaptic.NET.Domain.Resources.Storage;
 
+/// <summary>
+/// A
+/// </summary>
 public class MemorySearchResult
 {
     public required double Relevance { get; set; }

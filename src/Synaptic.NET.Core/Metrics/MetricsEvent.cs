@@ -6,9 +6,12 @@ namespace Synaptic.NET.Core.Metrics;
 public record MetricsEvent<T>
 {
     [JsonConstructor]
-    protected MetricsEvent()
+    protected MetricsEvent(string userIdentifier, T value, DateTime timestamp, string operation)
     {
-
+        UserIdentifier = userIdentifier;
+        Value = value;
+        Timestamp = timestamp;
+        Operation = operation;
     }
     public MetricsEvent(T value, string operation, User? userIdentifier = null)
     {

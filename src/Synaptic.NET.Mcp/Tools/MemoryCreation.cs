@@ -44,7 +44,7 @@ public static class MemoryCreation
             Title = memoryTitle,
             Content = content,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UnixEpoch,
+            UpdatedAt = DateTime.UtcNow,
             Pinned = pinned,
             Tags = tags ?? new List<string>()
         };
