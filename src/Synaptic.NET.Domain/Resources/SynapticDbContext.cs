@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
@@ -108,12 +109,6 @@ public class SynapticDbContext : DbContext
             .HasKey(m => m.StoreId);
 
         modelBuilder.Entity<MemoryStore>()
-            .HasOne(m => m.OwnerUser)
-            .WithMany()
-            .HasForeignKey(m => m.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<MemoryStore>()
             .Navigation(s => s.Memories).AutoInclude();
 
         modelBuilder.Entity<Memory>()
@@ -145,7 +140,12 @@ public class SynapticDbContext : DbContext
             )
             .Property(p => p.Tags)
             .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<List<string>>(
+                    (c1, c2) =>
+                        c1 == null && c2 == null || c1 != null && c1.SequenceEqual(c2 ?? new List<string>()),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()));
 
         modelBuilder.Entity<Memory>()
             .HasQueryFilter(m =>
@@ -155,13 +155,12 @@ public class SynapticDbContext : DbContext
             )
             .Property(p => p.Tags)
             .HasConversion(v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new());
-
-        modelBuilder.Entity<ApiKey>()
-            .HasOne(a => a.Owner)
-            .WithMany()
-            .HasForeignKey(a => a.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<List<string>>(
+                    (c1, c2) =>
+                        c1 == null && c2 == null || c1 != null && c1.SequenceEqual(c2 ?? new List<string>()),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()));
 
         modelBuilder.Entity<ApiKey>()
             .HasQueryFilter(a =>

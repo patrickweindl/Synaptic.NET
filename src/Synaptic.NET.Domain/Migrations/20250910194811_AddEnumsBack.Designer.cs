@@ -11,8 +11,8 @@ using Synaptic.NET.Domain.Resources;
 namespace Synaptic.NET.Domain.Migrations
 {
     [DbContext(typeof(SynapticDbContext))]
-    [Migration("20250907140318_FixMemoryRelationships")]
-    partial class FixMemoryRelationships
+    [Migration("20250910194811_AddEnumsBack")]
+    partial class AddEnumsBack
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,11 +45,16 @@ namespace Synaptic.NET.Domain.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ApiKey");
+                    b.HasIndex("UserId1");
+
+                    b.ToTable("ApiKeys");
                 });
 
             modelBuilder.Entity("Synaptic.NET.Domain.Resources.Management.Group", b =>
@@ -240,10 +245,14 @@ namespace Synaptic.NET.Domain.Migrations
             modelBuilder.Entity("Synaptic.NET.Domain.Resources.Management.ApiKey", b =>
                 {
                     b.HasOne("Synaptic.NET.Domain.Resources.Management.User", "Owner")
-                        .WithMany("ApiKeys")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Synaptic.NET.Domain.Resources.Management.User", null)
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("Owner");
                 });

@@ -28,6 +28,7 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
     public string UserAuthId => Identifier.Split("__").LastOrDefault() ?? Identifier;
 
     [JsonPropertyName("user_role")]
+
     public IdentityRole Role { get; set; } = IdentityRole.Guest;
 
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();

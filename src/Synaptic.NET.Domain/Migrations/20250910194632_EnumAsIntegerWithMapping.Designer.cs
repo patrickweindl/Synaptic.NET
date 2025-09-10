@@ -11,8 +11,8 @@ using Synaptic.NET.Domain.Resources;
 namespace Synaptic.NET.Domain.Migrations
 {
     [DbContext(typeof(SynapticDbContext))]
-    [Migration("20250907123036_MemoryRelationships")]
-    partial class MemoryRelationships
+    [Migration("20250910194632_EnumAsIntegerWithMapping")]
+    partial class EnumAsIntegerWithMapping
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,11 +45,16 @@ namespace Synaptic.NET.Domain.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ApiKey");
+                    b.HasIndex("UserId1");
+
+                    b.ToTable("ApiKeys");
                 });
 
             modelBuilder.Entity("Synaptic.NET.Domain.Resources.Management.Group", b =>
@@ -110,9 +115,8 @@ namespace Synaptic.NET.Domain.Migrations
                         .HasColumnType("TEXT")
                         .HasAnnotation("Relational:JsonPropertyName", "user_identifier");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER")
-                        .HasAnnotation("Relational:JsonPropertyName", "user_role");
+                    b.Property<int>("IdentityRoleInteger")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -223,11 +227,16 @@ namespace Synaptic.NET.Domain.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("StoreId");
 
                     b.HasIndex("GroupId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1");
 
                     b.ToTable("MemoryStores");
                 });
@@ -235,10 +244,14 @@ namespace Synaptic.NET.Domain.Migrations
             modelBuilder.Entity("Synaptic.NET.Domain.Resources.Management.ApiKey", b =>
                 {
                     b.HasOne("Synaptic.NET.Domain.Resources.Management.User", "Owner")
-                        .WithMany("ApiKeys")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Synaptic.NET.Domain.Resources.Management.User", null)
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("Owner");
                 });
@@ -296,10 +309,14 @@ namespace Synaptic.NET.Domain.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Synaptic.NET.Domain.Resources.Management.User", "OwnerUser")
-                        .WithMany("Stores")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Synaptic.NET.Domain.Resources.Management.User", null)
+                        .WithMany("Stores")
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("OwnerGroup");
 

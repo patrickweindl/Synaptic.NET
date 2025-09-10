@@ -22,10 +22,10 @@ public static class DomainServices
         var lambdaSettings = configuration;
         builder.Services.AddDbContext<SynapticDbContext>(options =>
             options.UseNpgsql($"" +
-                              $"Server={lambdaSettings.ServerSettings.PostgresUrl};" +
+                              $"Host={lambdaSettings.ServerSettings.PostgresUrl};" +
                               $"Port={lambdaSettings.ServerSettings.PostgresPort};" +
                               $"Database={lambdaSettings.ServerSettings.PostgresDatabase};" +
-                              $"User Id={lambdaSettings.ServerSettings.PostgresUserName};" +
+                              $"Username={lambdaSettings.ServerSettings.PostgresUserName};" +
                               $"Password={lambdaSettings.ServerSettings.PostgresPassword}"));
         return builder;
     }
@@ -34,7 +34,7 @@ public static class DomainServices
     {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SynapticDbContext>();
-        db.Database.Migrate();
+        db.Database.EnsureCreated();
 
         return app;
     }

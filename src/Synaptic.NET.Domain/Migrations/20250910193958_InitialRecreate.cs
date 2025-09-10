@@ -31,7 +31,7 @@ namespace Synaptic.NET.Domain.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Identifier = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
                     DisplayName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Role = table.Column<int>(type: "INTEGER", nullable: false)
+                    IdentityRoleInteger = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -39,24 +39,30 @@ namespace Synaptic.NET.Domain.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ApiKey",
+                name: "ApiKeys",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
                     Key = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: false),
-                    ExpiresAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    ExpiresAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UserId1 = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ApiKey", x => x.Id);
+                    table.PrimaryKey("PK_ApiKeys", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ApiKey_Users_UserId",
+                        name: "FK_ApiKeys_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ApiKeys_Users_UserId1",
+                        column: x => x.UserId1,
+                        principalTable: "Users",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -92,7 +98,8 @@ namespace Synaptic.NET.Domain.Migrations
                     Description = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
                     Tags = table.Column<string>(type: "TEXT", nullable: false),
                     UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    GroupId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    GroupId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    UserId1 = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -109,6 +116,11 @@ namespace Synaptic.NET.Domain.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MemoryStores_Users_UserId1",
+                        column: x => x.UserId1,
+                        principalTable: "Users",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -136,7 +148,8 @@ namespace Synaptic.NET.Domain.Migrations
                         name: "FK_Memories_Groups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "Groups",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Memories_MemoryStores_StoreId",
                         column: x => x.StoreId,
@@ -148,13 +161,18 @@ namespace Synaptic.NET.Domain.Migrations
                         column: x => x.Owner,
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ApiKey_UserId",
-                table: "ApiKey",
+                name: "IX_ApiKeys_UserId",
+                table: "ApiKeys",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApiKeys_UserId1",
+                table: "ApiKeys",
+                column: "UserId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GroupMembership_GroupId",
@@ -185,13 +203,18 @@ namespace Synaptic.NET.Domain.Migrations
                 name: "IX_MemoryStores_UserId",
                 table: "MemoryStores",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MemoryStores_UserId1",
+                table: "MemoryStores",
+                column: "UserId1");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ApiKey");
+                name: "ApiKeys");
 
             migrationBuilder.DropTable(
                 name: "GroupMembership");

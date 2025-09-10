@@ -8,8 +8,7 @@ public class SynapticDbContextFactory : IDesignTimeDbContextFactory<SynapticDbCo
     public SynapticDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<SynapticDbContext>();
-        optionsBuilder.UseSqlite("Data Source=synaptic.db");
-
+        optionsBuilder.UseInMemoryDatabase("InMemoryDbForTesting");
         return new SynapticDbContext(optionsBuilder.Options);
     }
 

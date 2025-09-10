@@ -11,8 +11,8 @@ using Synaptic.NET.Domain.Resources;
 namespace Synaptic.NET.Domain.Migrations
 {
     [DbContext(typeof(SynapticDbContext))]
-    [Migration("20250908195618_AddApiKeysTable")]
-    partial class AddApiKeysTable
+    [Migration("20250910193958_InitialRecreate")]
+    partial class InitialRecreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -115,9 +115,8 @@ namespace Synaptic.NET.Domain.Migrations
                         .HasColumnType("TEXT")
                         .HasAnnotation("Relational:JsonPropertyName", "user_identifier");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER")
-                        .HasAnnotation("Relational:JsonPropertyName", "user_role");
+                    b.Property<int>("IdentityRoleInteger")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
