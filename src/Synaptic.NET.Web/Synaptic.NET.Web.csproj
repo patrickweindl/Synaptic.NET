@@ -23,6 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Synaptic.NET.Augmentation\Synaptic.NET.Augmentation.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Authentication\Synaptic.NET.Authentication.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Core\Synaptic.NET.Core.csproj" />
       <ProjectReference Include="..\Synaptic.NET.Domain\Synaptic.NET.Domain.csproj" />

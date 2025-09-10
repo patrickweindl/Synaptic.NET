@@ -11,13 +11,18 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Cryptography
 @using Synaptic.NET.Domain.Enums
+@using Synaptic.NET.Domain.Abstractions.Services
+@using Synaptic.NET.Domain.BackgroundTasks
+@using Synaptic.NET.Augmentation.Handlers
 @attribute [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 @rendermode InteractiveServer
 @inject IMemoryProvider MemoryProvider
 @inject ICurrentUserService CurrentUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IFileMemoryCreationService FileMemoryCreationService
+@inject IArchiveService ArchiveService
 @inject SynapticDbContext DbContext
+@inject IBackgroundTaskQueue BackgroundTaskQueue
 
 <PageTitle>Memory Management - Synaptic.NET</PageTitle>
 
@@ -61,6 +66,13 @@
                         <div class="stat-content">
                             <div class="stat-number">@_apiKeyCount</div>
                             <div class="stat-label">API Keys</div>
+                        </div>
+                    </div>
+                    <div class="stat-card clickable-card" @onclick="ShowTaskQueueModal">
+                        <div class="stat-icon">📋</div>
+                        <div class="stat-content">
+                            <div class="stat-number">@_taskQueueCount</div>
+                            <div class="stat-label">Background Tasks</div>
                         </div>
                     </div>
                 </div>
@@ -623,6 +635,119 @@
                     @_publishMessage
                 </div>
             }
+        </div>
+    </div>
+}
+
+<!-- Background Task Queue Modal -->
+@if (_showTaskQueueModal)
+{
+    <div class="modal-overlay" @onclick="CloseTaskQueueModal">
+        <div class="modal-content task-queue-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>📋 Background Task Queue (@_backgroundTasks.Count)</h3>
+                <button class="modal-close" @onclick="CloseTaskQueueModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (_backgroundTasks.Any())
+                {
+                    <div class="task-queue-grid">
+                        @foreach (var task in _backgroundTasks.OrderByDescending(t => t.CreatedAt))
+                        {
+                            <div class="task-card @(task.Status.ToString().ToLower())">
+                                <div class="task-header">
+                                    <div class="task-icon">
+                                        @if (task.Status == BackgroundTaskState.Queued)
+                                        {
+                                            <span>⏳</span>
+                                        }
+                                        else if (task.Status == BackgroundTaskState.Processing)
+                                        {
+                                            <span>⚙️</span>
+                                        }
+                                        else if (task.Status == BackgroundTaskState.Completed)
+                                        {
+                                            <span>✅</span>
+                                        }
+                                        else if (task.Status == BackgroundTaskState.Failed)
+                                        {
+                                            <span>❌</span>
+                                        }
+                                    </div>
+                                    <div class="task-info">
+                                        <h4>@task.TaskType</h4>
+                                        <div class="task-meta">
+                                            <span class="task-id">@task.TaskId[..8]...</span>
+                                            <span class="task-status @(task.Status.ToString().ToLower())">@task.Status</span>
+                                        </div>
+                                    </div>
+                                    <div class="task-time">
+                                        <span class="created-time">@task.CreatedAt.ToString("MMM dd, HH:mm")</span>
+                                        @if (task.CompletedAt.HasValue)
+                                        {
+                                            <span class="completed-time">Completed: @task.CompletedAt.Value.ToString("HH:mm")</span>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                @if (task.Status == BackgroundTaskState.Processing && task.Progress > 0)
+                                {
+                                    <div class="task-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: @((task.Progress * 100).ToString("F1"))%"></div>
+                                        </div>
+                                        <span class="progress-text">@((task.Progress * 100).ToString("F0"))%</span>
+                                    </div>
+                                }
+                                
+                                <div class="task-message">
+                                    @if (!string.IsNullOrEmpty(task.Message))
+                                    {
+                                        <p>@task.Message</p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(task.ErrorMessage))
+                                    {
+                                        <p class="error-message">Error: @task.ErrorMessage</p>
+                                    }
+                                </div>
+                                
+                                @if (task.Result != null && task.Status == BackgroundTaskState.Completed)
+                                {
+                                    <div class="task-result">
+                                        @if (task.Result is FileUploadResult fileResult)
+                                        {
+                                            <div class="result-info">
+                                                <span class="result-label">📁 @fileResult.FileName</span>
+                                                <span class="result-value">@fileResult.MemoryCount memories created</span>
+                                                <span class="result-store">Store: @fileResult.StoreIdentifier</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="result-info">
+                                                <span class="result-label">Result:</span>
+                                                <span class="result-value">@task.Result.ToString()</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <span class="empty-icon">📋</span>
+                        <h4>No background tasks found</h4>
+                        <p>Your background processing tasks will appear here when you upload files or perform other background operations.</p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="RefreshTaskQueue">🔄 Refresh</button>
+                <button class="btn btn-secondary" @onclick="CloseTaskQueueModal">Close</button>
+            </div>
         </div>
     </div>
 }
@@ -1857,6 +1982,219 @@
         border-top: 1px solid #f5c6cb;
     }
 
+    /* Background Task Queue Modal Styles */
+    .task-queue-modal {
+        max-width: 1200px;
+    }
+
+    .task-queue-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .task-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .task-card.processing {
+        border-left: 4px solid #ffc107;
+        background: linear-gradient(135deg, #fff9e6 0%, #f8f9fa 100%);
+    }
+
+    .task-card.completed {
+        border-left: 4px solid #28a745;
+        background: linear-gradient(135deg, #e8f5e8 0%, #f8f9fa 100%);
+    }
+
+    .task-card.failed {
+        border-left: 4px solid #dc3545;
+        background: linear-gradient(135deg, #ffeaea 0%, #f8f9fa 100%);
+    }
+
+    .task-card.queued {
+        border-left: 4px solid #17a2b8;
+        background: linear-gradient(135deg, #e6f8ff 0%, #f8f9fa 100%);
+    }
+
+    .task-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .task-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        border: 2px solid rgba(27, 110, 194, 0.2);
+    }
+
+    .task-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .task-info h4 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .task-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .task-id {
+        font-family: 'Courier New', monospace;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+
+    .task-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .task-status.queued {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .task-status.processing {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .task-status.completed {
+        background: #28a745;
+        color: white;
+    }
+
+    .task-status.failed {
+        background: #dc3545;
+        color: white;
+    }
+
+    .task-time {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+        font-size: 0.85rem;
+        color: #6c757d;
+        flex-shrink: 0;
+    }
+
+    .created-time {
+        font-weight: 500;
+    }
+
+    .completed-time {
+        font-size: 0.8rem;
+    }
+
+    .task-progress {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 8px;
+    }
+
+    .task-progress .progress-bar {
+        flex: 1;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .task-progress .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+        min-width: 2px;
+    }
+
+    .progress-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #495057;
+        min-width: 40px;
+        text-align: right;
+    }
+
+    .task-message {
+        margin-bottom: 1rem;
+    }
+
+    .task-message p {
+        margin: 0 0 0.5rem 0;
+        color: #495057;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .error-message {
+        color: #dc3545 !important;
+        font-weight: 500;
+    }
+
+    .task-result {
+        padding: 1rem;
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        border-radius: 8px;
+    }
+
+    .result-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .result-label {
+        font-weight: 500;
+        color: #28a745;
+        font-size: 0.95rem;
+    }
+
+    .result-value {
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .result-store {
+        color: #6c757d;
+        font-size: 0.85rem;
+        font-style: italic;
+    }
+
     /* Responsive Design */
     @@media (max-width: 768px) {
         .management-header {
@@ -1991,6 +2329,11 @@
     private string _publishMessage = string.Empty;
     private bool _publishSuccess = false;
 
+    // Background task queue variables
+    private bool _showTaskQueueModal = false;
+    private List<BackgroundTaskStatus> _backgroundTasks = [];
+    private int _taskQueueCount = 0;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -2023,6 +2366,9 @@
 
             // Load user groups
             await LoadUserGroups();
+
+            // Load background tasks
+            await LoadBackgroundTasks();
 
             StateHasChanged();
         }
@@ -2104,6 +2450,11 @@
                 return;
             }
 
+            _uploadProgress.Message = "Processing file...";
+            _uploadProgress.Progress = 0.1;
+            StateHasChanged();
+
+            // Read file content
             string fileContent;
             using var ms = new MemoryStream();
             await _selectedFile.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024).CopyToAsync(ms);
@@ -2119,52 +2470,41 @@
                 fileContent = await reader.ReadToEndAsync();
             }
 
-            var processor = await FileMemoryCreationService.GetFileProcessor();
-
-            _ = extension.Contains("pdf")
-                ? processor.ExecutePdf(CurrentUserService.GetCurrentUser(), _selectedFile.Name, fileContent)
-                : processor.ExecuteFile(CurrentUserService.GetCurrentUser(), _selectedFile.Name, fileContent);
-
-            _uploadProgress.Message = "File received...";
-            _uploadProgress.Progress = 0;
-            while (!processor.Completed)
-            {
-                await Task.Delay(100);
-                _uploadProgress.Message = processor.Message;
-                _uploadProgress.Progress = processor.Progress;
-                StateHasChanged();
-            }
-
-            var results = processor.Result;
-
-            _uploadProgress.Message = "Creating memory collection...";
-            _uploadProgress.Progress = 0.9;
+            _uploadProgress.Message = "Queueing file for background processing...";
+            _uploadProgress.Progress = 0.3;
             StateHasChanged();
 
-            if (results == null)
+            // Get current user and service instances before creating background task
+            var currentUser = CurrentUserService.GetCurrentUser();
+            
+            // Create background task with all contextual service instances
+            var backgroundTask = new FileUploadBackgroundTask
             {
-                _uploadProgress.Message = "The memory store was null";
-                _uploadProgress.Progress = 1;
-                return;
-            }
+                UserId = currentUser.Id.ToString(),
+                User = currentUser, // Pass the complete user object for background processing
+                FileName = _selectedFile.Name,
+                FileContent = fileContent,
+                FileExtension = extension,
+                FileSize = _selectedFile.Size,
+                // Pass service instances from current HTTP context to preserve user scoping
+                MemoryProvider = MemoryProvider,
+                ArchiveService = ArchiveService,
+                FileMemoryCreationService = FileMemoryCreationService
+            };
 
-            _uploadProgress.Message = "Saving memories to database...";
-            _uploadProgress.Progress = 0.95;
-            StateHasChanged();
+            // Queue the background task
+            await BackgroundTaskQueue.QueueBackgroundWorkItemAsync(backgroundTask);
 
-            await MemoryProvider.CreateCollectionAsync(results);
-
+            _uploadProgress.Message = "File queued for processing. You can now close this page.";
             _uploadProgress.Progress = 1.0;
-            _uploadProgress.Message = "Upload completed successfully!";
             StateHasChanged();
 
             // Show completion message briefly
-            await Task.Delay(1000);
+            await Task.Delay(2000);
 
-            _uploadMessage = $"File '{_selectedFile.Name}' has been successfully uploaded and processed.";
+            _uploadMessage = $"File '{_selectedFile.Name}' has been queued for background processing. The processing will continue even if you close this page.";
             _uploadSuccess = true;
             _selectedFile = null;
-            await LoadData();
         }
         catch (Exception ex)
         {
@@ -2594,5 +2934,39 @@
             _publishingStoreId = Guid.Empty;
             StateHasChanged();
         }
+    }
+
+    // Background Task Queue Methods
+    private async Task LoadBackgroundTasks()
+    {
+        try
+        {
+            var currentUser = CurrentUserService.GetCurrentUser();
+            _backgroundTasks = BackgroundTaskQueue.GetUserTasks(currentUser.Id.ToString()).ToList();
+            _taskQueueCount = _backgroundTasks.Count;
+        }
+        catch (Exception ex)
+        {
+            _searchMessage = $"Error loading background tasks: {ex.Message}";
+            _searchSuccess = false;
+        }
+    }
+
+    private void ShowTaskQueueModal()
+    {
+        _showTaskQueueModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseTaskQueueModal()
+    {
+        _showTaskQueueModal = false;
+        StateHasChanged();
+    }
+
+    private async Task RefreshTaskQueue()
+    {
+        await LoadBackgroundTasks();
+        StateHasChanged();
     }
 }

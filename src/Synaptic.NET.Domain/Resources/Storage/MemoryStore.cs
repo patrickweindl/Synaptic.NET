@@ -16,12 +16,12 @@ public class MemoryStore
     [Required]
     [JsonPropertyName("title")]
     [Description("A unique title for the memory store. Should be a very brief (4-8 words) descriptor. Can not exceed 256 characters. Required.")]
-    [MaxLength(256)]
+    [MaxLength(512)]
     public required string Title { get; set; } = string.Empty;
 
     [JsonPropertyName("description")]
     [Description("The description of the memory store, which describes a common topic or context all memories within the store share. Can not exceed 512 characters.")]
-    [MaxLength(512)]
+    [MaxLength(4096)]
     public string Description { get; set; } = string.Empty;
 
     [JsonPropertyName("tags")]

@@ -4,6 +4,7 @@ using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.BackgroundTasks;
 using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Augmentation.Handlers;
 
@@ -14,10 +15,22 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
     public string FileContent { get; set; } = string.Empty; // Base64 for PDFs, plain text for others
     public string FileExtension { get; set; } = string.Empty;
     public long FileSize { get; set; }
+    public User? User { get; set; }
+    
+    // Store service instances from the original HTTP context
+    public IMemoryProvider? MemoryProvider { get; set; }
+    public IArchiveService? ArchiveService { get; set; }
+    public IFileMemoryCreationService? FileMemoryCreationService { get; set; }
 
     public override async Task ExecuteAsync(ICurrentUserService currentUserService, IArchiveService archiveService, IMemoryProvider memoryProvider, IFileMemoryCreationService fileMemoryCreationService, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken)
     {
-        var user = currentUserService.GetCurrentUser();
+        // Use the stored user instead of trying to get current user (which won't work in background context)
+        var user = User ?? throw new InvalidOperationException("User context is required but was not provided to the background task");
+        
+        // Use stored service instances from original HTTP context instead of background service scope instances
+        var contextualArchiveService = ArchiveService ?? throw new InvalidOperationException("ArchiveService instance is required but was not provided to the background task");
+        var contextualMemoryProvider = MemoryProvider ?? throw new InvalidOperationException("MemoryProvider instance is required but was not provided to the background task");
+        var contextualFileMemoryCreationService = FileMemoryCreationService ?? throw new InvalidOperationException("FileMemoryCreationService instance is required but was not provided to the background task");
         try
         {
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Starting file processing...", 0.1);
@@ -27,11 +40,11 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
                 : System.Text.Encoding.UTF8.GetBytes(FileContent);
 
             using var ms = new MemoryStream(fileBytes);
-            await archiveService.SaveFileAsync(FileName, ms);
+            await contextualArchiveService.SaveFileAsync(FileName, ms);
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "File archived, starting processing...", 0.2);
 
-            var fileProcessor = await fileMemoryCreationService.GetFileProcessor();
+            var fileProcessor = await contextualFileMemoryCreationService.GetFileProcessor();
 
             Task processingTask = FileExtension.ToLowerInvariant() == ".pdf"
                 ? fileProcessor.ExecutePdf(user, FileName, FileContent)
@@ -39,53 +52,63 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             while (!fileProcessor.Completed && !cancellationToken.IsCancellationRequested)
             {
-                double mappedProgress = 0.2 + fileProcessor.Progress * 0.7;
+                // Normalize progress to 0-1 range (handle both 0-1 and 0-100 scales)
+                double normalizedProgress = fileProcessor.Progress > 1.0 ? fileProcessor.Progress / 100.0 : fileProcessor.Progress;
+
+                // Map normalized progress to our range (0.2 to 0.9)
+                double mappedProgress = 0.2 + (normalizedProgress * 0.7);
                 UpdateStatus(taskQueue, BackgroundTaskState.Processing, fileProcessor.Message, mappedProgress);
 
-                await Task.Delay(1000, cancellationToken);
+                await Task.Delay(500, cancellationToken); // More frequent updates for better responsiveness
             }
 
             await processingTask;
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Saving memories to store...", 0.9);
 
-            if (fileProcessor.Result?.Memories.Count > 0)
+            if (fileProcessor.Result != null)
             {
                 var resultStore = fileProcessor.Result;
-                await memoryProvider.CreateCollectionAsync(resultStore.Title, fileProcessor.StoreDescription, out var memoryStore);
 
-                var saveTasks = fileProcessor.Result.Memories.Select(async m =>
+                if (resultStore.Memories.Count > 0)
                 {
-                    await memoryProvider.CreateMemoryEntryAsync(memoryStore.StoreId, m, resultStore.Description);
-                });
-                await Task.WhenAll(saveTasks);
+                    resultStore.UserId = user.Id;
+                    // Use the new approach: pass the complete MemoryStore to CreateCollectionAsync
+                    await contextualMemoryProvider.CreateCollectionAsync(resultStore);
 
-                var result = new FileUploadResult
+                    var result = new FileUploadResult
+                    {
+                        FileName = FileName,
+                        MemoryCount = resultStore.Memories.Count,
+                        StoreIdentifier = resultStore.Title,
+                        StoreDescription = fileProcessor.StoreDescription
+                    };
+
+                    var finalStatus = new BackgroundTaskStatus
+                    {
+                        TaskId = TaskId,
+                        UserId = UserId,
+                        TaskType = GetType().Name,
+                        Status = BackgroundTaskState.Completed,
+                        Progress = 1.0,
+                        Message = $"Successfully processed {FileName} and created {result.MemoryCount} memories",
+                        CreatedAt = CreatedAt,
+                        CompletedAt = DateTime.UtcNow,
+                        Result = result
+                    };
+
+                    taskQueue.UpdateTaskStatus(TaskId, finalStatus);
+                }
+                else
                 {
-                    FileName = FileName,
-                    MemoryCount = fileProcessor.Result.Memories.Count,
-                    StoreIdentifier = FileProcessingHelper.SanitizeFileName(FileName),
-                    StoreDescription = fileProcessor.StoreDescription
-                };
-
-                var finalStatus = new BackgroundTaskStatus
-                {
-                    TaskId = TaskId,
-                    UserId = UserId,
-                    TaskType = GetType().Name,
-                    Status = BackgroundTaskState.Completed,
-                    Progress = 1.0,
-                    Message = $"Successfully processed {FileName} and created {result.MemoryCount} memories",
-                    CreatedAt = CreatedAt,
-                    CompletedAt = DateTime.UtcNow,
-                    Result = result
-                };
-
-                taskQueue.UpdateTaskStatus(TaskId, finalStatus);
+                    throw new InvalidOperationException("File was processed but no memories were created");
+                }
             }
             else
             {
-                throw new InvalidOperationException("File was processed but no memories were created");
+                throw new InvalidOperationException("File processing completed but no result was returned");
             }
         }
         catch (Exception ex)

@@ -30,8 +30,8 @@ To explore functionality with a default setup:
 - [x] Observable file creation results
 - [ ] Observable search results
 - [x] File Upload
-- [ ] Memory Management
-- [ ] Background Memory Upload
+- [x] Memory Management
+- [x] Background Memory Upload
 ### MCP
 - [x] Memory Endpoints
 - [x] Common Tools

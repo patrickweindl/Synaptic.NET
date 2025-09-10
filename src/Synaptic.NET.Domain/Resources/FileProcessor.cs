@@ -146,7 +146,7 @@ public class FileProcessor
         Result = targetStore;
 
         Completed = true;
-        Progress = 100;
+        Progress = 1;
     }
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromBase64EncodedString(string fileName, string base64EncodedChunk)

@@ -20,13 +20,13 @@ public class Memory
     [Required]
     [Description("A unique title for the memory. Should be a very brief (4-8 words) descriptor. Has a maximum length of 256 characters. Required.")]
     [JsonPropertyName("title")]
-    [MaxLength(256)]
+    [MaxLength(512)]
     public required string Title { get; set; }
 
     [VectorStoreData(StorageName = "description", IsFullTextIndexed = true)]
     [JsonPropertyName("description")]
     [Description("A description of the memory, shorter than the actual content, but provides context about the memory content. Has a maximum length of 512 characters. Required as this property is vector indexed.")]
-    [MaxLength(512)]
+    [MaxLength(4096)]
     [Required]
     public required string Description { get; set; } = string.Empty;
 
@@ -34,7 +34,7 @@ public class Memory
     [Required]
     [Description("The memory's content. Can not exceed 4096 characters. Required.")]
     [JsonPropertyName("content")]
-    [MaxLength(4096)]
+    [MaxLength(8196)]
     public required string Content { get; set; }
 
     [VectorStoreData(StorageName = "pinned", IsIndexed = true)]
