@@ -205,4 +205,12 @@ public interface IMemoryProvider
     /// <param name="entryTitle">The title of the memory entry to delete.</param>
     /// <returns>True if the memory entry was successfully deleted, otherwise false.</returns>
     Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, string entryTitle);
+
+    /// <summary>
+    /// Publishes the specified memory store to a group, making its data accessible within the group's context.
+    /// </summary>
+    /// <param name="collectionIdentifier">The unique identifier of the memory store to be published.</param>
+    /// <param name="groupId">The unique identifier of the group to which the memory store is being published.</param>
+    /// <returns>A task that represents the operation. Returns true if the memory store is successfully published; otherwise, false.</returns>
+    Task<bool> PublishMemoryStoreToGroup(Guid collectionIdentifier, Guid groupId);
 }

@@ -613,4 +613,34 @@ public class HybridMemoryProvider : IMemoryProvider
 
         return true;
     }
+
+    public async Task<bool> PublishMemoryStoreToGroup(Guid collectionIdentifier, Guid groupId)
+    {
+        if (_currentUserService.GetCurrentUser().Memberships.All(m => m.Group.Id != groupId))
+        {
+            return false;
+        }
+
+        if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier) is not { } store)
+        {
+            return false;
+        }
+
+        if (_dbContext.Groups.FirstOrDefault(g => g.Id == groupId) is not { } group)
+        {
+            return false;
+        }
+
+        store.GroupId = groupId;
+        store.OwnerGroup = group;
+        group.Stores.Add(store);
+        _dbContext.Groups.Update(group);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.MemoryStores.Remove(store);
+        await _dbContext.SaveChangesAsync();
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(group, store);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUserService.GetCurrentUser().Id, store);
+        return true;
+
+    }
 }

@@ -12,26 +12,14 @@ public class LogAuthorizedRequestsMiddleware : IAppMiddleware
         bool isAuthorizedEndpoint = endpoint?.Metadata.GetMetadata<IAuthorizeData>() != null &&
                                      endpoint?.Metadata.GetMetadata<AllowAnonymousAttribute>() == null;
 
-        if (isAuthorizedEndpoint)
+        await next();
+        if (isAuthorizedEndpoint && context.Response.StatusCode >= 400)
         {
-            Log.Information("Authorized request received: {Method} {Path}",
+            Log.Warning(
+                "An authorized request failed: {Method} {Path} \u2192 {StatusCode}",
                 context.Request.Method,
-                context.Request.Path);
-
-            await next();
-
-            if (context.Response.StatusCode >= 400)
-            {
-                Log.Warning(
-                    "Authorized request failed: {Method} {Path} \u2192 {StatusCode}",
-                    context.Request.Method,
-                    context.Request.Path,
-                    context.Response.StatusCode);
-            }
-        }
-        else
-        {
-            await next();
+                context.Request.Path,
+                context.Response.StatusCode);
         }
     };
 }
