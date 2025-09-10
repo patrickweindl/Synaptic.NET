@@ -36,8 +36,8 @@ To explore functionality with a default setup:
 - [x] Memory Endpoints
 - [x] Common Tools
 ### RESTful API
-- [ ] Memory Endpoints
-- [ ] Common Tools
+- [x] Memory Endpoints
+- [x] Common Tools
 ### Backend
 - [x] Authentication/Authorization
   - [x] VSCode Authenticated MCP
