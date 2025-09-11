@@ -11,7 +11,7 @@ x-common-variables: &common-variables
   # Synaptic variables
   # Server
   ASPNETCORE_URLS: 'http://0.0.0.0:8000'
-  SERVERS__QDRANT__URL: 'http://localhost:6334'
+  SERVERS__QDRANTURL: 'http://192.168.0.253:6334' # Use your local IP as localhost will not be resolved.
   SERVERS__POSTGRESURL: '192.168.0.253' # Use your local IP as 127.0.0.1 or localhost will not be resolved.
   SERVERS__POSTGRESPORT: '5432'
   SERVERS__POSTGRESDATABASE: 'synaptic'
