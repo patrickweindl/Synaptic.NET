@@ -175,6 +175,23 @@
                                 @_searchMessage
                             </div>
                         }
+
+                        @if (_isSearching && (!string.IsNullOrEmpty(_searchProgress.Message) || _searchProgress.Progress > 0))
+                        {
+                            <div class="progress-section">
+                                <div class="progress-header">
+                                    <span class="progress-label">Searching Memories...</span>
+                                    <span class="progress-percent">@((_searchProgress.Progress * 100).ToString("F0"))%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: @((_searchProgress.Progress * 100).ToString("F1"))%"></div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(_searchProgress.Message))
+                                {
+                                    <div class="progress-message">@_searchProgress.Message</div>
+                                }
+                            </div>
+                        }
                     </div>
 
                     <!-- Memory Results -->
@@ -2272,6 +2289,12 @@
         public double Progress { get; set; } = 0.0;
     }
 
+    public class SearchProgress
+    {
+        public string Message { get; set; } = string.Empty;
+        public double Progress { get; set; } = 0.0;
+    }
+
     public class CreateApiKeyForm
     {
         public string Name { get; set; } = string.Empty;
@@ -2293,6 +2316,7 @@
     private bool _uploadSuccess;
     private bool _searchSuccess;
     private UploadProgress _uploadProgress = new();
+    private SearchProgress _searchProgress = new();
 
     private MemoryDisplayItem? _selectedMemoryDetail;
     private bool _isDeletingMemory;
@@ -2525,29 +2549,55 @@
 
         _isSearching = true;
         _searchMessage = string.Empty;
+        _searchProgress = new SearchProgress();
         StateHasChanged();
 
         try
         {
-            var searchResults = await MemoryProvider.SearchAsync(_searchForm.Query, _searchForm.Limit, _searchForm.MinRelevance);
-
-            _memories = searchResults.Select(result => new MemoryDisplayItem
+            var observableSearchResult = await MemoryProvider.SearchAsync(_searchForm.Query, _searchForm.Limit, _searchForm.MinRelevance);
+            
+            // Subscribe to progress updates
+            observableSearchResult.SubscribeToProgressChanges(progress =>
             {
-                Identifier = result.Memory.Identifier,
-                Title = result.Memory.Title,
-                Description = result.Memory.Description,
-                Content = result.Memory.Content,
-                Tags = result.Memory.Tags,
-                ReferenceType = result.Memory.ReferenceType,
-                Reference = result.Memory.Reference,
-                CreatedAt = result.Memory.CreatedAt,
-                UpdatedAt = result.Memory.UpdatedAt,
-                Owner = result.Memory.Owner,
-                OwnerUser = result.Memory.OwnerUser,
-                StoreId = result.Memory.StoreId,
-                Store = result.Memory.Store,
-                Relevance = result.Relevance
-            }).OrderByDescending(m => m.Relevance).ToList();
+                _searchProgress.Progress = progress;
+                InvokeAsync(StateHasChanged);
+            });
+            
+            // Subscribe to message updates
+            observableSearchResult.SubscribeToStatusChanges(message =>
+            {
+                _searchProgress.Message = message;
+                InvokeAsync(StateHasChanged);
+            });
+
+            // Process results as they become available
+            var resultsList = new List<MemoryDisplayItem>();
+            await foreach (var result in observableSearchResult.Results)
+            {
+                var displayItem = new MemoryDisplayItem
+                {
+                    Identifier = result.Memory.Identifier,
+                    Title = result.Memory.Title,
+                    Description = result.Memory.Description,
+                    Content = result.Memory.Content,
+                    Tags = result.Memory.Tags,
+                    ReferenceType = result.Memory.ReferenceType,
+                    Reference = result.Memory.Reference,
+                    CreatedAt = result.Memory.CreatedAt,
+                    UpdatedAt = result.Memory.UpdatedAt,
+                    Owner = result.Memory.Owner,
+                    OwnerUser = result.Memory.OwnerUser,
+                    StoreId = result.Memory.StoreId,
+                    Store = result.Memory.Store,
+                    Relevance = result.Relevance
+                };
+                
+                resultsList.Add(displayItem);
+                
+                // Update the UI as we get results
+                _memories = resultsList.OrderByDescending(m => m.Relevance).ToList();
+                InvokeAsync(StateHasChanged);
+            }
 
             _searchMessage = $"Found {_memories.Count} memories matching your search";
             _searchSuccess = true;

@@ -33,7 +33,8 @@ public class WhenUsingScopedDatabase
         Assert.True(_builder.DbContext.Memories.ToList().Count > 0);
 
         var searchResult = await _builder.MemoryProvider.SearchAsync("Test", 10, -1);
-        Assert.True(searchResult.Any());
+        var contextSearchResults = await searchResult.Results.ToListAsync();
+        Assert.True(contextSearchResults.Any());
 
         Guid otherTestGuid = Guid.Parse("00000001-0000-abcd-0000-000000000000");
         string otherUser = "otherUserId";
@@ -41,7 +42,8 @@ public class WhenUsingScopedDatabase
         var otherBuilder = new IntegrationTestBuilder(otherTestGuid, otherUserName, otherUser);
 
         var otherSearchResult = await otherBuilder.MemoryProvider.SearchAsync("Test", 10, -1);
-        Assert.False(otherSearchResult.Any());
+        var otherContextSearchResults = await otherSearchResult.Results.ToListAsync();
+        Assert.False(otherContextSearchResults.Any());
 
         Assert.False(otherBuilder.DbContext.MemoryStores.Any());
         Assert.False(otherBuilder.DbContext.Memories.Any());

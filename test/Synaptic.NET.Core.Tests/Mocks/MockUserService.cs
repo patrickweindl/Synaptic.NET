@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Identity;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
+using IdentityRole = Synaptic.NET.Domain.Enums.IdentityRole;
 
 namespace Synaptic.NET.Core.Tests.Mocks;
 
@@ -13,6 +15,7 @@ public class MockUserService : ICurrentUserService
             _testUser.Id = overrideGuid.Value;
             _testUser.DisplayName = overrideDisplayName;
             _testUser.Identifier = overrideUserId;
+            _testUser.Role = IdentityRole.User;
         }
     }
 
@@ -20,7 +23,8 @@ public class MockUserService : ICurrentUserService
     {
         Id = Guid.Parse("4530bee0-3f17-4223-843d-e67c18f9fbfa"),
         DisplayName = "Test User",
-        Identifier = "testUser"
+        Identifier = "testUser",
+        Role = IdentityRole.User
     };
 
     public User GetCurrentUser()

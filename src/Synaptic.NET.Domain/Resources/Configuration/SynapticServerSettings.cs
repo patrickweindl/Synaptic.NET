@@ -12,9 +12,6 @@ public class SynapticServerSettings
     private const string BackupPathEnvVar = "BACKUP__PATH";
     private const string BackupEnabledEnvVar = "BACKUP__ENABLE";
 
-    private readonly IConfiguration? _configuration;
-    private readonly string _generatedJwtKey;
-
     public SynapticServerSettings(IConfiguration config)
     {
         Log.Information("Creating server settings...");
@@ -57,9 +54,6 @@ public class SynapticServerSettings
             EncryptionKey = Convert.ToBase64String(bytes);
             Log.Warning($"Using generated encryption key {EncryptionKey}. YOU HAVE TO SAVE THIS KEY TO ACCESS ENCRYPTED DATA LATER!");
         }
-
-        _configuration = config;
-
 
         OpenAiSettings = new OpenAiSettings(config);
         GitHubOAuthProviderSettings = new OAuthProviderSettings("GitHub", config);

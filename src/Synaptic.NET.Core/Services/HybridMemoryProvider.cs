@@ -42,7 +42,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<List<MemoryStore>> GetStoresAsync()
     {
-        return _dbContext.MemoryStores.ToList();
+        return await _dbContext.MemoryStores.ToListAsync();
     }
 
     public Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier)
@@ -55,9 +55,11 @@ public class HybridMemoryProvider : IMemoryProvider
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle));
     }
 
-    public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
+    private async IAsyncEnumerable<MemorySearchResult> HybridSearchWithReranking(ObservableMemorySearchResult r, string query, int limit, double relevanceThreshold)
     {
-        var userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
+        r.Message = "Memory query received. Starting memory search...";
+        var userVectorResults =
+            await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
 
         foreach (var group in _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group))
         {
@@ -66,46 +68,73 @@ public class HybridMemoryProvider : IMemoryProvider
         }
 
         var resultList = userVectorResults.ToList();
-        List<MemorySearchResult> results;
-        if (resultList.Any())
+        r.Progress = 0.2;
+        r.Message = $"Vector search resulted in {resultList.Count} results.";
+        if (resultList.Count != 0)
         {
-            var reranked = (await _reranker.Rerank(resultList)).ToList();
-            Log.Information($"[Memory Search] Vector search was sufficiently returning results. Reranking results with {reranked.Count} results.");
-            results = reranked.OrderBy(r => r.Relevance).Take(limit).ToList();
+            r.Progress = 0.7;
+            r.Message = "Reranking results...";
+            var rerankedResults = _reranker.Rerank(resultList);
+            Log.Information(
+                "[Memory Search] Vector search was sufficiently returning results.");
+            var reranked = await rerankedResults.ToListAsync();
+            r.Progress = 0.85;
+            r.Message = "Reranking complete, adding missing information if required...";
+
+            double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m));
+            foreach (var task in taskList)
+            {
+                var result = await task;
+                r.Progress += progressPerItem;
+                yield return result;
+            }
         }
         else
         {
-            Log.Information($"[Memory Search] Vector search did not result in any results. Falling back to augmented search...");
+            r.Progress = 0.4;
+            r.Message = "Vector search did not return any results. Falling back to augmented search...";
+            Log.Information(
+                "[Memory Search] Vector search did not result in any results. Falling back to augmented search...");
             var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
-            results = augmentedResults.OrderBy(r => r.Relevance).Take(limit).ToList();
+            var rerankedResults = _reranker.Rerank(augmentedResults);
+            var reranked = await rerankedResults.ToListAsync();
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m));
+            double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
+            foreach (var task in taskList)
+            {
+                r.Progress += progressPerItem;
+                yield return await task;
+            }
         }
+        r.Message = "Memory search complete.";
+        r.Progress = 1;
+        r.IsComplete = true;
+    }
 
-        foreach (var result in results)
+    public Task<ObservableMemorySearchResult> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
+    {
+        var searchTask = new ObservableMemorySearchResult(r => HybridSearchWithReranking(r, query, limit, relevanceThreshold));
+        return Task.FromResult(searchTask);
+    }
+
+    private async Task<MemorySearchResult> AddStoreAndUserIfMissing(MemorySearchResult result)
+    {
+        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == result.Memory.StoreId) is not
+            { } existingStore)
         {
-            if (result.Memory.Store != null)
-            {
-                continue;
-            }
-
-            if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == result.Memory.StoreId) is not
-                { } existingStore)
-            {
-                continue;
-            }
-
-            result.Memory.Store = existingStore;
-
-            if (_dbContext.DbUser() is not { } user || user.Id != _currentUserService.GetCurrentUser().Id)
-            {
-                continue;
-            }
-
-            if (result.Memory.OwnerUser == null)
-            {
-                result.Memory.OwnerUser = user;
-            }
+            return result;
         }
-        return results;
+
+        result.Memory.Store = existingStore;
+
+        if (_dbContext.DbUser() is not { } user || user.Id != _currentUserService.GetCurrentUser().Id)
+        {
+            return result;
+        }
+
+        result.Memory.OwnerUser ??= user;
+        return result;
     }
 
     private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, int limit = 10,

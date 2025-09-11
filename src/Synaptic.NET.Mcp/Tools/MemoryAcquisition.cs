@@ -1,13 +1,11 @@
 using System.ComponentModel;
 using System.Text.Json;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Identity;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Constants;
 using Synaptic.NET.Domain.Resources.Storage;
-using IdentityRole = Synaptic.NET.Domain.Enums.IdentityRole;
 
 namespace Synaptic.NET.Mcp.Tools;
 
@@ -36,7 +34,7 @@ public static class MemoryAcquisition
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
         var memoryQueryResults =
             await memoryProvider.SearchAsync(query, limit, relevance);
-        var memories = memoryQueryResults.Select(m => new ContextMemory(m.Memory)).ToList();
+        var memories = await memoryQueryResults.Results.Select(m => new ContextMemory(m.Memory)).ToListAsync();
         return memories;
     }
 

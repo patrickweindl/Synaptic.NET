@@ -14,13 +14,22 @@ public class MemoryQueryResultReranker : IMemoryQueryResultReranker
         _client = openAiClientFactory.GetClient(settings.OpenAiSettings.MemoryAugmentationModel);
     }
 
-    public async Task<IEnumerable<MemorySearchResult>> Rerank(IReadOnlyList<MemorySearchResult> results)
+
+    public async IAsyncEnumerable<MemorySearchResult> Rerank(IAsyncEnumerable<MemorySearchResult> results)
     {
-        return results;
+        await foreach (var result in results)
+        {
+            // Rerank.
+            yield return result;
+        }
     }
 
-    public async Task<IEnumerable<MemorySearchResult>> Rerank(IEnumerable<MemorySearchResult> results)
+    public async IAsyncEnumerable<MemorySearchResult> Rerank(IEnumerable<MemorySearchResult> results)
     {
-        return results;
+        foreach (var result in results)
+        {
+            // Rerank.
+            yield return result;
+        }
     }
 }

@@ -471,6 +471,7 @@ public class MemoryController : ControllerBase
         }
 
         var results = await _memory.SearchAsync(query, limit, relevanceThreshold);
-        return Ok(results.Select(m => new ContextMemory(m.Memory)));
+        var contextMemoryResults = await results.Results.ToListAsync();
+        return Ok(contextMemoryResults.Select(m => new ContextMemory(m.Memory)));
     }
 }

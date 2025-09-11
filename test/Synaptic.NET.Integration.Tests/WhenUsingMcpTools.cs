@@ -30,6 +30,7 @@ public class WhenUsingMcpTools
         Assert.True(_builder.DbContext.Memories.ToList().Count > 0);
 
         var searchResult = await _builder.MemoryProvider.SearchAsync("Test", 10, -1);
-        Assert.True(searchResult.Any());
+        var contextSearchResults = await searchResult.Results.ToListAsync();
+        Assert.True(contextSearchResults.Any());
     }
 }

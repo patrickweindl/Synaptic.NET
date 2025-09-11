@@ -32,6 +32,8 @@ To explore functionality with a default setup:
 - [x] File Upload
 - [x] Memory Management
 - [x] Background Memory Upload
+- [ ] User data exporter
+- [ ] Exporter to another Synaptic.NET instance
 ### MCP
 - [x] Memory Endpoints
 - [x] Common Tools
