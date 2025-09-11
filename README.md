@@ -4,6 +4,9 @@ a RAG base via Qdrant and OpenAI API communication — all secured via OAuth2.
 
 This repository acts as a starting point to dive into setting up MCP + RESTful RAG systems through a hybrid approach with EF and Qdrant with a basic implementation for your own project.
 
+<img width="1327" height="1026" alt="image" src="https://github.com/user-attachments/assets/e87ab863-6f6e-4c1e-82c0-57ba28ae5025" />
+
+
 ## Getting Started
 To explore functionality with a default setup:
 1) Setup a Qdrant instance (see [Qdrant](https://github.com/qdrant/qdrant))
