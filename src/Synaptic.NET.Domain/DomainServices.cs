@@ -12,7 +12,7 @@ public static class DomainServices
 {
     public static IHostApplicationBuilder ConfigureDomainServices(this IHostApplicationBuilder builder, out SynapticServerSettings configuration, IConfiguration? configurationOverride = null)
     {
-        builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+        builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
         builder.Configuration.AddEnvironmentVariables();
 
         if (configurationOverride != null)

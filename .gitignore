@@ -4,7 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
 .claude
-
+deploy/
+**/docker/deploy/**/*
 **/appsettings.json
 **/appsettings.Development.json
 **/testSettings.json

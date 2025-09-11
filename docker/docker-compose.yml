@@ -1,0 +1,110 @@
+version: '3.8'
+
+x-common-variables: &common-variables
+  # PG varaibles
+  POSTGRES_USER: 'synaptic'
+  POSTGRES_PASSWORD: 'synapticPassword'
+  PGADMIN_DEFAULT_EMAIL: 'your@email.com'
+  PGADMIN_DEFAULT_PASSWORD: 'yourPassword'
+  POSTGRES_DB: 'synaptic'
+
+  # Synaptic variables
+  # Server
+  ASPNETCORE_URLS: 'http://0.0.0.0:8000'
+  SERVERS__QDRANT__URL: 'http://localhost:6334'
+  SERVERS__POSTGRESURL: '192.168.0.253' # Use your local IP as 127.0.0.1 or localhost will not be resolved.
+  SERVERS__POSTGRESPORT: '5432'
+  SERVERS__POSTGRESDATABASE: 'synaptic'
+  SERVERS__POSTGRESUSERNAME: 'synaptic'
+  SERVERS__POSTGRESPASSWORD: 'synapticPassword'
+  SERVERS__URL: "https://your-domain.com" # The externally reachable URL of your synaptic instance
+  SERVERS__KNOWNPROXIES: '127.0.0.1,192.168.0.254' # local IPs of trusted proxies, comma separated, e.g. localhost + IP of your reverse proxy
+  JWT__KEY: 'yourVerySecretJwtIssuingKey'
+  ALLOWEDHOSTS: '*'
+
+  # Encryption and Security
+  ENCRYPTION__MASTERKEY: 'aVerySecretMasterKey' # This is used for the encprytion service, currently idle in the solution
+  SECURITY__TOKENLIFETIME: '08:00:00' # Lifetime of a JWT token
+  SECURITY__ADMINS: 'admin-1234,admin-5678' # Comma separated list of user IDs that should have admin rights
+
+  # OpenAI
+  OPENAI__APIKEY: 'sk-...'
+  OPENAI__EMBEDDINGMODEL: 'text-embedding-3-large'
+  OPENAI__MEMORYROUTINGMODEL: 'gpt-5-mini'
+  OPENAI__MEMORYAUGMENTATIONMODEL: 'gpt-5-mini'
+  OPENAI__RAGCREATIONMODEL: 'gpt-5-mini'
+
+  # OAuth
+  OAUTH__GITHUB__ENABLE: 'false'
+  OAUTH__GITHUB__CLIENTID: 'yourClientId'
+  OAUTH__GITHUB__CLIENTSECRET: 'yourClientSecret'
+  OAUTH__GOOGLE__ENABLE: 'false'
+  OAUTH__GOOGLE__CLIENTID: 'yourClientId'
+  OAUTH__GOOGLE__CLIENTSECRET: 'yourClientSecret'
+  OAUTH__MICROSOFT__ENABLE: 'false'
+  OAUTH__MICROSOFT__CLIENTID: 'yourClientId'
+  OAUTH__MICROSOFT__CLIENTSECRET: 'yourClientSecret'
+
+services:
+  postgres:
+    image: postgres:15
+    environment: *common-variables
+    volumes:
+      - ./deploy/postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - synaptic-network
+  pgadmin:
+    image: dpage/pgadmin4
+    environment: *common-variables
+    ports:
+      - 16543:80
+    volumes:
+      - ./deploy/pg_admin:/pgadmin4/servers.json
+    networks:
+      - synaptic-network
+    depends_on:
+      - postgres
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    container_name: qdrant
+    ports:
+      - 6333:6333
+      - 6334:6334
+    expose:
+      - 6333
+      - 6334
+      - 6335
+    configs:
+      - source: qdrant_config
+        target: /qdrant/config/production.yaml
+    volumes:
+      - ./deploy/qdrant_data:/qdrant/storage
+
+  synaptic:
+    image: synaptic-net
+    restart: unless-stopped
+    container_name: synaptic-net
+    volumes:
+      - ./deploy/synaptic_data:/app/data
+    ports:
+      - 8000:8000
+    environment: *common-variables
+    depends_on:
+      - postgres
+      - qdrant
+      - pgadmin
+    networks:
+      - synaptic-network
+
+configs:
+  qdrant_config:
+    content: |
+      log_level: INFO
+
+networks:
+  synaptic-network:
+    driver: bridge

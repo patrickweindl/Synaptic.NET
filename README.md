@@ -9,14 +9,13 @@ This repository acts as a starting point to dive into setting up MCP + RESTful R
 
 ## Getting Started
 To explore functionality with a default setup:
-1) Setup a Qdrant instance (see [Qdrant](https://github.com/qdrant/qdrant))
-2) Setup a PostgreSQL instance (see [PostgreSQL](https://hub.docker.com/_/postgres))
-3) Clone the repository
-4) Adjust the `appsettings.json` file or your environment variables in `src/Synaptic.NET.AppHost` to match your local setup for ports and forwarding (check the exampleAppSettings.json in the same folder for reference)
-5) Make sure you provide an OpenAI API key in either the `appsettings.json` file or environment variables
+1) Have .NET SDK 10 installed (https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+2) Clone the repository
+3) Make sure you have a reverse proxy with an externally available domain with a valid TLS certificate
+4) Run `dotnet publish .././src/Synaptic.NET.AppHost/Synaptic.NET.AppHost.csproj -c Release /t:PublishContainer` or set chmod +X on the `BuildDockerImage.sh` in ./docker and run `./BuildDockerImage.sh` to build a docker image
+5) Adjust the variables in `./docker-compose.yml` according to your keys and URLs
 6) Make sure you have an application configured in either GitHub, Microsoft or Google for OAuth2 authentication and carry over your application credentials to the `appsettings.json` file or environment variables, make sure the redirect-URI is exactly `https://your-uri/oauth-callback`
-7) Build the solution
-8) Run the solution in HTTPS configuration (HTTP is available but should be used only when running the solution behind a reverse proxy as per certifications)
+7) Run `docker-compose up -d` in the folder where your `docker-compose.yml` is located
 
 *If you are getting an error when opening the Blazor web UI that no secure connection can be established:*
 
@@ -55,9 +54,6 @@ Check out the samples in the `samples` folder for example partial usages or inje
   - [x] Claude Authenticated MCP
   - [x] Claude Code Authenticated MCP
   - [ ] ChatGPT Desktop Authenticated MCP (not tested)
-    - [ ] GitHub
-    - [ ] MS
-    - [ ] Google
   - [ ] EntraID
 - [x] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users (permissions of users within groups)
@@ -69,6 +65,6 @@ Check out the samples in the `samples` folder for example partial usages or inje
 - [x] Entity Framework Core
 - [x] OpenAI
 - [ ] Swagger UI
-- [ ] Docker support
+- [x] Easy docker building
 - [ ] CI/CD with package publishing
 - [x] Extend readme and usage instructions
