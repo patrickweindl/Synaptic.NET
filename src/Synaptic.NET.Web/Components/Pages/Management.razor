@@ -2555,14 +2555,14 @@
         try
         {
             var observableSearchResult = await MemoryProvider.SearchAsync(_searchForm.Query, _searchForm.Limit, _searchForm.MinRelevance);
-            
+
             // Subscribe to progress updates
             observableSearchResult.SubscribeToProgressChanges(progress =>
             {
                 _searchProgress.Progress = progress;
                 InvokeAsync(StateHasChanged);
             });
-            
+
             // Subscribe to message updates
             observableSearchResult.SubscribeToStatusChanges(message =>
             {
@@ -2591,9 +2591,9 @@
                     Store = result.Memory.Store,
                     Relevance = result.Relevance
                 };
-                
+
                 resultsList.Add(displayItem);
-                
+
                 // Update the UI as we get results
                 _memories = resultsList.OrderByDescending(m => m.Relevance).ToList();
                 InvokeAsync(StateHasChanged);

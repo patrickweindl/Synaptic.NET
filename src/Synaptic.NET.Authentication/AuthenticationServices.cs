@@ -98,16 +98,6 @@ public static class AuthenticationServices
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);
             });
         app.Services.AddAuthorization();
-
-        app.Services.AddControllersWithViews().ConfigureApplicationPartManager(manager =>
-        {
-            var authAssembly = typeof(AccountController).Assembly;
-            manager.ApplicationParts.Clear();
-            manager.ApplicationParts.Add(new AssemblyPart(authAssembly));
-
-            manager.FeatureProviders.Add(new AuthControllerFeatureProvider());
-        });
-
         return app;
     }
 
@@ -121,7 +111,6 @@ public static class AuthenticationServices
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAntiforgery();
-        app.MapControllers();
         return app;
     }
 }

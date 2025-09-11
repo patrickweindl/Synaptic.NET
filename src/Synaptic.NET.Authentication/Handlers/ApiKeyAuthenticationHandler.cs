@@ -56,8 +56,8 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Identifier),
+                new Claim(ClaimTypes.NameIdentifier, user.UserAuthId),
+                new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("DisplayName", user.DisplayName)
             };
@@ -81,13 +81,9 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
     {
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SynapticDbContext>();
-        var userService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
-        dbContext.SetCurrentUser(userService);
-        var foundUser = await dbContext.Users
-            .Include(u => u.ApiKeys)
-            .FirstOrDefaultAsync(u => u.ApiKeys.Any(ak =>
-                ak.Key == apiKey && ak.ExpiresAt > DateTimeOffset.UtcNow));
+        var users = await dbContext.Users.Include(u => u.ApiKeys).ToListAsync();
 
+        var foundUser = users.FirstOrDefault(x => x.ApiKeys.Any(k => k.Key == apiKey));
         return foundUser;
     }
 }

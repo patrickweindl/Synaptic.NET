@@ -1,13 +1,18 @@
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Serilog;
 using Serilog.Events;
 using Synaptic.NET.Augmentation;
 using Synaptic.NET.Authentication;
+using Synaptic.NET.Authentication.Controllers;
+using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Mcp;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.Qdrant;
 using Synaptic.NET.RestApi;
+using Synaptic.NET.RestApi.Controllers;
 using Synaptic.NET.Web;
 
 namespace Synaptic.NET.AppHost;
@@ -25,6 +30,7 @@ public static class SynapticAppHost
         defaultApp.MapStaticAssets();
         defaultApp.ConfigureDomainApplication()
             .ConfigureCoreApplication();
+        defaultApp.MapControllers();
         if (!runWithoutAuthorization)
         {
             defaultApp.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
@@ -42,6 +48,13 @@ public static class SynapticAppHost
             defaultApp.ConfigureMcpApplicationWithoutAuthorization()
                 .ConfigureRestServicesWithoutAuthorization();
         }
+
+        var partManager = defaultApp.Services.GetRequiredService<ApplicationPartManager>();
+        var feature = new ControllerFeature();
+        partManager.PopulateFeature(feature);
+        Console.WriteLine("== Discovered Controllers ==");
+        foreach (var c in feature.Controllers)
+            Console.WriteLine(c.FullName);
 
         defaultApp.Run();
     }
@@ -80,6 +93,10 @@ public static class SynapticAppHost
             .ConfigureAugmentationServices()
             .ConfigureMcpServices(additionalResourceTypes, additionalPromptTypes, additionalToolTypes)
             .ConfigureRestServices();
+
+        builder.Services.AddControllersWithViews()
+            .AddApplicationPart(typeof(AccountController).Assembly)
+            .AddApplicationPart(typeof(MemoryController).Assembly);
 
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
