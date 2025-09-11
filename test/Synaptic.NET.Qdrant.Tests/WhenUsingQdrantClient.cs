@@ -43,7 +43,7 @@ public class WhenUsingQdrantClient
                 OwnerUser = _currentUserService.GetCurrentUser()
             });
 
-        var results = await qdrantClient.SearchAsync("Test", 10, -1, _currentUserService.GetCurrentUser().Id);
+        var results = await qdrantClient.SearchAsync("Test", 10, -1, _currentUserService.GetCurrentUser());
         Assert.True(results.Any());
     }
 }

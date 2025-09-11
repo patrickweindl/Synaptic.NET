@@ -31,7 +31,7 @@ public class VectorMemory : Memory
             Owner = memory.Owner,
             OwnerUser = memory.OwnerUser,
             VectorStoreIdentifier = memory.StoreId.ToString(),
-            VectorOwnerIdentifier = memory.Owner.ToString(),
+            VectorOwnerIdentifier = memory.GroupId != null ? memory.GroupId.Value.ToString() : memory.Owner.ToString(),
             TitleEmbedding = titleEmbedding.Value.ToFloats(),
             DescriptionEmbedding = descriptionEmbeddingResult.Value.ToFloats(),
             ContentEmbedding = contentEmbeddingResult.Value.ToFloats()

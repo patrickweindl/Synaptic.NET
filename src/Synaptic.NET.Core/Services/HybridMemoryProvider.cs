@@ -4,6 +4,7 @@ using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Qdrant;
 
@@ -58,12 +59,13 @@ public class HybridMemoryProvider : IMemoryProvider
     private async IAsyncEnumerable<MemorySearchResult> HybridSearchWithReranking(ObservableMemorySearchResult r, string query, int limit, double relevanceThreshold)
     {
         r.Message = "Memory query received. Starting memory search...";
+        var currentUser = _currentUserService.GetCurrentUser();
         var userVectorResults =
-            await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUserService.GetCurrentUser().Id);
+            await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, currentUser);
 
-        foreach (var group in _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group))
+        foreach (var group in currentUser.Memberships.Select(m => m.Group))
         {
-            var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group.Id);
+            var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group);
             userVectorResults = userVectorResults.Concat(groupResults);
         }
 
@@ -82,7 +84,7 @@ public class HybridMemoryProvider : IMemoryProvider
             r.Message = "Reranking complete, adding missing information if required...";
 
             double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
-            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m));
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m, currentUser));
             foreach (var task in taskList)
             {
                 var result = await task;
@@ -99,7 +101,7 @@ public class HybridMemoryProvider : IMemoryProvider
             var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
             var rerankedResults = _reranker.Rerank(augmentedResults);
             var reranked = await rerankedResults.ToListAsync();
-            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m));
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m, currentUser));
             double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
             foreach (var task in taskList)
             {
@@ -118,22 +120,27 @@ public class HybridMemoryProvider : IMemoryProvider
         return Task.FromResult(searchTask);
     }
 
-    private async Task<MemorySearchResult> AddStoreAndUserIfMissing(MemorySearchResult result)
+    private async Task<MemorySearchResult> AddStoreAndUserIfMissing(MemorySearchResult result, User requestingUser)
     {
-        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == result.Memory.StoreId) is not
-            { } existingStore)
+        var memoryStores = requestingUser.Stores;
+        var userGroups = requestingUser.Memberships.Select(m => m.Group).ToList();
+        if (memoryStores.FirstOrDefault(s => s.StoreId == result.Memory.StoreId) is
+            { } existingStore
+            && memoryStores.SelectMany(s => s.Memories).FirstOrDefault(m => m.Identifier == result.Memory.Identifier) is { } memory)
         {
+            result.Memory.Store = existingStore;
+            result.Memory.OwnerUser = memory.OwnerUser;
+            result.Memory.OwnerGroup = memory.OwnerGroup;
             return result;
         }
 
-        result.Memory.Store = existingStore;
-
-        if (_dbContext.DbUser() is not { } user || user.Id != _currentUserService.GetCurrentUser().Id)
+        if (userGroups.FirstOrDefault(g => g.Stores.Any(s => s.Memories.Any(groupMem => groupMem.Identifier == result.Memory.Identifier))) is { } owningGroup)
         {
-            return result;
+            result.Memory.OwnerGroup = owningGroup;
+            result.Memory.GroupId = owningGroup.Id;
+            result.Memory.Store = owningGroup.Stores.FirstOrDefault(s => s.StoreId == result.Memory.StoreId);
         }
 
-        result.Memory.OwnerUser ??= user;
         return result;
     }
 

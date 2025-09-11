@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
@@ -7,6 +8,7 @@ using Qdrant.Client;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Qdrant;
@@ -50,28 +52,53 @@ public class QdrantMemoryClient
         _memoryAugmentationService = augmentationService;
     }
 
-    public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int top, double relevanceThreshold, Guid userIdentifier, CancellationToken cancellationToken = default)
+    static Expression<Func<VectorMemory, bool>> BuildOwnerFilter(string userId, IEnumerable<string> groupUserIds)
     {
-        string userId = userIdentifier.ToString();
-        using var collection = _store.GetCollection<Guid, VectorMemory>(userIdentifier.ToString());
+        var param = Expression.Parameter(typeof(VectorMemory), "m");
+        var prop  = Expression.Property(param, nameof(VectorMemory.VectorOwnerIdentifier));
+
+        // m => m.VectorOwnerIdentifier == userId
+        Expression body = Expression.Equal(prop, Expression.Constant(userId, typeof(string)));
+
+        foreach (var id in groupUserIds)
+        {
+            var eq = Expression.Equal(prop, Expression.Constant(id, typeof(string)));
+            body = Expression.OrElse(body, eq);
+        }
+
+        return Expression.Lambda<Func<VectorMemory, bool>>(body, param);
+    }
+
+    public async Task<IEnumerable<MemorySearchResult>> SearchAsync(string query, int top, double relevanceThreshold, IManagedIdentity owner, CancellationToken cancellationToken = default)
+    {
+        using var collection = _store.GetCollection<Guid, VectorMemory>(owner.Id.ToString());
         await collection.EnsureCollectionExistsAsync(cancellationToken);
+
+        // If the searched identity is a group, the filter could either be for ownership of the memory to the group or for any of the users that are part of the group.
+        var allowedGroupUserIds = owner is Group g
+            ? g.Memberships.Select(m => m.UserId.ToString("D").ToLowerInvariant())
+            : Enumerable.Empty<string>();
+
+        var filter = BuildOwnerFilter(userId: owner.Id.ToString("D").ToLowerInvariant(),
+            groupUserIds: allowedGroupUserIds);
+
         var contentResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<VectorMemory>
         {
             VectorProperty = m => m.ContentEmbedding,
-            Filter = m => m.VectorOwnerIdentifier == userId
+            Filter = filter
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 
         var titleResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<VectorMemory>
         {
             VectorProperty = m => m.TitleEmbedding,
-            Filter = m => m.VectorOwnerIdentifier == userId
+            Filter = filter
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         var descriptionResult = await collection.SearchAsync(query, top, options: new VectorSearchOptions<VectorMemory>
         {
             VectorProperty = m => m.DescriptionEmbedding,
-            Filter = m => m.VectorOwnerIdentifier == userId
+            Filter = filter
         }, cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
 
@@ -141,6 +168,7 @@ public class QdrantMemoryClient
 
         if (string.IsNullOrEmpty(memory.Description))
         {
+            // Requirement as this cannot be empty as long as descriptions are used for embeddings.
             memory.Description = await _memoryAugmentationService.GenerateMemoryDescriptionAsync(memory.Content);
         }
 
