@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
-using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Helpers;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
+using Synaptic.NET.Domain.Scopes;
 using Synaptic.NET.Domain.StructuredResponses;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Writer;
@@ -14,15 +14,15 @@ namespace Synaptic.NET.Domain.Resources;
 /// </summary>
 public class FileProcessor
 {
-    private readonly IFileMemoryCreationService _fileMemoryCreationService;
-    private readonly IMemoryAugmentationService _augmentationService;
+    private readonly ScopeFactory _scopeFactory;
+    private readonly User _user;
     private int _chunksCount;
     private int _chunksFinished;
 
-    public FileProcessor(IFileMemoryCreationService fileMemoryCreationService, IMemoryAugmentationService augmentationService)
+    public FileProcessor(ScopeFactory scopeFactory, User user)
     {
-        _fileMemoryCreationService = fileMemoryCreationService;
-        _augmentationService = augmentationService;
+        _scopeFactory = scopeFactory;
+        _user = user;
     }
     public async Task ExecutePdfFile(User user, string fileName, string filePath)
     {
@@ -33,6 +33,7 @@ public class FileProcessor
 
     public async Task ExecutePdf(User user, string fileName, string base64String)
     {
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, base64String.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
         DateTime start = DateTime.Now;
@@ -68,7 +69,7 @@ public class FileProcessor
 
         var descriptions = await CreateMemoryDescriptionsFromSummaries(chunkResults);
 
-        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
+        string description = await scope.MemoryAugmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
         StoreDescription = description;
         var targetStore = new MemoryStore()
         {
@@ -82,7 +83,7 @@ public class FileProcessor
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, base64String.Length, chunkResults.Sum(s => s.Summary.Length));
         Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {base64String.Length} characters.";
 
-        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, targetStore, descriptions, fileName, summary));
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(targetStore, descriptions, fileName, summary));
         var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
         Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
@@ -96,6 +97,7 @@ public class FileProcessor
 
     public async Task ExecuteFile(User user, string fileName, string fileContent)
     {
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, fileContent.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
         DateTime start = DateTime.Now;
@@ -123,7 +125,7 @@ public class FileProcessor
 
         var descriptions = await CreateMemoryDescriptionsFromSummaries(chunkResults);
 
-        string description = await _augmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
+        string description = await scope.MemoryAugmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
         StoreDescription = description;
         var targetStore = new MemoryStore
         {
@@ -137,7 +139,7 @@ public class FileProcessor
         Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, fileContent.Length, chunkResults.Sum(s => s.Summary.Length));
         Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {fileContent.Length} characters.";
 
-        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(user, targetStore, descriptions, fileName, summary));
+        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(targetStore, descriptions, fileName, summary));
         var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
 
         targetStore.Memories = returnMemories;
@@ -151,12 +153,13 @@ public class FileProcessor
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromBase64EncodedString(string fileName, string base64EncodedChunk)
     {
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
         var returnSummaries = new List<MemorySummary>();
         DateTime chunkStart = DateTime.Now;
         Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1,
             _chunksCount);
         var response =
-            await _fileMemoryCreationService.CreateMemoriesFromPdfFileAsync(fileName, base64EncodedChunk);
+            await scope.FileMemoryCreationService.CreateMemoriesFromPdfFileAsync(fileName, base64EncodedChunk);
         Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", _chunksFinished + 1,
             (DateTime.Now - chunkStart).TotalSeconds);
         foreach (var summary in response.Summaries)
@@ -172,6 +175,7 @@ public class FileProcessor
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromRawString(string fileName, string rawString)
     {
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
         var returnSummaries = new List<MemorySummary>();
         DateTime chunkStart = DateTime.Now;
         Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1, _chunksCount);
@@ -181,7 +185,7 @@ public class FileProcessor
             return returnSummaries;
         }
 
-        var response = await _fileMemoryCreationService.CreateMemoriesFromBase64String(fileName, rawString);
+        var response = await scope.FileMemoryCreationService.CreateMemoriesFromBase64String(fileName, rawString);
         Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", _chunksFinished + 1, (DateTime.Now - chunkStart).TotalSeconds);
         foreach (var summary in response.Summaries)
         {
@@ -207,12 +211,14 @@ public class FileProcessor
 
     private async Task<string> GenerateDescriptionFromSummary(MemorySummary summary)
     {
-        return await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        return await scope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
     }
 
-    private async Task<Memory> CreateReturnMemory(User currentUser, MemoryStore memoryStore, Dictionary<string, string> descriptions, string fileName, MemorySummary summary)
+    private async Task<Memory> CreateReturnMemory(MemoryStore memoryStore, Dictionary<string, string> descriptions, string fileName, MemorySummary summary)
     {
-        string description = descriptions.TryGetValue(summary.Identifier, out string? value) ? value : await _augmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
+        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        string description = descriptions.TryGetValue(summary.Identifier, out string? value) ? value : await scope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
         Memory mem = new()
         {
             StoreId = memoryStore.StoreId,
@@ -223,8 +229,8 @@ public class FileProcessor
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             Reference = fileName,
-            Owner = currentUser.Id,
-            OwnerUser = currentUser,
+            Owner = _user.Id,
+            OwnerUser = _user,
             ReferenceType = (int)ReferenceType.Document,
             Tags = new List<string>()
         };

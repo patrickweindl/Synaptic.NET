@@ -9,6 +9,8 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
 {
     private readonly Channel<BackgroundTaskItem> _queue;
     private readonly ConcurrentDictionary<string, BackgroundTaskStatus> _taskStatuses = new();
+    
+    public event Action<BackgroundTaskStatus>? TaskStatusChanged;
 
     public BackgroundTaskQueue(int capacity = 100)
     {
@@ -37,6 +39,7 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
             Message = "Task queued for processing"
         };
         _taskStatuses[workItem.TaskId] = status;
+        TaskStatusChanged?.Invoke(status);
 
         await _queue.Writer.WriteAsync(workItem);
     }
@@ -51,6 +54,7 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
             status.Status = BackgroundTaskState.Processing;
             status.StartedAt = DateTime.UtcNow;
             status.Message = "Task is being processed";
+            TaskStatusChanged?.Invoke(status);
         }
 
         return workItem;
@@ -64,6 +68,7 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     public void UpdateTaskStatus(string taskId, BackgroundTaskStatus status)
     {
         _taskStatuses[taskId] = status;
+        TaskStatusChanged?.Invoke(status);
 
         var cutoff = DateTime.UtcNow.AddHours(-24);
         var completedTasks = _taskStatuses

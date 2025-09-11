@@ -1,5 +1,7 @@
 using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
+using Synaptic.NET.Domain.Scopes;
 using Synaptic.NET.Domain.StructuredResponses;
 
 namespace Synaptic.NET.Domain.Abstractions.Augmentation;
@@ -13,7 +15,7 @@ public interface IFileMemoryCreationService
     /// Acquires a file processor (<see cref="FileProcessor"/>) that can be used to process files in an observable manner.
     /// </summary>
     /// <returns>A <see cref="FileProcessor"/> instance.</returns>
-    Task<FileProcessor> GetFileProcessor();
+    Task<FileProcessor> GetFileProcessor(ScopeFactory scopeFactory, User user);
 
     /// <summary>
     /// Generate memories from a PDF file, as base 64 string.

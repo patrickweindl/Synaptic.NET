@@ -1,36 +1,23 @@
 using Synaptic.NET.Domain.Abstractions.Augmentation;
-using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.BackgroundTasks;
-using Synaptic.NET.Domain.Helpers;
-using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Scopes;
 
 namespace Synaptic.NET.Augmentation.Handlers;
 
-//TODO: Use the background tasks instead of directly using a FileProcessor in the Management page.
 public class FileUploadBackgroundTask : BackgroundTaskItem
 {
     public string FileName { get; set; } = string.Empty;
     public string FileContent { get; set; } = string.Empty; // Base64 for PDFs, plain text for others
     public string FileExtension { get; set; } = string.Empty;
     public long FileSize { get; set; }
-    public User? User { get; set; }
-    
-    // Store service instances from the original HTTP context
-    public IMemoryProvider? MemoryProvider { get; set; }
-    public IArchiveService? ArchiveService { get; set; }
-    public IFileMemoryCreationService? FileMemoryCreationService { get; set; }
-
-    public override async Task ExecuteAsync(ICurrentUserService currentUserService, IArchiveService archiveService, IMemoryProvider memoryProvider, IFileMemoryCreationService fileMemoryCreationService, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken)
+    public override async Task ExecuteAsync(ScopeFactory scopeFactory, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken)
     {
         // Use the stored user instead of trying to get current user (which won't work in background context)
         var user = User ?? throw new InvalidOperationException("User context is required but was not provided to the background task");
-        
-        // Use stored service instances from original HTTP context instead of background service scope instances
-        var contextualArchiveService = ArchiveService ?? throw new InvalidOperationException("ArchiveService instance is required but was not provided to the background task");
-        var contextualMemoryProvider = MemoryProvider ?? throw new InvalidOperationException("MemoryProvider instance is required but was not provided to the background task");
-        var contextualFileMemoryCreationService = FileMemoryCreationService ?? throw new InvalidOperationException("FileMemoryCreationService instance is required but was not provided to the background task");
+        await using var scope = scopeFactory.CreateFixedUserScope(user);
         try
         {
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Starting file processing...", 0.1);
@@ -40,11 +27,11 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
                 : System.Text.Encoding.UTF8.GetBytes(FileContent);
 
             using var ms = new MemoryStream(fileBytes);
-            await contextualArchiveService.SaveFileAsync(FileName, ms);
+            await scope.ArchiveService.SaveFileAsync(FileName, ms);
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "File archived, starting processing...", 0.2);
 
-            var fileProcessor = await contextualFileMemoryCreationService.GetFileProcessor();
+            FileProcessor fileProcessor = await scope.FileMemoryCreationService.GetFileProcessor(scopeFactory, User);
 
             Task processingTask = FileExtension.ToLowerInvariant() == ".pdf"
                 ? fileProcessor.ExecutePdf(user, FileName, FileContent)
@@ -76,7 +63,7 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
                 {
                     resultStore.UserId = user.Id;
                     // Use the new approach: pass the complete MemoryStore to CreateCollectionAsync
-                    await contextualMemoryProvider.CreateCollectionAsync(resultStore);
+                    await scope.MemoryProvider.CreateCollectionAsync(resultStore);
 
                     var result = new FileUploadResult
                     {

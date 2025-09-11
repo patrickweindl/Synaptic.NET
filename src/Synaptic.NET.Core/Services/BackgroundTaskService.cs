@@ -1,25 +1,21 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Synaptic.NET.Domain.Abstractions.Augmentation;
-using Synaptic.NET.Domain.Abstractions.Management;
-using Synaptic.NET.Domain.Abstractions.Services;
-using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.BackgroundTasks;
+using Synaptic.NET.Domain.Scopes;
 
 namespace Synaptic.NET.Core.Services;
 
 public class BackgroundTaskService : BackgroundService
 {
     private readonly ILogger<BackgroundTaskService> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ScopeFactory _scopeFactory;
 
     public BackgroundTaskService(
         ILogger<BackgroundTaskService> logger,
-        IServiceProvider serviceProvider)
+        ScopeFactory scopeFactory)
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,21 +29,19 @@ public class BackgroundTaskService : BackgroundService
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
-                var taskQueue = scope.ServiceProvider.GetRequiredService<IBackgroundTaskQueue>();
-
-                var archiveService = scope.ServiceProvider.GetRequiredService<IArchiveService>();
-                var memoryProvider = scope.ServiceProvider.GetRequiredService<IMemoryProvider>();
-                var fileMemoryCreationService = scope.ServiceProvider.GetRequiredService<IFileMemoryCreationService>();
-                var currentUserService = scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
-                var workItem = await taskQueue.DequeueAsync(stoppingToken);
+                var taskQueue = _scopeFactory.GetBackgroundTaskQueue();
+                BackgroundTaskItem workItem = await taskQueue.DequeueAsync(stoppingToken);
+                await using var scope = _scopeFactory.CreateFixedUserScope(workItem.User);
+                var dbContext = scope.DbContext;
+                var currentUserService = scope.CurrentUserService;
+                currentUserService.SetCurrentUser(workItem.User);
+                dbContext.SetCurrentUser(workItem.User);
 
                 _logger.LogInformation("Processing background task {TaskId} of type {TaskType} for user {UserId}",
                     workItem.TaskId, workItem.GetType().Name, workItem.UserId);
-
                 try
                 {
-                    await workItem.ExecuteAsync(currentUserService, archiveService, memoryProvider, fileMemoryCreationService, taskQueue, stoppingToken);
+                    await workItem.ExecuteAsync(_scopeFactory, taskQueue, stoppingToken);
 
                     var completedStatus = new BackgroundTaskStatus
                     {

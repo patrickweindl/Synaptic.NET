@@ -4,6 +4,8 @@ using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Scopes;
 using Synaptic.NET.Domain.StructuredResponses;
 using Synaptic.NET.OpenAI;
 using Synaptic.NET.OpenAI.Clients;
@@ -24,9 +26,9 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         _currentUserService = currentUserService;
         _memoryAugmentationService = memoryAugmentationService;
     }
-    public Task<FileProcessor> GetFileProcessor()
+    public Task<FileProcessor> GetFileProcessor(ScopeFactory scopeFactory, User user)
     {
-        return Task.FromResult(new FileProcessor(this, _memoryAugmentationService));
+        return Task.FromResult(new FileProcessor(scopeFactory, user));
     }
 
     public async Task<MemorySummaries> CreateMemoriesFromPdfFileAsync(string fileName, string base64Pdf)

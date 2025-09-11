@@ -65,8 +65,19 @@ public class CurrentUserService : ICurrentUserService
         return null;
     }
 
+    private User? _currentUser;
+
+    public void SetCurrentUser(User user)
+    {
+        _currentUser = user;
+    }
+
     public User GetCurrentUser()
     {
+        if (_currentUser != null)
+        {
+            return _currentUser;
+        }
         ClaimsIdentity? currentClaimsIdentity = null;
 
         if (TryGetClaimsIdentityFromCookie() is { } cookieClaimsIdentity)

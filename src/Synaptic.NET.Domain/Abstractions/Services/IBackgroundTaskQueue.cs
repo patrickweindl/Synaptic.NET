@@ -9,4 +9,6 @@ public interface IBackgroundTaskQueue
     BackgroundTaskStatus? GetTaskStatus(string taskId);
     void UpdateTaskStatus(string taskId, BackgroundTaskStatus status);
     IEnumerable<BackgroundTaskStatus> GetUserTasks(string userId);
+    
+    event Action<BackgroundTaskStatus>? TaskStatusChanged;
 }

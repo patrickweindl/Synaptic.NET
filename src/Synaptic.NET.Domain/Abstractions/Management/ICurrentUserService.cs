@@ -23,6 +23,8 @@ public interface ICurrentUserService
     /// <returns>A <see cref="User"/> object representing the current user.</returns>
     User GetCurrentUser();
 
+    void SetCurrentUser(User user);
+
     /// <summary>
     ///
     /// </summary>

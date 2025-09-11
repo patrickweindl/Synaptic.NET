@@ -689,7 +689,7 @@
                                         }
                                     </div>
                                 </div>
-                                
+
                                 @if (task.Status == BackgroundTaskState.Processing && task.Progress > 0)
                                 {
                                     <div class="task-progress">
@@ -699,7 +699,7 @@
                                         <span class="progress-text">@((task.Progress * 100).ToString("F0"))%</span>
                                     </div>
                                 }
-                                
+
                                 <div class="task-message">
                                     @if (!string.IsNullOrEmpty(task.Message))
                                     {
@@ -710,7 +710,7 @@
                                         <p class="error-message">Error: @task.ErrorMessage</p>
                                     }
                                 </div>
-                                
+
                                 @if (task.Result != null && task.Status == BackgroundTaskState.Completed)
                                 {
                                     <div class="task-result">
@@ -2246,6 +2246,8 @@
     }
 </style>
 
+@implements IDisposable
+
 @code {
     public class FileUploadForm
     {
@@ -2338,6 +2340,9 @@
     {
         try
         {
+            // Subscribe to background task status changes
+            BackgroundTaskQueue.TaskStatusChanged += OnTaskStatusChanged;
+
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
@@ -2476,7 +2481,7 @@
 
             // Get current user and service instances before creating background task
             var currentUser = CurrentUserService.GetCurrentUser();
-            
+
             // Create background task with all contextual service instances
             var backgroundTask = new FileUploadBackgroundTask
             {
@@ -2485,11 +2490,7 @@
                 FileName = _selectedFile.Name,
                 FileContent = fileContent,
                 FileExtension = extension,
-                FileSize = _selectedFile.Size,
-                // Pass service instances from current HTTP context to preserve user scoping
-                MemoryProvider = MemoryProvider,
-                ArchiveService = ArchiveService,
-                FileMemoryCreationService = FileMemoryCreationService
+                FileSize = _selectedFile.Size
             };
 
             // Queue the background task
@@ -2968,5 +2969,40 @@
     {
         await LoadBackgroundTasks();
         StateHasChanged();
+    }
+
+    private async void OnTaskStatusChanged(BackgroundTaskStatus status)
+    {
+        // Check if this task belongs to the current user
+        var currentUser = CurrentUserService.GetCurrentUser();
+        if (status.UserId == currentUser.Id.ToString())
+        {
+            // Update the task in the local list
+            var existingTask = _backgroundTasks.FirstOrDefault(t => t.TaskId == status.TaskId);
+            if (existingTask != null)
+            {
+                var index = _backgroundTasks.IndexOf(existingTask);
+                _backgroundTasks[index] = status;
+            }
+            else
+            {
+                _backgroundTasks.Add(status);
+            }
+
+            // Sort the tasks by creation date (newest first)
+            _backgroundTasks = _backgroundTasks.OrderByDescending(t => t.CreatedAt).ToList();
+
+            // Update the count
+            _taskQueueCount = _backgroundTasks.Count;
+
+            // Notify the UI to update
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from the event
+        BackgroundTaskQueue.TaskStatusChanged -= OnTaskStatusChanged;
     }
 }

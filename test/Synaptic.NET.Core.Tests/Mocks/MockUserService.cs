@@ -16,7 +16,7 @@ public class MockUserService : ICurrentUserService
         }
     }
 
-    private readonly User _testUser = new()
+    private User _testUser = new()
     {
         Id = Guid.Parse("4530bee0-3f17-4223-843d-e67c18f9fbfa"),
         DisplayName = "Test User",
@@ -26,6 +26,11 @@ public class MockUserService : ICurrentUserService
     public User GetCurrentUser()
     {
         return _testUser;
+    }
+
+    public void SetCurrentUser(User user)
+    {
+        _testUser = user;
     }
 
     public MemoryStore MockMemoryStore => new()

@@ -13,6 +13,7 @@ using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Scopes;
 
 namespace Synaptic.NET.Core;
 
@@ -46,7 +47,7 @@ public static class CoreServices
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
 
         builder.Services.AddSingleton<IMetricsCollectorProvider, MetricsCollectorProvider>();
-
+        builder.Services.AddSingleton(s => new ScopeFactory(s));
         builder.Services.AddScoped<IUserManager, UserManager>();
         builder.Services.AddScoped<IEncryptionService, ClaimsBasedEncryptionService>();
         builder.Services.AddScoped<IArchiveService, ArchiveService>();
