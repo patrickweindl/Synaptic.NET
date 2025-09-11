@@ -71,4 +71,10 @@ public static class McpServices
         app.MapMcp("/mcp").RequireAuthorization();
         return app;
     }
+
+    public static WebApplication ConfigureMcpApplicationWithoutAuthorization(this WebApplication app)
+    {
+        app.MapMcp("/mcp");
+        return app;
+    }
 }

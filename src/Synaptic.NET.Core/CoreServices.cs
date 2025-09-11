@@ -57,9 +57,9 @@ public static class CoreServices
         return builder;
     }
 
-    public static WebApplication ConfigureCoreApplication(this WebApplication app, SynapticServerSettings configuration)
+    public static WebApplication ConfigureCoreApplication(this WebApplication app)
     {
-        app.ConfigureHeaderForwarding(configuration);
+        app.ConfigureHeaderForwarding();
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/alive", new HealthCheckOptions
         {

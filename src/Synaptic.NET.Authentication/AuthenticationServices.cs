@@ -32,7 +32,7 @@ public static class AuthenticationServices
 
         var app = builder.Build();
 
-        app.ConfigureCoreApplication(synapticSettings);
+        app.ConfigureCoreApplication();
         app.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
         app.Run();
     }

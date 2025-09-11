@@ -10,8 +10,4 @@
       <ProjectReference Include="..\..\src\Synaptic.NET.AppHost\Synaptic.NET.AppHost.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="ExampleMcpTools\" />
-    </ItemGroup>
-
 </Project>

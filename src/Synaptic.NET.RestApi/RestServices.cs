@@ -12,6 +12,13 @@ public static class RestServices
 
     public static WebApplication ConfigureRestServicesWithAuthorization(this WebApplication app)
     {
+        app.MapControllers().RequireAuthorization();
+        return app;
+    }
+
+    public static WebApplication ConfigureRestServicesWithoutAuthorization(this WebApplication app)
+    {
+        app.MapControllers().AllowAnonymous();
         return app;
     }
 }

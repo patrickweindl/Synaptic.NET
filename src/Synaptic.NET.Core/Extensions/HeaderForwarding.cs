@@ -1,15 +1,17 @@
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection;
 using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Core.Extensions;
 
 public static class HeaderForwarding
 {
-    internal static void ConfigureHeaderForwarding(this WebApplication app, SynapticServerSettings configuration)
+    internal static void ConfigureHeaderForwarding(this WebApplication app)
     {
-        List<string> knownProxies = configuration.ServerSettings.KnownProxies;
+        var settings = app.Services.GetRequiredService<SynapticServerSettings>();
+        List<string> knownProxies = settings.ServerSettings.KnownProxies;
         List<IPAddress> knownProxyIps = knownProxies.Select(IPAddress.Parse).ToList();
         if (knownProxies.Count > 0)
         {

@@ -65,6 +65,7 @@ Check out the samples in the `samples` folder for example partial usages or inje
 - [x] Qdrant
 - [x] Entity Framework Core
 - [x] OpenAI
+- [ ] Swagger UI
 - [ ] Docker support
 - [ ] CI/CD with package publishing
 - [x] Extend readme and usage instructions

@@ -10,10 +10,15 @@ namespace Synaptic.NET.Domain;
 
 public static class DomainServices
 {
-    public static IHostApplicationBuilder ConfigureDomainServices(this IHostApplicationBuilder builder, out SynapticServerSettings configuration)
+    public static IHostApplicationBuilder ConfigureDomainServices(this IHostApplicationBuilder builder, out SynapticServerSettings configuration, IConfiguration? configurationOverride = null)
     {
         builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
         builder.Configuration.AddEnvironmentVariables();
+
+        if (configurationOverride != null)
+        {
+            builder.Configuration.AddConfiguration(configurationOverride);
+        }
 
         configuration = new SynapticServerSettings(builder.Configuration);
         builder.Services.AddSingleton(configuration);

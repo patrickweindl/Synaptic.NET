@@ -12,9 +12,46 @@ using Synaptic.NET.Web;
 
 namespace Synaptic.NET.AppHost;
 
-public class SynapticAppHost
+public static class SynapticAppHost
 {
     public static void Main(string[] args)
+    {
+        var app = DefaultSynapticApplication(args);
+        app.RunDefaultApplication();
+    }
+
+    public static void RunDefaultApplication(this WebApplication defaultApp, bool runWithoutAuthorization = false)
+    {
+        defaultApp.MapStaticAssets();
+        defaultApp.ConfigureDomainApplication()
+            .ConfigureCoreApplication();
+        if (!runWithoutAuthorization)
+        {
+            defaultApp.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
+        }
+
+        defaultApp.MapRazorComponents<SynapticWebApp>().AddInteractiveServerRenderMode();
+
+        if (!runWithoutAuthorization)
+        {
+            defaultApp.ConfigureMcpApplicationWithAuthorization()
+                .ConfigureRestServicesWithAuthorization();
+        }
+        else
+        {
+            defaultApp.ConfigureMcpApplicationWithoutAuthorization()
+                .ConfigureRestServicesWithoutAuthorization();
+        }
+
+        defaultApp.Run();
+    }
+
+    public static WebApplication DefaultSynapticApplication(string[] args,
+        bool runWithoutAuthorization = false,
+        IConfiguration? configurationOverride = null,
+        IEnumerable<Type>? additionalToolTypes = null,
+        IEnumerable<Type>? additionalPromptTypes = null,
+        IEnumerable<Type>? additionalResourceTypes = null)
     {
         Log.Logger = new LoggerConfiguration()
             .WriteTo.File(Path.Combine(AppContext.BaseDirectory, "logs", "Verbose", "VerboseLog.log"), rollingInterval: RollingInterval.Day, shared: true)
@@ -30,13 +67,18 @@ public class SynapticAppHost
         });
 
         builder
-            .ConfigureDomainServices(out var synapticSettings)
-            .ConfigureAuthenticationAndAuthorization(synapticSettings)
+            .ConfigureDomainServices(out var synapticSettings);
+
+        if (!runWithoutAuthorization)
+        {
+            builder.ConfigureAuthenticationAndAuthorization(synapticSettings);
+        }
+        builder
             .ConfigureOpenAiServices()
             .ConfigureQdrantServices()
             .ConfigureCoreServices()
             .ConfigureAugmentationServices()
-            .ConfigureMcpServices()
+            .ConfigureMcpServices(additionalResourceTypes, additionalPromptTypes, additionalToolTypes)
             .ConfigureRestServices();
 
         builder.Services.AddRazorComponents()
@@ -45,15 +87,6 @@ public class SynapticAppHost
         builder.Services.AddRazorPages();
         builder.Services.AddServerSideBlazor();
 
-        var app = builder.Build();
-
-        app.MapStaticAssets();
-        app.ConfigureDomainApplication()
-            .ConfigureCoreApplication(synapticSettings)
-            .ConfigureAuthenticationAndAuthorizationAndMiddlewares();
-        app.MapRazorComponents<SynapticWebApp>().AddInteractiveServerRenderMode();
-        app.ConfigureMcpApplicationWithAuthorization()
-            .ConfigureRestServicesWithAuthorization();
-        app.Run();
+        return builder.Build();
     }
 }
