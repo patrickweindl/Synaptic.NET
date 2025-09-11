@@ -52,13 +52,14 @@ To explore functionality with a default setup:
     - [x] GitHub
     - [x] MS
     - [x] Google
-  - [ ] CustomGPT Authenticated RestAPI Access
+  - [ ] ChatGPT Desktop Authenticated MCP
     - [ ] GitHub
     - [ ] MS
     - [ ] Google
   - [ ] EntraID
 - [ ] Observable results for memory creation and search for frontend
-- [ ] Group permissions for users
+- [ ] Group permissions for users (permissions of users within groups)
+- [ ] Rest and MCP endpoints with filterable queries (e.g. only look in certain groups or in user memories)
 - [x] Restricted access for guests
 - [x] Sharing memory stores with groups
 ### Others
