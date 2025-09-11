@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Synaptic.NET.Domain.Abstractions.Management;
@@ -462,7 +463,13 @@ public class MemoryController : ControllerBase
     [AssistantConstraint("The query parameter must not be empty or whitespace.")]
     [AssistantInstruction("Use limit to control the number of results returned (default: 10). Use relevanceThreshold to filter results by relevance score (default: 0.5).")]
     [AssistantExample("GET /api/memory/search?query=project meetings&limit=5&relevanceThreshold=0.7")]
-    public async Task<ActionResult<IEnumerable<ContextMemory>>> Search([FromQuery] string query, [FromQuery] int limit = 10, [FromQuery] double relevanceThreshold = 0.5)
+    public async Task<ActionResult<IEnumerable<ContextMemory>>> Search(
+        [FromQuery] string query,
+        [FromQuery] int limit = 10,
+        [FromQuery] double relevanceThreshold = 0.5,
+        [FromQuery] bool includePersonal = true,
+        [FromQuery] Guid? limitToGroup = null,
+        [FromQuery] Guid? limitToStore = null)
     {
         _currentUserService.LockoutUserIfGuest();
         if (string.IsNullOrWhiteSpace(query))
@@ -470,7 +477,24 @@ public class MemoryController : ControllerBase
             return BadRequest("Query must not be empty.");
         }
 
-        var results = await _memory.SearchAsync(query, limit, relevanceThreshold);
+        MemoryQueryOptions options = MemoryQueryOptions.Default;
+
+        if (!includePersonal)
+        {
+            options = options.WithoutPersonalSearch();
+        }
+
+        if (limitToGroup != null)
+        {
+            options = options.WithGroupOptions(GroupQueryOptions.ById(limitToGroup.Value));
+        }
+
+        if (limitToStore != null)
+        {
+            options = options.WithStoreOptions(StoreQueryOptions.ById(limitToStore.Value));
+        }
+
+        var results = await _memory.SearchAsync(query, limit, relevanceThreshold, options);
         var contextMemoryResults = await results.Results.ToListAsync();
         return Ok(contextMemoryResults.Select(m => new ContextMemory(m.Memory)));
     }

@@ -26,6 +26,7 @@ public static class MemoryAcquisition
         [Description("The free text query.")] string query,
         [Description("The maximum count of memories to return")] int limit,
         [Description("The minimum relevance of the memory, between 0.0 und 1.0")] double relevance,
+        [Description("The memory query options, optional, defaults to search all available stores and personal memories.")] MemoryQueryOptions? options,
         ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
@@ -33,7 +34,7 @@ public static class MemoryAcquisition
         Log.Logger.Information("[MCP Tool Call] Query: {Query}", query);
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
         var memoryQueryResults =
-            await memoryProvider.SearchAsync(query, limit, relevance);
+            await memoryProvider.SearchAsync(query, limit, relevance, options ?? MemoryQueryOptions.Default);
         var memories = await memoryQueryResults.Results.Select(m => new ContextMemory(m.Memory)).ToListAsync();
         return memories;
     }

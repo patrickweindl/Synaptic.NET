@@ -41,8 +41,9 @@ public interface IMemoryProvider
     /// <param name="query">The search query string used to match memory entries.</param>
     /// <param name="limit">The maximum number of search results to return. Defaults to 10.</param>
     /// <param name="relevanceThreshold">The minimum relevance score required for a result to be included. Defaults to 0.5.</param>
+    /// <param name="options">The search options.</param>
     /// <returns>A task representing the operation, returning a collection of memory search results that meet the specified criteria.</returns>
-    Task<ObservableMemorySearchResult> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5);
+    Task<ObservableMemorySearchResult> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5, MemoryQueryOptions? options = null);
 
     /// <summary>
     /// Creates a new memory collection with the provided title.

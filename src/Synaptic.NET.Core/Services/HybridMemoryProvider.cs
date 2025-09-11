@@ -56,18 +56,42 @@ public class HybridMemoryProvider : IMemoryProvider
         return Task.FromResult(_dbContext.MemoryStores.FirstOrDefault(s => s.Title == collectionTitle));
     }
 
-    private async IAsyncEnumerable<MemorySearchResult> HybridSearchWithReranking(ObservableMemorySearchResult r, string query, int limit, double relevanceThreshold)
+    private async IAsyncEnumerable<MemorySearchResult> HybridSearchWithReranking(ObservableMemorySearchResult r, string query, int limit, double relevanceThreshold, MemoryQueryOptions options)
     {
         r.Message = "Memory query received. Starting memory search...";
         var currentUser = _currentUserService.GetCurrentUser();
-        var userVectorResults =
-            await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, currentUser);
-
-        foreach (var group in currentUser.Memberships.Select(m => m.Group))
+        var userVectorResults = Enumerable.Empty<MemorySearchResult>();
+        if (options.SearchInPersonal)
         {
-            var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group);
-            userVectorResults = userVectorResults.Concat(groupResults);
+            if (options.StoreQueryOptions.StoreSearchMode < StoreSearchMode.All)
+            {
+                var storeFilteredResults = new List<MemorySearchResult>();
+                foreach (var store in currentUser.Stores.Where(s => s.GroupId == null))
+                {
+                    if (options.StoreQueryOptions.StoreShouldBeIncluded(store))
+                    {
+                        storeFilteredResults.AddRange(await _qdrantMemoryClient.SearchInStoreAsync(query, limit, relevanceThreshold,
+                            options.StoreQueryOptions.StoreIds.FirstOrDefault(), currentUser.Id));
+                    }
+                }
+                userVectorResults = storeFilteredResults;
+            }
+            else
+            {
+                userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, currentUser);
+            }
+
         }
+
+        if (options.GroupQueryOptions.GroupSearchMode > GroupSearchMode.None)
+        {
+            foreach (var group in currentUser.Memberships.Select(m => m.Group).Where(g => options.GroupQueryOptions.GroupShouldBeIncluded(g)))
+            {
+                var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group);
+                userVectorResults = userVectorResults.Concat(groupResults);
+            }
+        }
+
 
         var resultList = userVectorResults.ToList();
         r.Progress = 0.2;
@@ -98,7 +122,7 @@ public class HybridMemoryProvider : IMemoryProvider
             r.Message = "Vector search did not return any results. Falling back to augmented search...";
             Log.Information(
                 "[Memory Search] Vector search did not result in any results. Falling back to augmented search...");
-            var augmentedResults = await SearchAugmented(query, limit, relevanceThreshold);
+            var augmentedResults = await SearchAugmented(query, options, limit, relevanceThreshold);
             var rerankedResults = _reranker.Rerank(augmentedResults);
             var reranked = await rerankedResults.ToListAsync();
             var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m, currentUser));
@@ -114,9 +138,9 @@ public class HybridMemoryProvider : IMemoryProvider
         r.IsComplete = true;
     }
 
-    public Task<ObservableMemorySearchResult> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5)
+    public Task<ObservableMemorySearchResult> SearchAsync(string query, int limit = 10, double relevanceThreshold = 0.5, MemoryQueryOptions? options = null)
     {
-        var searchTask = new ObservableMemorySearchResult(r => HybridSearchWithReranking(r, query, limit, relevanceThreshold));
+        var searchTask = new ObservableMemorySearchResult(r => HybridSearchWithReranking(r, query, limit, relevanceThreshold, options ?? MemoryQueryOptions.Default));
         return Task.FromResult(searchTask);
     }
 
@@ -144,14 +168,30 @@ public class HybridMemoryProvider : IMemoryProvider
         return result;
     }
 
-    private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, int limit = 10,
+    private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, MemoryQueryOptions options, int limit = 10,
         double relevanceThreshold = 0.5)
     {
-        var groupStores = _currentUserService.GetCurrentUser().Memberships.Select(m => m.Group).SelectMany(g => g.Stores).ToList();
+        var groupStores = options.GroupQueryOptions.GroupSearchMode == GroupSearchMode.None
+            ? new List<MemoryStore>()
+            : _currentUserService.GetCurrentUser().Memberships
+            .Select(m => m.Group).Where(g => options.GroupQueryOptions.GroupShouldBeIncluded(g))
+            .SelectMany(g => g.Stores).ToList();
 
-        var allStores = _dbContext.MemoryStores.ToList().Concat(groupStores).ToList();
+        var userStores = await _dbContext.MemoryStores.ToListAsync();
+        var userOwnedStores = userStores.Where(s => s.GroupId == null);
+        if (!options.SearchInPersonal)
+        {
+            userOwnedStores = Enumerable.Empty<MemoryStore>();
+        }
 
-        var storeRankings = (await _storeRouter.RankStoresAsync(query, allStores)).ToList();
+        var relevantStores = userOwnedStores.Concat(groupStores).DistinctBy(s => s.StoreId).ToList();
+
+        if (options.StoreQueryOptions.StoreSearchMode < StoreSearchMode.All)
+        {
+            relevantStores = relevantStores.Where(s => options.StoreQueryOptions.StoreShouldBeIncluded(s)).ToList();
+        }
+
+        var storeRankings = (await _storeRouter.RankStoresAsync(query, relevantStores)).ToList();
 
         var topScore = storeRankings.FirstOrDefault()?.Relevance ?? double.MinValue;
 
@@ -162,7 +202,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         storeRankings = storeRankings.Where(r => r.Relevance >= topScore * 0.5).ToList();
 
-        var rankedStores = allStores.Where(s => storeRankings.Any(r => r.Identifier == s.StoreId)).ToList();
+        var rankedStores = relevantStores.Where(s => storeRankings.Any(r => r.Identifier == s.StoreId)).ToList();
 
         CancellationToken token = new CancellationTokenSource().Token;
         var searchTasks = rankedStores.Select(async s => await AugmentedSearchInStore(s, query, limit, relevanceThreshold, token));

@@ -28,7 +28,7 @@ To explore functionality with a default setup:
 - [x] Dashboard
 - [x] Search
 - [x] Observable file creation results
-- [ ] Observable search results
+- [x] Observable search results
 - [x] File Upload
 - [x] Memory Management
 - [x] Background Memory Upload
@@ -59,9 +59,9 @@ To explore functionality with a default setup:
     - [ ] MS
     - [ ] Google
   - [ ] EntraID
-- [ ] Observable results for memory creation and search for frontend
+- [x] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users (permissions of users within groups)
-- [ ] Rest and MCP endpoints with filterable queries (e.g. only look in certain groups or in user memories)
+- [x] Rest and MCP endpoints with filterable queries (e.g. only look in certain groups or in user memories)
 - [x] Restricted access for guests
 - [x] Sharing memory stores with groups
 ### Others
