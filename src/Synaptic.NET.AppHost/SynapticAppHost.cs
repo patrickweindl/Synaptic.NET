@@ -29,31 +29,31 @@ public class SynapticAppHost
             ContentRootPath = AppContext.BaseDirectory
         });
 
-        builder.ConfigureDomainServices(out var synapticSettings);
-        builder.ConfigureOpenAiServices();
-        builder.ConfigureQdrantServices();
-        builder.ConfigureCoreServices();
-        builder.ConfigureAugmentationServices();
+        builder
+            .ConfigureDomainServices(out var synapticSettings)
+            .ConfigureAuthenticationAndAuthorization(synapticSettings)
+            .ConfigureOpenAiServices()
+            .ConfigureQdrantServices()
+            .ConfigureCoreServices()
+            .ConfigureAugmentationServices()
+            .ConfigureMcpServices()
+            .ConfigureRestServices();
 
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents()
             .AddAuthenticationStateSerialization(o => o.SerializeAllClaims = true);
         builder.Services.AddRazorPages();
         builder.Services.AddServerSideBlazor();
-        builder.ConfigureMcpServices();
-        builder.ConfigureRestServices();
-
-        builder.ConfigureAuthenticationAndAuthorization(synapticSettings);
 
         var app = builder.Build();
 
         app.MapStaticAssets();
-        app.ConfigureDomainApplication();
-        app.ConfigureCoreApplication(synapticSettings);
-        app.ConfigureAuthenticationAndAuthorizationAndMiddlewares();
+        app.ConfigureDomainApplication()
+            .ConfigureCoreApplication(synapticSettings)
+            .ConfigureAuthenticationAndAuthorizationAndMiddlewares();
         app.MapRazorComponents<SynapticWebApp>().AddInteractiveServerRenderMode();
-        app.ConfigureMcpApplicationWithAuthorization();
-        app.ConfigureRestServicesWithAuthorization();
+        app.ConfigureMcpApplicationWithAuthorization()
+            .ConfigureRestServicesWithAuthorization();
         app.Run();
     }
 }

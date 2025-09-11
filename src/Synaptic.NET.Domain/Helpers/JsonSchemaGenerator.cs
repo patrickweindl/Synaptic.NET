@@ -6,12 +6,12 @@ using System.Text.Json.Serialization;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Attributes;
 
-namespace Synaptic.NET.OpenAI.StructuredResponses;
+namespace Synaptic.NET.Domain.Helpers;
 
 /// <summary>
 /// Generates JSON schemas from C# classes marked with JsonSchemaAttribute
 /// </summary>
-internal static class JsonSchemaGenerator
+public static class JsonSchemaGenerator
 {
     public static string GetSchemaName<T>() where T : IStructuredResponseSchema
     {

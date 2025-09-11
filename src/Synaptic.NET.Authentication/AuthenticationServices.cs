@@ -37,7 +37,7 @@ public static class AuthenticationServices
         app.Run();
     }
 
-    public static IHostApplicationBuilder ConfigureAuthenticationAndAuthorization(this WebApplicationBuilder app, SynapticServerSettings configuration)
+    public static IHostApplicationBuilder ConfigureAuthenticationAndAuthorization(this IHostApplicationBuilder app, SynapticServerSettings configuration)
     {
         app.Services.AddHttpContextAccessor();
         app.Services.AddAuthenticationCore();
