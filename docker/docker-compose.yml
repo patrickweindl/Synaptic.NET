@@ -10,6 +10,10 @@ x-common-variables: &common-variables
 
   # Synaptic variables
   # Server
+  LOGGING__LOGLEVEL__DEFAULT: 'Information'
+  LOGGING__LOGLEVEL__MICROSOFT.ASPNETCORE: 'Warning'
+  LOGGING__LOGLEVEL__MODELCONTEXTPROTOCOL: 'Warning'
+  LOGGING__LOGLEVEL__MICROSOFT.ENTITYFRAMEWORKCORE.DATABASE.COMMAND: 'Warning'
   ASPNETCORE_URLS: 'http://0.0.0.0:8000'
   SERVERS__QDRANTURL: 'http://192.168.0.253:6334' # Use your local IP as localhost will not be resolved.
   SERVERS__POSTGRESURL: '192.168.0.253' # Use your local IP as 127.0.0.1 or localhost will not be resolved.
