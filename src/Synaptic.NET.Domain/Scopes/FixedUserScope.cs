@@ -20,7 +20,6 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
         MemoryAugmentationService = _scope.ServiceProvider.GetRequiredService<IMemoryAugmentationService>();
         MemoryProvider = _scope.ServiceProvider.GetRequiredService<IMemoryProvider>();
         FileMemoryCreationService = _scope.ServiceProvider.GetRequiredService<IFileMemoryCreationService>();
-        ArchiveService = _scope.ServiceProvider.GetRequiredService<IArchiveService>();
         _dbContextFactory = _scope.ServiceProvider.GetRequiredService<IDbContextFactory<SynapticDbContext>>();
         _user = user;
     }
@@ -45,7 +44,6 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
     public IMemoryAugmentationService MemoryAugmentationService { get; }
     public IMemoryProvider MemoryProvider { get; }
     public IFileMemoryCreationService FileMemoryCreationService { get; }
-    public IArchiveService ArchiveService { get; }
     public void Dispose()
     {
         _scope.Dispose();

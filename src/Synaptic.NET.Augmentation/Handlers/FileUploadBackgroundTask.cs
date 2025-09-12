@@ -27,7 +27,6 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
                 : System.Text.Encoding.UTF8.GetBytes(FileContent);
 
             using var ms = new MemoryStream(fileBytes);
-            await scope.ArchiveService.SaveFileAsync(FileName, ms);
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "File archived, starting processing...", 0.2);
 

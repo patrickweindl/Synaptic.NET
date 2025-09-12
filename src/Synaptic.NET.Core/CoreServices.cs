@@ -50,7 +50,6 @@ public static class CoreServices
         builder.Services.AddSingleton(s => new ScopeFactory(s));
         builder.Services.AddScoped<IUserManager, UserManager>();
         builder.Services.AddScoped<IEncryptionService, ClaimsBasedEncryptionService>();
-        builder.Services.AddScoped<IArchiveService, ArchiveService>();
         builder.Services.AddScoped<IMemoryProvider, HybridMemoryProvider>();
         builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
         builder.Services.AddHostedService<BackgroundTaskService>();
