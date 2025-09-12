@@ -39,7 +39,15 @@ public class QdrantMemoryClient
             port = 6334;
         }
 
-        _client = new QdrantClient(ip, port);
+        if (string.IsNullOrEmpty(settings.ServerSettings.QdrantApiKey) || settings.ServerSettings.QdrantApiKey == "your_secret_api_key_here")
+        {
+            _client = new QdrantClient(ip, port);
+        }
+        else
+        {
+            _client = new QdrantClient(ip, port, apiKey: settings.ServerSettings.QdrantApiKey);
+        }
+
         _ = Task.Run(async () => await _client.HealthAsync()).Result;
         _store = new QdrantVectorStore(
             _client,

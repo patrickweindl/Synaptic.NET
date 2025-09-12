@@ -9,6 +9,7 @@ public class AspNetServerSettings
     private const string KnownProxiesEnvVar = "SERVERS__KNOWNPROXIES";
     private const string ServerPortEnvVar = "SERVERS__PORT";
     private const string QdrantUrlEvnVar = "SERVERS__QDRANTURL";
+    private const string QdrantApiKeyEnvVar = "SERVERS__QDRANTAPIKEY";
     private const string PostgresUrlEnvVar = "SERVERS__POSTGRESURL";
     private const string PostGresPortEnvVar = "SERVERS__POSTGRESPORT";
     private const string PostgresUserNameEnvVar = "SERVERS__POSTGRESUSERNAME";
@@ -22,6 +23,7 @@ public class AspNetServerSettings
         ServerPortEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => ServerPort = int.Parse(s));
         KnownProxiesEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => KnownProxies = s.Split(',').ToList());
         QdrantUrlEvnVar.AssignValueFromEnvironmentVariableIfAvailable(s => QdrantUrl = s);
+        QdrantApiKeyEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => QdrantApiKey = s);
         PostgresUrlEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => PostgresUrl = s);
         PostGresPortEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => PostgresPort = int.Parse(s));
         PostgresUserNameEnvVar.AssignValueFromEnvironmentVariableIfAvailable(s => PostgresUserName = s);
@@ -39,6 +41,7 @@ public class AspNetServerSettings
             serversSection.AssignValueIfAvailable(s => ServerPort = int.Parse(s), "Port");
             serversSection.AssignValueIfAvailable(s => KnownProxies = s.Split(',').ToList(), "KnownProxies");
             serversSection.AssignValueIfAvailable(s => QdrantUrl = s, "QdrantUrl");
+            serversSection.AssignValueIfAvailable(s => QdrantApiKey = s, "QdrantApiKey");
             serversSection.AssignValueIfAvailable(s => PostgresUrl = s, "PostgresUrl");
             serversSection.AssignValueIfAvailable(s => PostgresPort = int.Parse(s), "PostgresPort");
             serversSection.AssignValueIfAvailable(s => PostgresUserName = s, "PostgresUserName");
@@ -59,6 +62,7 @@ public class AspNetServerSettings
     public List<string> KnownProxies { get; set;  } = new List<string>();
     public List<string> AdminIdentifiers { get; set;  } = new List<string>();
     public string QdrantUrl { get; set; } = "http://localhost:6334";
+    public string QdrantApiKey { get; set; } = "your_secret_api_key_here";
     public string PostgresUrl { get; set; } = "http://localhost";
     public int PostgresPort { get; set; } = 5432;
     public string PostgresUserName { get; set; } = "postgres";
