@@ -17,7 +17,7 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
     {
         // Use the stored user instead of trying to get current user (which won't work in background context)
         var user = User ?? throw new InvalidOperationException("User context is required but was not provided to the background task");
-        await using var scope = scopeFactory.CreateFixedUserScope(user);
+        await using var scope = await scopeFactory.CreateFixedUserScopeAsync(user);
         try
         {
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Starting file processing...", 0.1);
@@ -62,7 +62,6 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
                 if (resultStore.Memories.Count > 0)
                 {
                     resultStore.UserId = user.Id;
-                    // Use the new approach: pass the complete MemoryStore to CreateCollectionAsync
                     await scope.MemoryProvider.CreateCollectionAsync(resultStore);
 
                     var result = new FileUploadResult

@@ -15,22 +15,26 @@ public class CurrentUserService : ICurrentUserService
     private readonly IHttpContextAccessor? _accessor;
     private readonly ISymLinkUserService _symlinkUserService;
     private readonly AuthenticationStateProvider? _authenticationStateProvider;
-    private readonly SynapticDbContext _dbContext;
+    private readonly IDbContextFactory<SynapticDbContext> _dbContextFactory;
     private readonly SynapticServerSettings _settings;
-    public CurrentUserService(SynapticServerSettings serverSettings, SynapticDbContext synapticDbContext, ISymLinkUserService symlinkUserService, AuthenticationStateProvider? authenticationStateProvider = null, IHttpContextAccessor? accessor = null)
+    public CurrentUserService(SynapticServerSettings serverSettings, IDbContextFactory<SynapticDbContext> dbContextFactory, ISymLinkUserService symlinkUserService, AuthenticationStateProvider? authenticationStateProvider = null, IHttpContextAccessor? accessor = null)
     {
         _accessor = accessor;
         _symlinkUserService = symlinkUserService;
         _authenticationStateProvider = authenticationStateProvider;
-        _dbContext = synapticDbContext;
+        _dbContextFactory = dbContextFactory;
         _settings = serverSettings;
     }
 
-    private ClaimsIdentity? TryGetClaimsIdentityFromCookie()
+    private async Task<ClaimsIdentity?> TryGetClaimsIdentityFromCookie()
     {
-        var cookieState = _authenticationStateProvider?.GetAuthenticationStateAsync().Result;
+        if (_authenticationStateProvider == null)
+        {
+            return null;
+        }
+        var cookieState = await _authenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (cookieState?.User is { Identity: { IsAuthenticated: true } } &&
+        if (cookieState?.User is { Identity.IsAuthenticated: true } &&
             cookieState.User.FindFirst(ClaimTypes.NameIdentifier) is { } nameIdentifier &&
             cookieState.User.FindFirst(ClaimTypes.Name) is { } name)
         {
@@ -80,9 +84,10 @@ public class CurrentUserService : ICurrentUserService
         {
             return _currentUser;
         }
-        ClaimsIdentity? currentClaimsIdentity = null;
+        ClaimsIdentity? currentClaimsIdentity;
 
-        if (TryGetClaimsIdentityFromCookie() is { } cookieClaimsIdentity)
+        ClaimsIdentity? cookieClaimsIdentity = await TryGetClaimsIdentityFromCookie();
+        if (cookieClaimsIdentity != null)
         {
             currentClaimsIdentity = _symlinkUserService.GetMainIdentity(cookieClaimsIdentity);
         }
@@ -102,7 +107,13 @@ public class CurrentUserService : ICurrentUserService
             throw new UnauthorizedAccessException();
         }
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Identifier == identifier);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var user = await dbContext.Users
+            .Include(u => u.Stores)
+            .Include(u => u.Memberships)
+            .Include(u => u.ApiKeys)
+            .FirstOrDefaultAsync(u => u.Identifier == identifier);
         if (user == null)
         {
             user = new User
@@ -111,18 +122,17 @@ public class CurrentUserService : ICurrentUserService
                 DisplayName = identifier.Split("__").FirstOrDefault() ?? identifier,
                 Role = IdentityRole.Guest
             };
-            await _dbContext.Users.AddAsync(user);
-            await _dbContext.SaveChangesAsync();
+            await dbContext.Users.AddAsync(user);
+            await dbContext.SaveChangesAsync();
         }
 
-        if (_settings.ServerSettings.AdminIdentifiers.Contains(identifier))
+        if (!_settings.ServerSettings.AdminIdentifiers.Contains(identifier) || user.Role == IdentityRole.Admin)
         {
-            user.Role = IdentityRole.Admin;
-            await _dbContext.Users.ExecuteUpdateAsync(u => u.SetProperty(us => us.Role, IdentityRole.Admin));
-            await _dbContext.SaveChangesAsync();
+            return user;
         }
 
-        await _dbContext.SetCurrentUserAsync(user);
+        user.Role = IdentityRole.Admin;
+        await dbContext.SaveChangesAsync();
         return user;
     }
 }

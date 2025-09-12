@@ -44,18 +44,7 @@ public class SynapticDbContext : DbContext
         CurrentUserId = user.Id;
         CurrentGroupIds.Clear();
         CurrentGroupIds.AddRange(user.Memberships.Select(m => m.GroupId));
-        Attach(user);
         return Task.CompletedTask;
-    }
-
-    public async Task<User?> DbUserAsync()
-    {
-        var user = await Users.Include(u => u.Memberships).FirstOrDefaultAsync(u => u.Id == CurrentUserId);
-        if (user != null)
-        {
-            await SetCurrentUserAsync(user);
-        }
-        return user;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

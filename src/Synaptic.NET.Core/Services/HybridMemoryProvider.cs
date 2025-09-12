@@ -9,6 +9,8 @@ using Synaptic.NET.Qdrant;
 
 namespace Synaptic.NET.Core.Services;
 
+//TODO: Check that no navigational properties are saved on additions
+
 /// <summary>
 /// Provides an <see cref="IMemoryProvider"/> implementation that relies on EF for basic data retrieval but Vector Search for free text queries.
 ///
@@ -244,12 +246,22 @@ public class HybridMemoryProvider : IMemoryProvider
         {
             foreach (var memory in store.Memories)
             {
+                memory.OwnerUser = null;
                 existingStore.Memories.Add(memory);
             }
             await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
             await _dbContext.SaveChangesAsync();
             return existingStore;
         }
+
+        foreach (var mem in store.Memories)
+        {
+            mem.Store = null;
+            mem.OwnerUser = null;
+            mem.OwnerGroup = null;
+        }
+        store.OwnerUser = null!;
+        store.OwnerGroup = null!;
         await _dbContext.MemoryStores.AddAsync(store);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
@@ -259,6 +271,7 @@ public class HybridMemoryProvider : IMemoryProvider
     public async Task<MemoryStore?> CreateCollectionAsync(string collectionTitle, string storeDescription)
     {
         var currentUser = await _currentUserService.GetCurrentUserAsync();
+        _dbContext.Attach(currentUser);
         var newStore = new MemoryStore
         {
             Title = collectionTitle,
@@ -267,6 +280,15 @@ public class HybridMemoryProvider : IMemoryProvider
             OwnerUser = currentUser,
             UserId = currentUser.Id
         };
+
+        foreach (var mem in newStore.Memories)
+        {
+            mem.Store = null;
+            mem.OwnerUser = null;
+            mem.OwnerGroup = null;
+        }
+        newStore.OwnerUser = null!;
+        newStore.OwnerGroup = null!;
         await _dbContext.MemoryStores.AddAsync(newStore);
         await _dbContext.SaveChangesAsync();
         return newStore;
@@ -496,7 +518,7 @@ public class HybridMemoryProvider : IMemoryProvider
         {
             return false;
         }
-        
+
         existingStore.Title = newStore.Title;
         existingStore.Description = newStore.Description;
 

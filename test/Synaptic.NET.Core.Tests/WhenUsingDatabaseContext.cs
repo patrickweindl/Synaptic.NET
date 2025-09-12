@@ -53,7 +53,7 @@ public class WhenUsingDatabaseContext
     {
         var currentUser = await _currentUserService.GetCurrentUserAsync();
         _dbContext.Attach(currentUser);
-        (await _dbContext.DbUserAsync())?.ApiKeys.Add(new ApiKey()
+        currentUser.ApiKeys.Add(new ApiKey()
         {
             Id = Guid.NewGuid(),
             Name ="Unit Test Key",
@@ -64,7 +64,7 @@ public class WhenUsingDatabaseContext
 
         await _dbContext.SaveChangesAsync();
 
-        Assert.NotEqual(0, (await _dbContext.DbUserAsync())?.ApiKeys.Count);
+        Assert.NotEqual(0, (await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == currentUser.Id))?.ApiKeys.Count);
     }
 
     [Fact]

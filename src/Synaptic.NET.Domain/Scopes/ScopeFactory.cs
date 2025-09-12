@@ -17,8 +17,8 @@ public class ScopeFactory
         return _serviceProvider.GetRequiredService<IBackgroundTaskQueue>();
     }
 
-    public FixedUserScope CreateFixedUserScope(User user)
+    public async Task<FixedUserScope> CreateFixedUserScopeAsync(User user)
     {
-        return new FixedUserScope(_serviceProvider, user);
+        return await FixedUserScope.CreateFixedUserScopeAsync(_serviceProvider, user);
     }
 }

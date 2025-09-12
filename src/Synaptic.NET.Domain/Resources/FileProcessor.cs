@@ -33,7 +33,7 @@ public class FileProcessor
 
     public async Task ExecutePdfAsync(User user, string fileName, string base64String)
     {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, base64String.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
         DateTime start = DateTime.Now;
@@ -97,7 +97,7 @@ public class FileProcessor
 
     public async Task ExecuteFile(User user, string fileName, string fileContent)
     {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, fileContent.Length);
         string storeId = $"project__{FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName))}";
         DateTime start = DateTime.Now;
@@ -153,7 +153,7 @@ public class FileProcessor
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromBase64EncodedString(string fileName, string base64EncodedChunk)
     {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         var returnSummaries = new List<MemorySummary>();
         DateTime chunkStart = DateTime.Now;
         Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1,
@@ -175,7 +175,7 @@ public class FileProcessor
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromRawString(string fileName, string rawString)
     {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         var returnSummaries = new List<MemorySummary>();
         DateTime chunkStart = DateTime.Now;
         Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1, _chunksCount);
@@ -201,23 +201,17 @@ public class FileProcessor
     {
         ConcurrentDictionary<string, string> descriptions = new();
 
-        var summaryTasks = summaries.Select(async s =>
+        await Parallel.ForEachAsync(summaries, async (summary, _) =>
         {
-            descriptions[s.Identifier] = await GenerateDescriptionFromSummary(s);
+            await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
+            descriptions[summary.Identifier] = await scope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
         });
-        await Task.WhenAll(summaryTasks);
         return descriptions.ToDictionary(d => d.Key, d => d.Value);
-    }
-
-    private async Task<string> GenerateDescriptionFromSummary(MemorySummary summary)
-    {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
-        return await scope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
     }
 
     private async Task<Memory> CreateReturnMemory(MemoryStore memoryStore, Dictionary<string, string> descriptions, string fileName, MemorySummary summary)
     {
-        await using var scope = _scopeFactory.CreateFixedUserScope(_user);
+        await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         string description = descriptions.TryGetValue(summary.Identifier, out string? value) ? value : await scope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
         Memory mem = new()
         {

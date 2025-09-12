@@ -31,7 +31,7 @@ public class BackgroundTaskService : BackgroundService
             {
                 var taskQueue = _scopeFactory.GetBackgroundTaskQueue();
                 BackgroundTaskItem workItem = await taskQueue.DequeueAsync(stoppingToken);
-                await using var scope = _scopeFactory.CreateFixedUserScope(workItem.User);
+                await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(workItem.User);
                 var dbContext = scope.DbContext;
                 var currentUserService = scope.CurrentUserService;
                 await currentUserService.SetCurrentUserAsync(workItem.User);

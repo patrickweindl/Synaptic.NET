@@ -21,7 +21,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IFileMemoryCreationService FileMemoryCreationService
 @inject IArchiveService ArchiveService
-@inject SynapticDbContext DbContext
+@inject IDbContextFactory<SynapticDbContext> DbContextFactory
 @inject IBackgroundTaskQueue BackgroundTaskQueue
 
 <PageTitle>Memory Management - Synaptic.NET</PageTitle>
@@ -2412,8 +2412,9 @@
     {
         try
         {
-            await DbContext.SetCurrentUserAsync(CurrentUserService);
-            _apiKeys = await DbContext.ApiKeys.ToListAsync();
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            await dbContext.SetCurrentUserAsync(CurrentUserService);
+            _apiKeys = await dbContext.ApiKeys.ToListAsync();
             _apiKeyCount = _apiKeys.Count;
         }
         catch (Exception ex)
@@ -2742,22 +2743,17 @@
         if (string.IsNullOrWhiteSpace(_createApiKeyForm.Name))
             return;
 
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var currentUser = await CurrentUserService.GetCurrentUserAsync();
+        await dbContext.SetCurrentUserAsync(currentUser);
         _isCreatingApiKey = true;
         _apiKeyActionMessage = string.Empty;
         StateHasChanged();
 
         try
         {
-            var userWithApiKeys = await DbContext.DbUserAsync();
-
-            if (userWithApiKeys == null)
-            {
-                _apiKeyActionMessage = "User not found";
-                _apiKeyActionSuccess = false;
-                return;
-            }
-
-            bool refuse = (await DbContext.ApiKeys.ToListAsync()).Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase));
+            bool refuse = (await dbContext.ApiKeys.ToListAsync()).Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase));
             // Check for duplicate names
             if (refuse)
             {
@@ -2769,8 +2765,8 @@
             var apiKey = new ApiKey
             {
                 Id = Guid.NewGuid(),
-                Owner = userWithApiKeys,
-                UserId = userWithApiKeys.Id,
+                Owner = currentUser,
+                UserId = currentUser.Id,
                 Name = _createApiKeyForm.Name.Trim(),
                 Key = GenerateSecureApiKey(),
                 ExpiresAt = _createApiKeyForm.ExpirationDays == 0
@@ -2778,8 +2774,8 @@
                     : DateTimeOffset.UtcNow.AddDays(_createApiKeyForm.ExpirationDays)
             };
 
-            await DbContext.ApiKeys.AddAsync(apiKey);
-            await DbContext.SaveChangesAsync();
+            await dbContext.ApiKeys.AddAsync(apiKey);
+            await dbContext.SaveChangesAsync();
 
             // Show the new key in the one-time display modal
             _newApiKey = apiKey;
@@ -2813,20 +2809,14 @@
 
         try
         {
-            var currentUser = await DbContext.DbUserAsync();
-
-            if (currentUser == null)
-            {
-                _apiKeyActionMessage = "User not found";
-                _apiKeyActionSuccess = false;
-                return;
-            }
-
-            var keyToRemove = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Key == apiKey.Key);
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
+            await dbContext.SetCurrentUserAsync(currentUser);
+            var keyToRemove = await dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Key == apiKey.Key);
             if (keyToRemove != null)
             {
-                DbContext.ApiKeys.Remove(keyToRemove);
-                await DbContext.SaveChangesAsync();
+                dbContext.ApiKeys.Remove(keyToRemove);
+                await dbContext.SaveChangesAsync();
 
                 _apiKeyActionMessage = $"API key '{apiKey.Name}' deleted successfully";
                 _apiKeyActionSuccess = true;
@@ -2907,9 +2897,11 @@
     // Publish Memory Store Methods
     private async Task LoadUserGroups()
     {
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var currentUser = await CurrentUserService.GetCurrentUserAsync();
         try
         {
-            _userGroups = (await DbContext.DbUserAsync())?.Memberships.Select(m => m.Group).ToList() ?? new();
+            _userGroups = currentUser.Memberships.Select(m => m.Group).ToList() ?? new();
         }
         catch (Exception ex)
         {

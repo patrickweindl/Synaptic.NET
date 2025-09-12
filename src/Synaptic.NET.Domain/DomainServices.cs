@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Configuration;
 
@@ -25,13 +26,24 @@ public static class DomainServices
 
         Directory.CreateDirectory(configuration.BaseDataPath);
         var lambdaSettings = configuration;
-        builder.Services.AddDbContext<SynapticDbContext>(options =>
+
+        builder.Services.AddDbContextFactory<SynapticDbContext>(options =>
+        {
             options.UseNpgsql($"" +
                               $"Host={lambdaSettings.ServerSettings.PostgresUrl};" +
                               $"Port={lambdaSettings.ServerSettings.PostgresPort};" +
                               $"Database={lambdaSettings.ServerSettings.PostgresDatabase};" +
                               $"Username={lambdaSettings.ServerSettings.PostgresUserName};" +
-                              $"Password={lambdaSettings.ServerSettings.PostgresPassword}"));
+                              $"Password={lambdaSettings.ServerSettings.PostgresPassword}");
+        });
+        builder.Services.AddScoped(async sp =>
+        {
+            var factory = sp.GetRequiredService<IDbContextFactory<SynapticDbContext>>();
+            var ctx = await factory.CreateDbContextAsync();
+            var userService = sp.GetRequiredService<ICurrentUserService>();
+            await ctx.SetCurrentUserAsync(userService);
+            return ctx;
+        });
         return builder;
     }
 

@@ -73,14 +73,13 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         ];
 
         DateTime start = DateTime.UtcNow;
-        Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
-            storeIdentifier, start);
+        Log.Information("[Augmentation] Calling model for memory store summary.");
         var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
-            "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
+            "[Augmentation] Model call finished after {Duration:c}.",
             DateTime.UtcNow - start, output);
 
         return output;

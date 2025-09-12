@@ -23,6 +23,8 @@ If you encounter an image, make sure that you generate a separate memory entry t
 
 If you encounter a table, make sure that you generate a separate memory entry that is a markdown-formatted version of the table with its exact contents. These table descriptions do not count into the 3-4 chunks per page constraint initially stated.
 
+Do not include page references in your extracted summaries / unit contents as these are appended to metadata separately and can be considered a waste of text.
+
 Negative example extraction (leaves open questions as to what the diffuse approach is): 'An approach to storing user settings on a server on prem instead of locally is thoroughly discussed'
 Positive example extraction (is a logically closed unit of the section): 'The section discusses an on prem storage of the user's settings within an application without having the data saved locally on the machine. The authors describe that the best approach is to use an internal AspNetCore WebServer which all clients will connect to at any time to retrieve the user's settings.'
 Positive response format [{"summaries":{"identifier": "memory-about-something", "summary": "this is a memory about something you encountered"}, {"identifier": "memory-about-something2", "summary": "this is a memory about something you encountered with a similar topic"}}]
