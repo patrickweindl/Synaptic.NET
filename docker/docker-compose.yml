@@ -16,7 +16,7 @@ x-common-variables: &common-variables
   LOGGING__LOGLEVEL__MICROSOFT.ENTITYFRAMEWORKCORE.DATABASE.COMMAND: 'Warning'
   ASPNETCORE_URLS: 'http://0.0.0.0:8000'
   SERVERS__QDRANTURL: 'http://192.168.0.253:6334' # Use your local IP as localhost will not be resolved.
-  SERVERS__QDRANTAPIKEY: 'your_secret_api_key_here'
+  #SERVERS__QDRANTAPIKEY: 'your_secret_api_key_here' # Optional, if not set, Qdrant won't use an API key.
   SERVERS__POSTGRESURL: '192.168.0.253' # Use your local IP as 127.0.0.1 or localhost will not be resolved.
   SERVERS__POSTGRESPORT: '5432'
   SERVERS__POSTGRESDATABASE: 'synaptic'
@@ -76,7 +76,7 @@ services:
     image: qdrant/qdrant:latest
     restart: always
     container_name: qdrant
-    api_key: your_secret_api_key_here
+    # api_key: your_secret_api_key_here
     ports:
       - 6333:6333
       - 6334:6334

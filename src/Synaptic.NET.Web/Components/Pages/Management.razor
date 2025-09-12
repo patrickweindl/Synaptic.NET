@@ -2596,7 +2596,7 @@
 
                 // Update the UI as we get results
                 _memories = resultsList.OrderByDescending(m => m.Relevance).ToList();
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
 
             _searchMessage = $"Found {_memories.Count} memories matching your search";
@@ -2991,7 +2991,7 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUserAsync();
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
             _backgroundTasks = BackgroundTaskQueue.GetUserTasks(currentUser.Id.ToString()).ToList();
             _taskQueueCount = _backgroundTasks.Count;
         }

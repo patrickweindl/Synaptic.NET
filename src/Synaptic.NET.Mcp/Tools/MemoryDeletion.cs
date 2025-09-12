@@ -19,7 +19,7 @@ public static class MemoryDeletion
     public static async Task<string> DeleteMemoryAsync(Guid identifier, ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuestAsync();
+        await currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Delete memory");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
 
