@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Synaptic.NET.Domain.Resources.Configuration;
 
 namespace Synaptic.NET.Domain.Resources;
 
@@ -7,8 +9,14 @@ public class SynapticDbContextFactory : IDesignTimeDbContextFactory<SynapticDbCo
 {
     public SynapticDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<SynapticDbContext>();
-        optionsBuilder.UseInMemoryDatabase("InMemoryDbForTesting");
+        IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: true).AddEnvironmentVariables().Build();
+        var synapticSettings = new SynapticServerSettings(configuration);
+        var optionsBuilder = new DbContextOptionsBuilder<SynapticDbContext>().UseNpgsql($"" +
+            $"Host={synapticSettings.ServerSettings.PostgresUrl};" +
+            $"Port={synapticSettings.ServerSettings.PostgresPort};" +
+            $"Database={synapticSettings.ServerSettings.PostgresDatabase};" +
+            $"Username={synapticSettings.ServerSettings.PostgresUserName};" +
+            $"Password={synapticSettings.ServerSettings.PostgresPassword}");
         return new SynapticDbContext(optionsBuilder.Options);
     }
 

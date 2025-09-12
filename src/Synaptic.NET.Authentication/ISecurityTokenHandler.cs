@@ -15,5 +15,5 @@ public interface ISecurityTokenHandler
     Task<VerificationResult> VerifyGitHubAuthentication(SynapticServerSettings settings, string clientId, string clientSecret, string code,
         string grantType = "", string codeVerifier = "");
 
-    AccessTokenResult GenerateJwtToken(string jwtSecret, string jwtIssuer, TimeSpan lifetime, ClaimsIdentity? claimsIdentity);
+    Task<AccessTokenResult> GenerateJwtTokenAsync(string jwtSecret, string jwtIssuer, TimeSpan lifetime, ClaimsIdentity? claimsIdentity);
 }

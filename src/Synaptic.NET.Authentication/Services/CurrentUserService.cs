@@ -34,17 +34,17 @@ public class CurrentUserService : ICurrentUserService
         }
         var cookieState = await _authenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (cookieState?.User is { Identity.IsAuthenticated: true } &&
-            cookieState.User.FindFirst(ClaimTypes.NameIdentifier) is { } nameIdentifier &&
-            cookieState.User.FindFirst(ClaimTypes.Name) is { } name)
+        if (cookieState.User is not { Identity.IsAuthenticated: true } ||
+            cookieState.User.FindFirst(ClaimTypes.NameIdentifier) is not { } nameIdentifier ||
+            cookieState.User.FindFirst(ClaimTypes.Name) is not { } name)
         {
-            var cookieClaim = new ClaimsIdentity();
-            cookieClaim.AddClaim(new Claim(ClaimTypes.NameIdentifier, nameIdentifier.Value));
-            cookieClaim.AddClaim(new Claim(ClaimTypes.Name, name.Value));
-            return cookieClaim;
+            return null;
         }
 
-        return null;
+        var cookieClaim = new ClaimsIdentity();
+        cookieClaim.AddClaim(new Claim(ClaimTypes.NameIdentifier, nameIdentifier.Value));
+        cookieClaim.AddClaim(new Claim(ClaimTypes.Name, name.Value));
+        return cookieClaim;
     }
 
     private ClaimsIdentity? TryGetClaimsIdentityFromHttpContext()
@@ -89,11 +89,11 @@ public class CurrentUserService : ICurrentUserService
         ClaimsIdentity? cookieClaimsIdentity = await TryGetClaimsIdentityFromCookie();
         if (cookieClaimsIdentity != null)
         {
-            currentClaimsIdentity = _symlinkUserService.GetMainIdentity(cookieClaimsIdentity);
+            currentClaimsIdentity = await _symlinkUserService.GetMainIdentityAsync(cookieClaimsIdentity);
         }
         else if (TryGetClaimsIdentityFromHttpContext() is { } httpClaimsIdentity)
         {
-            currentClaimsIdentity = _symlinkUserService.GetMainIdentity(httpClaimsIdentity);
+            currentClaimsIdentity = await _symlinkUserService.GetMainIdentityAsync(httpClaimsIdentity);
         }
         else
         {

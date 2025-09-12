@@ -1,34 +1,26 @@
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources;
+using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Authentication.Handlers;
 
 public class RefreshTokenHandler : IRefreshTokenHandler
 {
-    private readonly string _filePath = Path.Join(AppContext.BaseDirectory, "data", "refresh_tokens.json");
-    private static ConcurrentDictionary<string, RefreshTokenData> s_refreshTokens = new();
-    private readonly Lock _fileLock = new();
+    private readonly IDbContextFactory<SynapticDbContext> _dbContextFactory;
 
-    public RefreshTokenHandler()
+    public RefreshTokenHandler(IDbContextFactory<SynapticDbContext> dbContextFactory)
     {
-        if (!string.IsNullOrEmpty(Path.GetDirectoryName(_filePath)))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-        }
-        LoadFromFile();
-        CleanExpiredTokens();
+        _dbContextFactory = dbContextFactory;
     }
 
-    public string GenerateRefreshToken(string jwtSecret, string jwtIssuer, ClaimsIdentity? claimsIdentity, TimeSpan lifetime)
+    public async Task<RefreshToken> GenerateRefreshTokenAsync(string jwtSecret, string jwtIssuer, ClaimsIdentity? claimsIdentity, TimeSpan lifetime)
     {
-        CleanExpiredTokens();
+        await CleanExpiredAndConsumedTokensAsync();
 
         JwtSecurityTokenHandler tokenHandler = new();
         byte[] key = Encoding.UTF8.GetBytes(jwtSecret);
@@ -46,83 +38,67 @@ public class RefreshTokenHandler : IRefreshTokenHandler
 
         string returnString = jwtString ?? Guid.NewGuid().ToString("N");
 
-        var refreshTokenData = new RefreshTokenData
+        var refreshTokenData = new RefreshToken
         {
+            Id = Guid.NewGuid(),
             UserId = claimsIdentity.ToUserId(),
             UserName = claimsIdentity.ToUserName(),
-            ExpiresAt = DateTime.UtcNow.Add(lifetime)
+            ExpiresAt = DateTime.UtcNow.Add(lifetime),
+            Token = returnString,
+            IsConsumed = false
         };
-        s_refreshTokens[returnString] = refreshTokenData;
-        SaveToFile();
-        return returnString;
+
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.RefreshTokens.AddAsync(refreshTokenData);
+        await dbContext.SaveChangesAsync();
+
+        return refreshTokenData;
     }
 
-    public bool ValidateRefreshToken(string refreshToken, [MaybeNullWhen(false)] out ClaimsIdentity claimsIdentity)
+    public async Task<ClaimsIdentity?> ValidateRefreshTokenAsync(string refreshToken)
     {
-        if (s_refreshTokens.TryGetValue(refreshToken, out var tokenData))
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var token = await dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
+
+        if (token == null)
         {
-            claimsIdentity = new ClaimsIdentity();
-            claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, tokenData.UserId));
-            claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, tokenData.UserName));
-            return true;
+            return null;
         }
 
-        claimsIdentity = null;
-        return false;
+        var claimsIdentity = new ClaimsIdentity();
+        claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, token.UserId));
+        claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, token.UserName));
+        return claimsIdentity;
     }
 
-    public bool ValidateRefreshTokenExpiry(string refreshToken)
+    public async Task<bool> ValidateRefreshTokenExpiryAsync(string refreshToken)
     {
-        if (s_refreshTokens.TryGetValue(refreshToken, out var tokenData))
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var token = await dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
+        return token is { IsExpired: false };
+    }
+
+    public async Task InvalidateRefreshTokenAsync(string refreshToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var token = await dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
+        if (token != null)
         {
-            return tokenData.ExpiresAt > DateTime.UtcNow;
-        }
-
-        return false;
-    }
-
-    public void InvalidateRefreshToken(string refreshToken)
-    {
-        s_refreshTokens.TryRemove(refreshToken, out _);
-        SaveToFile();
-    }
-
-    private void CleanExpiredTokens()
-    {
-        var expired = s_refreshTokens.Where(kv => kv.Value.ExpiresAt < DateTime.UtcNow).ToList();
-        foreach (var kvp in expired)
-        {
-            s_refreshTokens.TryRemove(kvp);
-        }
-        SaveToFile();
-    }
-
-    private void SaveToFile()
-    {
-        lock (_fileLock)
-        {
-            File.WriteAllText(_filePath, JsonSerializer.Serialize(s_refreshTokens));
-        }
-    }
-    private void LoadFromFile()
-    {
-        lock (_fileLock)
-        {
-            s_refreshTokens = File.Exists(_filePath)
-                ? JsonSerializer.Deserialize<ConcurrentDictionary<string, RefreshTokenData>>(File.ReadAllText(_filePath)) ?? new()
-                : new();
+            token.IsConsumed = true;
+            await dbContext.SaveChangesAsync();
         }
     }
 
+    private async Task CleanExpiredAndConsumedTokensAsync()
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var refreshTokens = await dbContext.RefreshTokens.ToListAsync();
+        var invalidTokens = refreshTokens.Where(t => t.IsExpired || t.IsConsumed).ToList();
+        foreach (var token in invalidTokens)
+        {
+            dbContext.RefreshTokens.Remove(token);
+        }
 
-}
-
-public class RefreshTokenData
-{
-    [JsonPropertyName("user_id")]
-    public required string UserId { get; set; }
-    [JsonPropertyName("user_name")]
-    public required string UserName { get; set; }
-    [JsonPropertyName("expires_at")]
-    public DateTime ExpiresAt { get; set; }
+        await dbContext.SaveChangesAsync();
+    }
 }

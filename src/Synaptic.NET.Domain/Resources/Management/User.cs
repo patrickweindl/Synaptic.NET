@@ -37,6 +37,8 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
 
     public ICollection<GroupMembership> Memberships { get; set; } = new List<GroupMembership>();
 
+    public ICollection<SymLinkUser> SymLinkUserIds { get; set; } = new List<SymLinkUser>();
+
     public int CompareTo(User? other)
     {
         return other == null

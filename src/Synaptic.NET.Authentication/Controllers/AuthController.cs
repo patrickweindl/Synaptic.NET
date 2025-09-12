@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Synaptic.NET.Authentication.Providers;
@@ -107,7 +106,6 @@ public class AuthController : ControllerBase
         string queryString = string.Empty;
         if (inputQuery != null)
         {
-            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             queryString = string.Join("&", inputQuery.Where(k => k.Key != null && k.Value != null).Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
             Log.Information($"[Authorization] Received authorize GET with query {queryString}.");
             if (inputQuery.TryGetValue("client_id", out string? clientId) && !string.IsNullOrEmpty(clientId) && _registrations.TryGetValue(clientId, out _))
@@ -177,20 +175,20 @@ public class AuthController : ControllerBase
 
         if (grantType.ToLowerInvariant().Contains("refresh") && !string.IsNullOrEmpty(refreshToken))
         {
-            if (!_refreshTokenHandler.ValidateRefreshToken(refreshToken, out var claimsIdentity))
+            if (await _refreshTokenHandler.ValidateRefreshTokenAsync(refreshToken) is not { } claimsIdentity)
             {
                 Log.Error("Invalid refresh token");
                 return StatusCode(401, "Invalid refresh token");
             }
 
-            if (!_refreshTokenHandler.ValidateRefreshTokenExpiry(refreshToken))
+            if (await _refreshTokenHandler.ValidateRefreshTokenExpiryAsync(refreshToken))
             {
                 Log.Error("Expired refresh token");
                 return StatusCode(401, "The refresh token expired");
             }
 
-            _refreshTokenHandler.InvalidateRefreshToken(refreshToken);
-            return Ok(_tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
+            await _refreshTokenHandler.InvalidateRefreshTokenAsync(refreshToken);
+            return Ok(await _tokenHandler.GenerateJwtTokenAsync(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
 
         }
         if (!_codeBasedAuthProvider.GetIdentityProviderByCode(code, out string? provider))
@@ -204,7 +202,7 @@ public class AuthController : ControllerBase
             provider = "github";
         }
 
-        if (_registrations.TryRemove(clientId, out var originalRequest))
+        if (_registrations.TryRemove(clientId, out _))
         {
             Log.Debug("[Authentication Token] Client registration removed.");
         }
@@ -246,7 +244,7 @@ public class AuthController : ControllerBase
         }
 
         var identity = ClaimsHelper.ClaimsIdentityFromUserNameAndId(validationResult.UserName, validationResult.UserId);
-        AccessTokenResult token = _tokenHandler.GenerateJwtToken(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, identity);
+        AccessTokenResult token = await _tokenHandler.GenerateJwtTokenAsync(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, identity);
         return Ok(token);
     }
 }

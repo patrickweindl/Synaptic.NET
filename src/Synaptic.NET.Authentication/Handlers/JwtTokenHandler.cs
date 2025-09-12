@@ -170,7 +170,7 @@ public class JwtTokenHandler : ISecurityTokenHandler
         return new VerificationResult { Success = true, UserName = githubLogin, UserId = githubUserName };
     }
 
-    public AccessTokenResult GenerateJwtToken(string jwtSecret, string jwtIssuer,
+    public async Task<AccessTokenResult> GenerateJwtTokenAsync(string jwtSecret, string jwtIssuer,
         TimeSpan lifetime, ClaimsIdentity? claimsIdentity)
     {
         TokenHandler tokenHandler = new();
@@ -188,12 +188,12 @@ public class JwtTokenHandler : ISecurityTokenHandler
         SecurityToken? jwt = tokenHandler.CreateToken(tokenDescriptor);
         string? jwtString = tokenHandler.WriteToken(jwt);
 
-        string refreshToken = _refreshTokenHandler.GenerateRefreshToken(jwtSecret, jwtIssuer, claimsIdentity, TimeSpan.FromDays(14));
+        var refreshToken = await _refreshTokenHandler.GenerateRefreshTokenAsync(jwtSecret, jwtIssuer, claimsIdentity, TimeSpan.FromDays(14));
 
         return new AccessTokenResult
         {
             AccessToken = jwtString,
-            RefreshToken = refreshToken,
+            RefreshToken = refreshToken.Token,
             TokenType = "Bearer",
             ExpiresIn = (tokenDescriptor.Expires.Value.ToUniversalTime() - DateTime.UtcNow).Seconds
         };

@@ -29,6 +29,8 @@ public class SynapticDbContext : DbContext
     /// </summary>
     public DbSet<Memory> Memories => Set<Memory>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
         : base(options)
     {
@@ -78,6 +80,9 @@ public class SynapticDbContext : DbContext
             .WithOne(s => s.OwnerUser)
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<User>()
+            .Navigation(u => u.SymLinkUserIds).AutoInclude();
 
         modelBuilder.Entity<User>()
             .Navigation(u => u.ApiKeys).AutoInclude();
