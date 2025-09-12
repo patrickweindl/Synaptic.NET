@@ -31,7 +31,7 @@ public class IntegrationTestBuilder
         _testSettings = TestSettings.FromFile();
         _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _dbContext.Database.EnsureCreated();
-        _dbContext.SetCurrentUser(_currentUserService.GetCurrentUser());
+        _ = Task.Run(async () => await _dbContext.SetCurrentUserAsync(_currentUserService));
         OpenAiClientFactory factory = new(_testSettings.OpenAiSettings.ApiKey);
         IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider();
         IMemoryAugmentationService memoryAugmentationService = new MemoryAugmentationService(_testSettings, factory, _currentUserService, testMetricsCollectorProvider);

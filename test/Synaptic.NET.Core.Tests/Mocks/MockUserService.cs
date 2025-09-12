@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
 using Synaptic.NET.Domain.Resources.Storage;
@@ -27,14 +26,15 @@ public class MockUserService : ICurrentUserService
         Role = IdentityRole.User
     };
 
-    public User GetCurrentUser()
+    public Task<User> GetCurrentUserAsync()
     {
-        return _testUser;
+        return Task.FromResult(_testUser);
     }
 
-    public void SetCurrentUser(User user)
+    public Task SetCurrentUserAsync(User user)
     {
         _testUser = user;
+        return Task.CompletedTask;
     }
 
     public MemoryStore MockMemoryStore => new()

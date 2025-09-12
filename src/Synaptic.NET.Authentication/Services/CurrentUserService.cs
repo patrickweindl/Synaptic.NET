@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Helpers;
@@ -67,12 +68,13 @@ public class CurrentUserService : ICurrentUserService
 
     private User? _currentUser;
 
-    public void SetCurrentUser(User user)
+    public Task SetCurrentUserAsync(User user)
     {
         _currentUser = user;
+        return Task.CompletedTask;
     }
 
-    public User GetCurrentUser()
+    public async Task<User> GetCurrentUserAsync()
     {
         if (_currentUser != null)
         {
@@ -100,7 +102,7 @@ public class CurrentUserService : ICurrentUserService
             throw new UnauthorizedAccessException();
         }
 
-        var user = _dbContext.Users.FirstOrDefault(u => u.Identifier == identifier);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Identifier == identifier);
         if (user == null)
         {
             user = new User
@@ -110,14 +112,14 @@ public class CurrentUserService : ICurrentUserService
                 Role = IdentityRole.Guest
             };
             _dbContext.Users.Add(user);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
 
         if (_settings.ServerSettings.AdminIdentifiers.Contains(identifier))
         {
             user.Role = IdentityRole.Admin;
             _dbContext.Users.Update(user);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
 
         _dbContext.SetCurrentUser(user);

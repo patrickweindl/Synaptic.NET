@@ -14,11 +14,11 @@ namespace Synaptic.NET.Mcp.Prompts;
 public static class DependencyInjectionPrompt
 {
     [McpServerPrompt(Name = "dependency_injection_prompt"), Description("A DI using prompt with arguments")]
-    public static IEnumerable<ChatMessage> ReturnCurrentUser(
+    public static async Task<IEnumerable<ChatMessage>> ReturnCurrentUser(
         ICurrentUserService currentUserService)
     {
         return [
-            new ChatMessage(ChatRole.User,$"The current user of the MCP server is {currentUserService.GetCurrentUser().DisplayName}"),
+            new ChatMessage(ChatRole.User,$"The current user of the MCP server is {(await currentUserService.GetCurrentUserAsync()).DisplayName}"),
         ];
     }
 }

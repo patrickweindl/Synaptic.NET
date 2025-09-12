@@ -30,9 +30,9 @@ public static class MemoryAcquisition
         ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Query: {Query}", query);
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         var memoryQueryResults =
             await memoryProvider.SearchAsync(query, limit, relevance, options ?? MemoryQueryOptions.Default);
         var memories = await memoryQueryResults.Results.Select(m => new ContextMemory(m.Memory)).ToListAsync();
@@ -47,9 +47,9 @@ public static class MemoryAcquisition
     [Description(ToolConstants.GetCurrentlyRelevantMemoriesToolDescription)]
     public static async Task<IEnumerable<ContextMemory>> GetPinnedMemoriesAsync(ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Get pinned memories");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         var stores = await memoryProvider.GetStoresAsync();
         var pinnedMemories = stores.SelectMany(s => s.Memories).Where(m => m.Pinned).Select(m => new ContextMemory(m)).ToList();
         return pinnedMemories;
@@ -64,9 +64,9 @@ public static class MemoryAcquisition
     public static async Task<string> GetMemoryStoreIdentifiersAndDescriptions(
         ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Get memory store identifiers and descriptions");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         return JsonSerializer.Serialize(await memoryProvider.GetStoreIdentifiersAndDescriptionsAsync());
     }
 }

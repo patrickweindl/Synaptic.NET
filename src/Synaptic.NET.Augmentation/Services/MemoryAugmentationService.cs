@@ -44,7 +44,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         ClientResult<ChatCompletion> chatCompletion = await _client.CompleteChatAsync(messages, structuredResponseSchema);
 
         MemorySummary? summary = CompletionOptionsHelper.ParseModelResponse<MemorySummary>(chatCompletion);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Memory Summarization",
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Memory Summarization",
             chatCompletion.Value);
         string output = summary?.Summary ?? string.Empty;
         Log.Information(
@@ -75,7 +75,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
         var response = await _client.CompleteChatAsync(messages);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Summary", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
@@ -106,7 +106,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
         var response = await _client.CompleteChatAsync(messages);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Summary", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
@@ -136,7 +136,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         Log.Information("[Augmentation] Calling model for memory store title. Input: {StoreDescription} at {Start}",
             storeDescription, start);
         var response = await _client.CompleteChatAsync(messages);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Summary", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
@@ -168,7 +168,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
             ChatMessage.CreateUserMessage(userPrompt)
         };
         var response = await _client.CompleteChatAsync(messages, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Augmented Search", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Augmented Search", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
 
         if (string.IsNullOrEmpty(suggestion))

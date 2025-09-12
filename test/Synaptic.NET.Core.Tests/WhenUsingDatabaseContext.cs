@@ -18,7 +18,7 @@ public class WhenUsingDatabaseContext
     {
         _dbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _dbContext.Database.EnsureCreated();
-        _dbContext.SetCurrentUser(_currentUserService.GetCurrentUser());
+        _ = Task.Run(async () => await _dbContext.SetCurrentUserAsync(_currentUserService));
 
         Guid otherGuid = Guid.Parse("00000000-0000-0000-0000-000000000001");
         string otherUser = "otherUserId";
@@ -26,91 +26,97 @@ public class WhenUsingDatabaseContext
         _otherCurrentUserService = new MockUserService(otherGuid, otherUser, otherUserName);
         _otherDbContext = new SynapticDbContextFactory().CreateInMemoryDbContext();
         _otherDbContext.Database.EnsureCreated();
-        _otherDbContext.SetCurrentUser(_otherCurrentUserService.GetCurrentUser());
+        _ = Task.Run(async () => await _otherDbContext.SetCurrentUserAsync(_otherCurrentUserService));
     }
 
     [Fact]
-    public void ShouldNotLeakContext()
+    public async Task ShouldNotLeakContext()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
+
+        var firstUser = await _currentUserService.GetCurrentUserAsync();
+        _dbContext.Attach(firstUser);
         _dbContext.MemoryStores.Add(new MemoryStore
         {
             Title = "Test Store",
             Description = "Test Store for leakage",
             StoreId = Guid.NewGuid(),
-            OwnerUser = _currentUserService.GetCurrentUser(),
-            UserId = _currentUserService.GetCurrentUser().Id
+            OwnerUser = firstUser,
+            UserId = firstUser.Id
         });
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
         Assert.False(_otherDbContext.MemoryStores.Any());
     }
 
     [Fact]
-    public void ShouldSaveApiKeys()
+    public async Task ShouldSaveApiKeys()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
-        _dbContext.DbUser()?.ApiKeys.Add(new ApiKey()
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+        _dbContext.Attach(currentUser);
+        (await _dbContext.DbUserAsync())?.ApiKeys.Add(new ApiKey()
         {
             Id = Guid.NewGuid(),
             Name ="Unit Test Key",
             Key = "TestKey",
-            UserId = _currentUserService.GetCurrentUser().Id,
-            Owner = _currentUserService.GetCurrentUser()
+            UserId = currentUser.Id,
+            Owner = currentUser
         });
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
-        Assert.NotEqual(0, _dbContext.DbUser()?.ApiKeys.Count);
+        Assert.NotEqual(0, (await _dbContext.DbUserAsync())?.ApiKeys.Count);
     }
 
     [Fact]
-    public void ShouldSaveApiKeysViaContext()
+    public async Task ShouldSaveApiKeysViaContext()
     {
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
         _dbContext.ApiKeys.Add(new ApiKey()
         {
             Id = Guid.NewGuid(),
             Name = "Unit Test Key2",
             Key = "TestKey2",
-            UserId = _currentUserService.GetCurrentUser().Id,
-            Owner = _currentUserService.GetCurrentUser()
+            UserId = currentUser.Id,
+            Owner = currentUser
         });
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
 
-        Assert.True(_dbContext.ApiKeys.FirstOrDefault(k => k.Name == "Unit Test Key2") != null);
-        Assert.NotNull(_dbContext.ApiKeys.FirstOrDefault(k => k.Name == "Unit Test Key2")?.Owner);
+        Assert.True((await _dbContext.ApiKeys.FirstOrDefaultAsync(k => k.Name == "Unit Test Key2")) != null);
+        Assert.NotNull((await _dbContext.ApiKeys.Include(apiKey => apiKey.Owner).FirstOrDefaultAsync(k => k.Name == "Unit Test Key2"))?.Owner);
     }
 
     [Fact]
-    public void ShouldAddMemoryStore()
+    public async Task ShouldAddMemoryStore()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+        _dbContext.Attach(currentUser);
         _dbContext.MemoryStores.Add(new MemoryStore()
         {
             Title = "Test Store",
             Description = "Test Store",
             StoreId = Guid.NewGuid(),
-            UserId = _currentUserService.GetCurrentUser().Id
+            UserId = currentUser.Id
         });
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
         Assert.NotEqual(0, _dbContext.MemoryStores.Count());
     }
 
     [Fact]
-    public void ShouldAddMemoryToMemoryStore()
+    public async Task ShouldAddMemoryToMemoryStore()
     {
-        _dbContext.Attach(_currentUserService.GetCurrentUser());
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+        _dbContext.Attach(currentUser);
         _dbContext.MemoryStores.Add(new MemoryStore()
         {
             Title = "Test Store",
             Description = "Test Store",
             StoreId = Guid.NewGuid(),
-            UserId = _currentUserService.GetCurrentUser().Id
+            UserId = currentUser.Id
         });
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
         _dbContext.Memories.Add(new Memory
         {
@@ -118,18 +124,18 @@ public class WhenUsingDatabaseContext
             Title = "Test Title",
             Description = "Test Description",
             Identifier = Guid.NewGuid(),
-            Owner = _currentUserService.GetCurrentUser().Id,
+            Owner = currentUser.Id,
             StoreId = _dbContext.MemoryStores.FirstOrDefault(s => s.Title == "Test Store")?.StoreId ?? Guid.NewGuid(),
             UpdatedAt = DateTimeOffset.UtcNow,
             CreatedAt = DateTimeOffset.UtcNow
         });
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
 
         Assert.NotEqual(0, _dbContext.MemoryStores.Include(memoryStore => memoryStore.Memories).FirstOrDefault(s => s.Title == "Test Store")?.Memories.Count());
         Assert.NotEqual(0, _dbContext.Memories.Count());
 
-        var memories = _dbContext.Memories.ToList();
+        var memories = _dbContext.Memories.Include(memory => memory.OwnerUser).ToList();
         Assert.NotNull(memories.FirstOrDefault()?.OwnerUser ?? null);
     }
 }

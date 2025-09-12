@@ -32,14 +32,15 @@ public static class MemoryCreation
         IMemoryProvider memoryProvider,
         IMemoryStoreRouter memoryStoreRouter)
     {
-        currentUserService.LockoutUserIfGuest();
+        await currentUserService.LockoutUserIfGuestAsync();
+        var currentUser = await currentUserService.GetCurrentUserAsync();
         Log.Logger.Information("[MCP Tool Call] Create memory");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
 
         Memory newMemory = new()
         {
-            Owner = currentUserService.GetCurrentUser().Id,
-            OwnerUser = currentUserService.GetCurrentUser(),
+            Owner = currentUser.Id,
+            OwnerUser = currentUser,
             Identifier = Guid.NewGuid(),
             Description = memoryDescription,
             Title = memoryTitle,

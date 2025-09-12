@@ -12,26 +12,26 @@ public interface ICurrentUserService
     /// Retrieves the unique identifier of the currently authenticated user.
     /// </summary>
     /// <returns>A string representing the user's unique identifier.</returns>
-    public string GetUserIdentifier()
+    public async Task<string> GetUserIdentifierAsync()
     {
-        return GetCurrentUser().Identifier;
+        return (await GetCurrentUserAsync()).Identifier;
     }
 
     /// <summary>
     /// Retrieves the currently authenticated user from the service.
     /// </summary>
     /// <returns>A <see cref="User"/> object representing the current user.</returns>
-    User GetCurrentUser();
+    Task<User> GetCurrentUserAsync();
 
-    void SetCurrentUser(User user);
+    Task SetCurrentUserAsync(User user);
 
     /// <summary>
     ///
     /// </summary>
     /// <exception cref="UnauthorizedAccessException"></exception>
-    void LockoutUserIfGuest()
+    async Task LockoutUserIfGuestAsync()
     {
-        if (GetCurrentUser().Role <= IdentityRole.Guest)
+        if ((await GetCurrentUserAsync()).Role <= IdentityRole.Guest)
         {
             throw new UnauthorizedAccessException("Guests cannot access this tool.");
         }

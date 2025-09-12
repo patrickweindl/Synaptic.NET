@@ -30,8 +30,8 @@ public class WhenUsingQdrantClient
     {
         Skip.If(string.IsNullOrEmpty(_testSettings.OpenAiSettings.ApiKey));
         var qdrantClient = new QdrantMemoryClient(_testSettings, _memoryAugmentationService);
-
-        await qdrantClient.UpsertMemoryAsync(_currentUserService.GetCurrentUser(),
+        var currentUser = await _currentUserService.GetCurrentUserAsync();
+        await qdrantClient.UpsertMemoryAsync(currentUser,
             new Memory
             {
                 Title = "A test memory",
@@ -39,11 +39,11 @@ public class WhenUsingQdrantClient
                 Content = "Test Content",
                 StoreId = Guid.NewGuid(),
                 CreatedAt = DateTimeOffset.UtcNow,
-                Owner = _currentUserService.GetCurrentUser().Id,
-                OwnerUser = _currentUserService.GetCurrentUser()
+                Owner = currentUser.Id,
+                OwnerUser = currentUser
             });
 
-        var results = await qdrantClient.SearchAsync("Test", 10, -1, _currentUserService.GetCurrentUser());
+        var results = await qdrantClient.SearchAsync("Test", 10, -1, currentUser);
         Assert.True(results.Any());
     }
 }

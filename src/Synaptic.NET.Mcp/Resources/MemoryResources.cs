@@ -19,9 +19,9 @@ public static class MemoryResources
     [Description("Retrieve all pinned memories")]
     public static async Task<IEnumerable<ContextMemory>> GetPinnedMemoriesAsync(ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Get pinned memories");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         var stores = await memoryProvider.GetStoresAsync();
         var pinnedMemories = stores.SelectMany(s => s.Memories).Where(m => m.Pinned).Select(m => new ContextMemory(m)).ToList();
         return pinnedMemories;
@@ -32,9 +32,9 @@ public static class MemoryResources
     public static async Task<string> GetMemoryStoreIdentifiersAndDescriptions(
         ICurrentUserService currentUserService, IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Get memory store identifiers and descriptions");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         return JsonSerializer.Serialize(await memoryProvider.GetStoreIdentifiersAndDescriptionsAsync());
     }
 }

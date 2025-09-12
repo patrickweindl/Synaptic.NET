@@ -34,7 +34,7 @@ public class BackgroundTaskService : BackgroundService
                 await using var scope = _scopeFactory.CreateFixedUserScope(workItem.User);
                 var dbContext = scope.DbContext;
                 var currentUserService = scope.CurrentUserService;
-                currentUserService.SetCurrentUser(workItem.User);
+                currentUserService.SetCurrentUserAsync(workItem.User);
                 dbContext.SetCurrentUser(workItem.User);
 
                 _logger.LogInformation("Processing background task {TaskId} of type {TaskType} for user {UserId}",

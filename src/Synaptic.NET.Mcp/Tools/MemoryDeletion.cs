@@ -19,9 +19,9 @@ public static class MemoryDeletion
     public static async Task<string> DeleteMemoryAsync(Guid identifier, ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        currentUserService.LockoutUserIfGuestAsync();
         Log.Logger.Information("[MCP Tool Call] Delete memory");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
 
         if (identifier == Guid.Empty)
         {
@@ -53,7 +53,7 @@ public static class MemoryDeletion
         IMemoryProvider memoryProvider)
     {
         Log.Logger.Information("[MCP Tool Call] Delete store");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         if (storeIdentifier == Guid.Empty)
         {
             Log.Logger.Error("Store identifier cannot be null or empty.");

@@ -14,6 +14,7 @@ public class WhenUsingHybridMemoryProvider
     [Fact]
     public async Task ShouldCreateMemories()
     {
+        var currentUser = await _builder.CurrentUserService.GetCurrentUserAsync();
         Skip.If(_builder.ShouldSkipIntegrationTest());
 
         var newMemory = new Memory
@@ -23,8 +24,8 @@ public class WhenUsingHybridMemoryProvider
             Content = "Test Content for a unit test that tests both Qdrant and EF storage.",
             StoreId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow,
-            Owner = _builder.CurrentUserService.GetCurrentUser().Id,
-            OwnerUser = _builder.CurrentUserService.GetCurrentUser()
+            Owner = currentUser.Id,
+            OwnerUser = currentUser
         };
 
         await _builder.MemoryProvider.CreateMemoryEntryAsync(newMemory);

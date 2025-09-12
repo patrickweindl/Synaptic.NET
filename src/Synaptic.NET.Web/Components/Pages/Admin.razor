@@ -133,8 +133,9 @@
                                                         <option value="">Add to group...</option>
                                                         @foreach (var group in _groups)
                                                         {
-                                                            <option value="@UserManager.GroupIdentifierToReadableName(group.Identifier)">
-                                                                @UserManager.GroupIdentifierToReadableName(group.Identifier)
+                                                            string readableName = Task.Run(async () => await UserManager.GroupIdentifierToReadableNameAsync(group.Id)).Result;
+                                                            <option value="@readableName">
+                                                                @readableName
                                                             </option>
                                                         }
                                                     </select>
@@ -144,9 +145,10 @@
                                                     <div class="user-group-list">
                                                         @foreach (var groupId in user.Memberships)
                                                         {
+                                                            string userIdentifier = Task.Run(async () => await UserManager.GroupIdentifierToReadableNameAsync(groupId.GroupId)).Result;
                                                             <div class="group-tag">
-                                                                <span>@UserManager.GroupIdentifierToReadableName(groupId.GroupId)</span>
-                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(user, UserManager.GroupIdentifierToReadableName(groupId.GroupId)))">×</button>
+                                                                <span>@userIdentifier</span>
+                                                                <button class="remove-btn" @onclick="@(() => RemoveUserFromGroup(user, userIdentifier))">×</button>
                                                             </div>
                                                         }
                                                     </div>
@@ -1284,7 +1286,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var currentUser = CurrentUserService.GetCurrentUser();
+        var currentUser = await CurrentUserService.GetCurrentUserAsync();
         if (currentUser.Role < IdentityRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
@@ -1293,17 +1295,17 @@
         await LoadAdminData();
     }
 
-    private Task LoadAdminData()
+    private async Task LoadAdminData()
     {
-        if (CurrentUserService.GetCurrentUser().Role < IdentityRole.Admin)
+        if ((await CurrentUserService.GetCurrentUserAsync()).Role < IdentityRole.Admin)
         {
             NavigationManager.NavigateTo("/home", true, true);
         }
         try
         {
             // Load users and groups
-            _users = UserManager.GetUsers();
-            _groups = UserManager.GetGroups();
+            _users = await UserManager.GetUsersAsync();
+            _groups = await UserManager.GetGroupsAsync();
             _adminUsers = _users.Where(u => u.Role == IdentityRole.Admin).ToList();
 
             // Load token metrics
@@ -1322,8 +1324,6 @@
         {
             Console.WriteLine($"Error loading admin data: {ex.Message}");
         }
-
-        return Task.CompletedTask;
     }
 
     private void SetActiveTab(string tab)
@@ -1336,8 +1336,8 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            UserManager.SetUserRole(currentUser, user, newRole);
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
+            await UserManager.SetUserRoleAsync(currentUser, user, newRole);
             await LoadAdminData();
         }
         catch (Exception ex)
@@ -1352,8 +1352,8 @@
 
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            UserManager.AddUserToGroup(currentUser, user, groupName);
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
+            await UserManager.AddUserToGroupAsync(currentUser, user, groupName);
             await LoadAdminData();
         }
         catch (Exception ex)
@@ -1366,8 +1366,8 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            UserManager.RemoveUserFromGroup(currentUser, user, groupName);
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
+            await UserManager.RemoveUserFromGroupAsync(currentUser, user, groupName);
             await LoadAdminData();
         }
         catch (Exception ex)
@@ -1391,8 +1391,8 @@
 
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            UserManager.CreateGroup(currentUser, _createGroupForm.GroupName);
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
+            await UserManager.CreateGroupAsync(currentUser, _createGroupForm.GroupName);
 
             _groupMessage = $"Group '{_createGroupForm.GroupName}' created successfully";
             _groupSuccess = true;

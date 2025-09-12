@@ -2412,7 +2412,7 @@
     {
         try
         {
-            DbContext.SetCurrentUser(CurrentUserService);
+            await DbContext.SetCurrentUserAsync(CurrentUserService);
             _apiKeys = DbContext.ApiKeys.ToList();
             _apiKeyCount = _apiKeys.Count;
         }
@@ -2456,7 +2456,7 @@
         _uploadProgress = new UploadProgress();
         StateHasChanged();
 
-        if (CurrentUserService.GetCurrentUser().Role <= IdentityRole.Guest)
+        if ((await CurrentUserService.GetCurrentUserAsync()).Role <= IdentityRole.Guest)
         {
             _uploadMessage = "Guests are not permitted to create memories from files";
             _isUploading = false;
@@ -2504,7 +2504,7 @@
             StateHasChanged();
 
             // Get current user and service instances before creating background task
-            var currentUser = CurrentUserService.GetCurrentUser();
+            var currentUser = await CurrentUserService.GetCurrentUserAsync();
 
             // Create background task with all contextual service instances
             var backgroundTask = new FileUploadBackgroundTask
@@ -2748,7 +2748,7 @@
 
         try
         {
-            var userWithApiKeys = DbContext.DbUser();
+            var userWithApiKeys = await DbContext.DbUserAsync();
 
             if (userWithApiKeys == null)
             {
@@ -2813,7 +2813,7 @@
 
         try
         {
-            var currentUser = DbContext.DbUser();
+            var currentUser = await DbContext.DbUserAsync();
 
             if (currentUser == null)
             {
@@ -2909,8 +2909,7 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
-            _userGroups = DbContext.DbUser()?.Memberships?.Select(m => m.Group).ToList() ?? new();
+            _userGroups = (await DbContext.DbUserAsync())?.Memberships.Select(m => m.Group).ToList() ?? new();
         }
         catch (Exception ex)
         {
@@ -2992,7 +2991,7 @@
     {
         try
         {
-            var currentUser = CurrentUserService.GetCurrentUser();
+            var currentUser = CurrentUserService.GetCurrentUserAsync();
             _backgroundTasks = BackgroundTaskQueue.GetUserTasks(currentUser.Id.ToString()).ToList();
             _taskQueueCount = _backgroundTasks.Count;
         }
@@ -3024,7 +3023,7 @@
     private async void OnTaskStatusChanged(BackgroundTaskStatus status)
     {
         // Check if this task belongs to the current user
-        var currentUser = CurrentUserService.GetCurrentUser();
+        var currentUser = CurrentUserService.GetCurrentUserAsync();
         if (status.UserId == currentUser.Id.ToString())
         {
             // Update the task in the local list

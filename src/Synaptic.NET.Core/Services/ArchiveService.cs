@@ -20,7 +20,7 @@ public class ArchiveService : IArchiveService
 
     private void IndexExisting()
     {
-        var currentUser = _currentUserService.GetCurrentUser() as IManagedIdentity;
+        var currentUser = Task.Run(async () => await _currentUserService.GetCurrentUserAsync()).Result as IManagedIdentity;
         foreach (var file in Directory.GetFiles(currentUser.GetStorageDirectory(_settings)))
         {
             var dictionary = _files.GetOrAdd(currentUser.Identifier, _ => new ConcurrentDictionary<string, string>());
@@ -30,7 +30,7 @@ public class ArchiveService : IArchiveService
 
     public async Task SaveFileAsync(string fileName, Stream content)
     {
-        var currentUser = _currentUserService.GetCurrentUser() as IManagedIdentity;
+        var currentUser = await _currentUserService.GetCurrentUserAsync() as IManagedIdentity;
         string filePath = Path.Join(currentUser.GetStorageDirectory(_settings), fileName);
         await using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write);
         await content.CopyToAsync(fs);
@@ -38,26 +38,25 @@ public class ArchiveService : IArchiveService
         dictionary.AddOrUpdate(fileName, filePath, (_, _) => filePath);
     }
 
-    public Task<Stream> GetFileAsync(string fileName)
+    public async Task<Stream> GetFileAsync(string fileName)
     {
-        var currentUser = _currentUserService.GetCurrentUser() as IManagedIdentity;
+        var currentUser = await _currentUserService.GetCurrentUserAsync() as IManagedIdentity;
         string filePath = Path.Join(currentUser.GetStorageDirectory(_settings), fileName);
-        return Task.FromResult<Stream>(new FileStream(filePath, FileMode.Open, FileAccess.Read));
+        return new FileStream(filePath, FileMode.Open, FileAccess.Read);
     }
 
-    public Task DeleteFileAsync(string fileName)
+    public async Task DeleteFileAsync(string fileName)
     {
-        var currentUser = _currentUserService.GetCurrentUser() as IManagedIdentity;
+        var currentUser = await _currentUserService.GetCurrentUserAsync() as IManagedIdentity;
         string filePath = Path.Join(currentUser.GetStorageDirectory(_settings), fileName);
         File.Delete(filePath);
         var dictionary = _files.GetOrAdd(currentUser.Identifier, _ => new ConcurrentDictionary<string, string>());
         dictionary.TryRemove(fileName, out _);
-        return Task.CompletedTask;
     }
 
-    public Task<IEnumerable<string>> GetFilesAsync()
+    public async Task<IEnumerable<string>> GetFilesAsync()
     {
-        string currentUser = _currentUserService.GetUserIdentifier();
-        return Task.FromResult<IEnumerable<string>>(_files[currentUser].Keys.ToList());
+        string currentUser = await _currentUserService.GetUserIdentifierAsync();
+        return _files[currentUser].Keys.ToList();
     }
 }

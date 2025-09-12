@@ -20,11 +20,12 @@ public static class StaticToolExample
 
     [McpServerTool(Name="GetCurrentTimeAndRequestor", Destructive = false, Idempotent = true, OpenWorld = false, Title = "Get current time and requestor")]
     [PublicAPI]
-    public static Task<StaticToolExampleResult> GetCurrentDateTime(ICurrentUserService currentUserService)
+    public static async Task<StaticToolExampleResult> GetCurrentDateTime(ICurrentUserService currentUserService)
     {
-        return Task.FromResult(new StaticToolExampleResult()
+        var currentUserId = await currentUserService.GetCurrentUserAsync();
+        return new StaticToolExampleResult
         {
-            Requestor = currentUserService.GetCurrentUser().DisplayName, CurrentTime = DateTime.Now
-        });
+            Requestor = currentUserId.DisplayName, CurrentTime = DateTime.Now
+        };
     }
 }

@@ -33,15 +33,16 @@ public static class MemoryReplacement
         ICurrentUserService currentUserService,
         IMemoryProvider memoryProvider)
     {
-        currentUserService.LockoutUserIfGuest();
+        await currentUserService.LockoutUserIfGuestAsync();
+        var currentUser = await currentUserService.GetCurrentUserAsync();
         Log.Logger.Information("[MCP Tool Call] Replace memory");
-        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifier());
+        Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
 
         Memory newMemory = new()
         {
             Identifier = memoryIdentifier,
-            Owner = currentUserService.GetCurrentUser().Id,
-            OwnerUser = currentUserService.GetCurrentUser(),
+            Owner = currentUser.Id,
+            OwnerUser = currentUser,
             Title = memoryTitle,
             Content = content,
             CreatedAt = DateTime.UtcNow,

@@ -33,7 +33,7 @@ public class MemoryController : ControllerBase
     [ProducesResponseType(200, Type = typeof(IReadOnlyDictionary<Guid, string>))]
     public async Task<ActionResult<IReadOnlyDictionary<Guid, string>>> GetStoreIdsAndDescriptions()
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var dict = await _memory.GetStoreIdentifiersAndDescriptionsAsync();
         return Ok(dict);
     }
@@ -45,7 +45,7 @@ public class MemoryController : ControllerBase
     [ProducesResponseType(200, Type = typeof(List<MemoryStore>))]
     public async Task<ActionResult<List<MemoryStore>>> GetStores()
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var stores = await _memory.GetStoresAsync();
         return Ok(stores);
     }
@@ -61,7 +61,7 @@ public class MemoryController : ControllerBase
         [FromQuery, SwaggerParameter("The GUID of the memory store to retrieve, must be applicable to any of the available stores.")]
         Guid id)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var store = await _memory.GetCollectionAsync(id);
         if (store is null)
         {
@@ -79,7 +79,7 @@ public class MemoryController : ControllerBase
     [AssistantConstraint("The title must match an existing memory store title exactly.")]
     public async Task<ActionResult<MemoryStore>> GetStoreByTitle(string title)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var store = await _memory.GetCollectionAsync(title);
         if (store is null)
         {
@@ -98,7 +98,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores with body: {\"Title\": \"My Store\", \"Description\": \"A store for important memories\"}")]
     public async Task<ActionResult<MemoryStore>> CreateStore([FromBody] MemoryStore store)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var created = await _memory.CreateCollectionAsync(store);
         if (created is null)
         {
@@ -118,13 +118,13 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores/by-title?title=ProjectNotes&description=Notes for the current project")]
     public async Task<ActionResult<MemoryStore>> CreateStoreByTitle([FromQuery] string title, [FromQuery] string description = "")
     {
-        _currentUserService.LockoutUserIfGuest();
-        var success = await _memory.CreateCollectionAsync(title, description, out var created);
-        if (!success)
+        await _currentUserService.LockoutUserIfGuestAsync();
+        var store = await _memory.CreateCollectionAsync(title, description);
+        if (store == null)
         {
             return Conflict("Collection could not be created.");
         }
-        return CreatedAtAction(nameof(GetStoreById), new { id = created.StoreId }, created);
+        return CreatedAtAction(nameof(GetStoreById), new { id = store.StoreId }, store);
     }
 
     [HttpPut("stores/{id:guid}")]
@@ -136,7 +136,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing store - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceStore(Guid id, [FromBody] MemoryStore newStore)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.ReplaceCollectionAsync(id, newStore);
         if (!ok)
         {
@@ -154,7 +154,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing store - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceStoreByTitle(string title, [FromBody] MemoryStore newStore)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.ReplaceCollectionAsync(title, newStore);
         if (!ok)
         {
@@ -172,7 +172,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateStore(Guid id, [FromBody] MemoryStore updated)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.UpdateCollectionAsync(id, updated);
         if (!ok)
         {
@@ -190,7 +190,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateStoreByTitle(string title, [FromBody] MemoryStore updated)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.UpdateCollectionAsync(title, updated);
         if (!ok)
         {
@@ -208,7 +208,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will delete all memory entries in the store.")]
     public async Task<IActionResult> DeleteStore(Guid id)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.DeleteCollectionAsync(id);
         if (!ok)
         {
@@ -226,7 +226,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will delete all memory entries in the store.")]
     public async Task<IActionResult> DeleteStoreByTitle(string title)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.DeleteCollectionAsync(title);
         if (!ok)
         {
@@ -244,7 +244,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/entries with body: {\"Title\": \"Meeting Notes\", \"Content\": \"Discussed project timeline\"}")]
     public async Task<IActionResult> CreateEntry([FromBody] Memory memory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.CreateMemoryEntryAsync(memory);
         if (!ok)
         {
@@ -264,7 +264,7 @@ public class MemoryController : ControllerBase
         [AssistantInstruction("If the store has to be created and this parameter is empty, the description will be created from the initially added memory.")]
         [FromQuery] string storeDescription = "")
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.CreateMemoryEntryAsync(storeId, memory, storeDescription);
         if (!ok)
         {
@@ -283,7 +283,7 @@ public class MemoryController : ControllerBase
     [AssistantExample("POST /api/memory/stores/by-title/ProjectNotes/entries?storeDescription=Project related notes")]
     public async Task<IActionResult> CreateEntryInStoreByTitle(string title, [FromBody] Memory memory, [FromQuery] string storeDescription = "")
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.CreateMemoryEntryAsync(title, memory, storeDescription);
         if (!ok)
         {
@@ -301,7 +301,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntry(Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.ReplaceMemoryEntryAsync(entryId, newMemory);
         if (!ok)
         {
@@ -319,7 +319,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntryInStore(Guid storeId, Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.ReplaceMemoryEntryAsync(storeId, entryId, newMemory);
         if (!ok)
         {
@@ -337,7 +337,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation completely replaces the existing entry - all existing data will be overwritten.")]
     public async Task<IActionResult> ReplaceEntryInStoreByTitle(string title, Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.ReplaceMemoryEntryAsync(title, entryId, newMemory);
         if (!ok)
         {
@@ -355,7 +355,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntry(Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.UpdateMemoryEntryAsync(entryId, newMemory);
         if (!ok)
         {
@@ -373,7 +373,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntryInStore(Guid storeId, Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.UpdateMemoryEntryAsync(storeId, entryId, newMemory);
         if (!ok)
         {
@@ -391,7 +391,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("Only the provided fields will be updated - other fields will remain unchanged.")]
     public async Task<IActionResult> UpdateEntryInStoreByTitle(string title, Guid entryId, [FromBody] Memory newMemory)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.UpdateMemoryEntryAsync(title, entryId, newMemory);
         if (!ok)
         {
@@ -409,7 +409,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry.")]
     public async Task<IActionResult> DeleteEntry(Guid entryId)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.DeleteMemoryEntryAsync(entryId);
         if (!ok)
         {
@@ -427,7 +427,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry from the specified store.")]
     public async Task<IActionResult> DeleteEntryInStore(Guid storeId, Guid entryId)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.DeleteMemoryEntryAsync(storeId, entryId);
         if (!ok)
         {
@@ -445,7 +445,7 @@ public class MemoryController : ControllerBase
     [AssistantInstruction("This operation is irreversible and will permanently remove the memory entry from the specified store.")]
     public async Task<IActionResult> DeleteEntryInStoreByTitle(Guid storeId, string entryTitle)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         var ok = await _memory.DeleteMemoryEntryAsync(storeId, entryTitle);
         if (!ok)
         {
@@ -471,7 +471,7 @@ public class MemoryController : ControllerBase
         [FromQuery] Guid? limitToGroup = null,
         [FromQuery] Guid? limitToStore = null)
     {
-        _currentUserService.LockoutUserIfGuest();
+        await _currentUserService.LockoutUserIfGuestAsync();
         if (string.IsNullOrWhiteSpace(query))
         {
             return BadRequest("Query must not be empty.");

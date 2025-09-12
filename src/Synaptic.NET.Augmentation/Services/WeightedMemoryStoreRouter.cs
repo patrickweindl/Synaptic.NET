@@ -62,7 +62,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to rank stores. Input query: {Query} at {Start}", query, start);
         var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Ranking", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Ranking", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start, suggestion);
         string[] ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -127,7 +127,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to route memory to stores.");
         var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(_currentUserService.GetCurrentUser(), "Store Routing", response.Value);
+        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Routing", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start,
             suggestion);

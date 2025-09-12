@@ -1,60 +1,47 @@
+using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Domain.Abstractions.Management;
-using Synaptic.NET.Domain.Abstractions.Services;
 using Synaptic.NET.Domain.Enums;
 using Synaptic.NET.Domain.Resources;
-using Synaptic.NET.Domain.Resources.Configuration;
 using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Core.Services;
 
 public class UserManager : IUserManager
 {
-    private readonly SynapticServerSettings _settings;
-    private readonly IEncryptionService _encryptionService;
     private readonly SynapticDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
-    public UserManager(ICurrentUserService currentUserService, SynapticDbContext dbContext, IEncryptionService encryptionService, SynapticServerSettings settings)
+    public UserManager(ICurrentUserService currentUserService, SynapticDbContext dbContext)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
-        _settings = settings;
-        _encryptionService = encryptionService;
     }
 
-    public List<User> GetUsers()
+    public async Task<List<User>> GetUsersAsync()
     {
-        if (_currentUserService.GetCurrentUser().Role >= IdentityRole.Admin)
-        {
-            return _dbContext.Users.ToList();
-        }
-        return [];
+        return (await _currentUserService.GetCurrentUserAsync()).Role >= IdentityRole.Admin ? _dbContext.Users.ToList() : [];
     }
 
-    public List<Group> GetGroups()
+    public async Task<List<Group>> GetGroupsAsync()
     {
-        if (_currentUserService.GetCurrentUser().Role >= IdentityRole.Admin)
-        {
-            return _dbContext.Groups.ToList();
-        }
-        return [];
+        return (await _currentUserService.GetCurrentUserAsync()).Role >= IdentityRole.Admin ? _dbContext.Groups.ToList() : [];
     }
 
-    public void SetUserRole(User currentUser, User targetUser, IdentityRole targetRole)
+    public async Task SetUserRoleAsync(User currentUser, User targetUser, IdentityRole targetRole)
     {
         if (currentUser.Role == IdentityRole.Admin)
         {
-            var dbTargetUser = _dbContext.Users.FirstOrDefault(u => u.Id == targetUser.Id);
+            var dbTargetUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == targetUser.Id);
             if (dbTargetUser == null)
             {
                 return;
             }
             dbTargetUser.Role = targetRole;
             _dbContext.Users.Update(dbTargetUser);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public void CreateGroup(User currentUser, string groupName)
+    public async Task CreateGroupAsync(User currentUser, string groupName)
     {
         if (currentUser.Role < IdentityRole.Admin)
         {
@@ -62,16 +49,16 @@ public class UserManager : IUserManager
         }
 
         string groupUserName = $"group-{groupName}__{Guid.NewGuid():N}";
-        Group newGroup = new Group { Identifier = groupUserName, DisplayName = groupName };
+        Group newGroup = new() { Identifier = groupUserName, DisplayName = groupName };
         if (_dbContext.Groups.Any(u => u.DisplayName == groupUserName))
         {
             return;
         }
         _dbContext.Groups.Add(newGroup);
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync();
     }
 
-    public void RemoveUserFromGroup(User currentUser, User targetUser, Group group)
+    public async Task RemoveUserFromGroupAsync(User currentUser, User targetUser, Group group)
     {
         if (currentUser.Role < IdentityRole.Admin)
         {
@@ -81,27 +68,27 @@ public class UserManager : IUserManager
         {
             group.Memberships.Remove(existingMembership);
             _dbContext.Groups.Update(group);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public string ReadableGroupNameToUserGroupIdentifier(string groupName)
+    public async Task<string> ReadableGroupNameToUserGroupIdentifierAsync(string groupName)
     {
-        if (GetGroups().FirstOrDefault(u => u.Identifier.StartsWith($"group-{groupName}__")) is { } existingGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.Identifier.StartsWith($"group-{groupName}__")) is { } existingGroup)
         {
             return existingGroup.Identifier;
         }
         return $"group-{groupName}__{Guid.NewGuid():N}";
     }
 
-    public string GroupIdentifierToReadableName(string groupIdentifier)
+    public Task<string> GroupIdentifierToReadableNameAsync(string groupIdentifier)
     {
-        return groupIdentifier.Split("__").First().Replace("group-", "");
+        return Task.FromResult(groupIdentifier.Split("__").First().Replace("group-", ""));
     }
 
-    public string GroupIdentifierToReadableName(Guid groupIdentifier)
+    public async Task<string> GroupIdentifierToReadableNameAsync(Guid groupIdentifier)
     {
-        if (_dbContext.Groups.FirstOrDefault(g => g.Id == groupIdentifier) is { } group)
+        if (await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupIdentifier) is { } group)
         {
             return group.DisplayName;
         }
@@ -109,13 +96,13 @@ public class UserManager : IUserManager
         return string.Empty;
     }
 
-    public void AddUserToGroup(User currentUser, User targetUser, string readableGroupName)
+    public async Task AddUserToGroupAsync(User currentUser, User targetUser, string readableGroupName)
     {
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } existingGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.DisplayName == readableGroupName) is not { })
         {
             if (currentUser.Role == IdentityRole.Admin)
             {
-                CreateGroup(currentUser, readableGroupName);
+                await CreateGroupAsync(currentUser, readableGroupName);
             }
             else
             {
@@ -123,7 +110,7 @@ public class UserManager : IUserManager
             }
         }
 
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } createdGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.DisplayName == readableGroupName) is not { } createdGroup)
         {
             return;
         }
@@ -132,13 +119,13 @@ public class UserManager : IUserManager
         {
             createdGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(createdGroup);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public void AddUserToGroup(User currentUser, User targetUser, Guid group)
+    public async Task AddUserToGroupAsync(User currentUser, User targetUser, Guid group)
     {
-        if (GetGroups().FirstOrDefault(u => u.Id == group) is not { } existingGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.Id == group) is not { } existingGroup)
         {
             return;
         }
@@ -147,17 +134,17 @@ public class UserManager : IUserManager
         {
             existingGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(existingGroup);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public void AddUserToGroup(User currentUser, User targetUser, Group group)
+    public async Task AddUserToGroupAsync(User currentUser, User targetUser, Group group)
     {
-        if (GetGroups().FirstOrDefault(u => u.Id == group.Id) is not { } existingGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.Id == group.Id) is not { })
         {
             if (currentUser.Role == IdentityRole.Admin)
             {
-                CreateGroup(currentUser, group.DisplayName);
+                await CreateGroupAsync(currentUser, group.DisplayName);
             }
             else
             {
@@ -165,7 +152,7 @@ public class UserManager : IUserManager
             }
         }
 
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == group.DisplayName) is not { } createdGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.DisplayName == group.DisplayName) is not { } createdGroup)
         {
             return;
         }
@@ -174,18 +161,18 @@ public class UserManager : IUserManager
         {
             createdGroup.Memberships.Add(new GroupMembership { UserId = targetUser.Id });
             _dbContext.Groups.Update(createdGroup);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public void RemoveUserFromGroup(User currentUser, User targetUser, string readableGroupName)
+    public async Task RemoveUserFromGroupAsync(User currentUser, User targetUser, string readableGroupName)
     {
-        string groupUserName = ReadableGroupNameToUserGroupIdentifier(readableGroupName);
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == groupUserName) is not { } existingGroup)
+        string groupUserName = await ReadableGroupNameToUserGroupIdentifierAsync(readableGroupName);
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.DisplayName == groupUserName) is not { })
         {
             if (currentUser.Role == IdentityRole.Admin)
             {
-                CreateGroup(currentUser, readableGroupName);
+                await CreateGroupAsync(currentUser, readableGroupName);
             }
             else
             {
@@ -193,7 +180,7 @@ public class UserManager : IUserManager
             }
         }
 
-        if (GetGroups().FirstOrDefault(u => u.DisplayName == groupUserName) is not { } createdGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.DisplayName == groupUserName) is not { } createdGroup)
         {
             return;
         }
@@ -202,13 +189,13 @@ public class UserManager : IUserManager
         {
             createdGroup.Memberships.Remove(existingMembership);
             _dbContext.Groups.Update(createdGroup);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 
-    public void RemoveUserFromGroup(User currentUser, User targetUser, Guid group)
+    public async Task RemoveUserFromGroupAsync(User currentUser, User targetUser, Guid group)
     {
-        if (GetGroups().FirstOrDefault(u => u.Id == group) is not { } existingGroup)
+        if ((await GetGroupsAsync()).FirstOrDefault(u => u.Id == group) is not { } existingGroup)
         {
             return;
         }
@@ -216,7 +203,7 @@ public class UserManager : IUserManager
         {
             existingGroup.Memberships.Remove(existingMembership);
             _dbContext.Groups.Update(existingGroup);
-            _dbContext.SaveChanges();
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

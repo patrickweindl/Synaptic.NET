@@ -5,29 +5,29 @@ namespace Synaptic.NET.Domain.Abstractions.Management;
 
 public interface IUserManager
 {
-    List<User> GetUsers();
+    Task<List<User>> GetUsersAsync();
 
-    List<Group> GetGroups();
+    Task<List<Group>> GetGroupsAsync();
 
-    void SetUserRole(User currentUser, User targetUser, IdentityRole targetRole);
+    Task SetUserRoleAsync(User currentUser, User targetUser, IdentityRole targetRole);
 
-    void CreateGroup(User currentUser, string groupName);
+    Task CreateGroupAsync(User currentUser, string groupName);
 
-    void AddUserToGroup(User currentUser, User targetUser, string readableGroupName);
+    Task AddUserToGroupAsync(User currentUser, User targetUser, string readableGroupName);
 
-    void AddUserToGroup(User currentUser, User targetUser, Guid group);
+    Task AddUserToGroupAsync(User currentUser, User targetUser, Guid group);
 
-    void AddUserToGroup(User currentUser, User targetUser, Group group);
+    Task AddUserToGroupAsync(User currentUser, User targetUser, Group group);
 
-    void RemoveUserFromGroup(User currentUser, User targetUser, string group);
+    Task RemoveUserFromGroupAsync(User currentUser, User targetUser, string group);
 
-    void RemoveUserFromGroup(User currentUser, User targetUser, Guid group);
+    Task RemoveUserFromGroupAsync(User currentUser, User targetUser, Guid group);
 
-    void RemoveUserFromGroup(User currentUser, User targetUser, Group group);
+    Task RemoveUserFromGroupAsync(User currentUser, User targetUser, Group group);
 
-    string ReadableGroupNameToUserGroupIdentifier(string groupName);
+    Task<string> ReadableGroupNameToUserGroupIdentifierAsync(string groupName);
 
-    string GroupIdentifierToReadableName(string groupIdentifier);
+    Task<string> GroupIdentifierToReadableNameAsync(string groupIdentifier);
 
-    string GroupIdentifierToReadableName(Guid groupIdentifier);
+    Task<string> GroupIdentifierToReadableNameAsync(Guid groupIdentifier);
 }
