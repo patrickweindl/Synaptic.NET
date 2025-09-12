@@ -9,8 +9,6 @@ using Synaptic.NET.Qdrant;
 
 namespace Synaptic.NET.Core.Services;
 
-//TODO: Check that no navigational properties are saved on additions
-
 /// <summary>
 /// Provides an <see cref="IMemoryProvider"/> implementation that relies on EF for basic data retrieval but Vector Search for free text queries.
 ///
@@ -312,7 +310,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
 
         memory.StoreId = targetStore.StoreId;
-        memory.Store = targetStore;
+        memory.Store = null;
         await _dbContext.Memories.AddAsync(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(await _currentUserService.GetCurrentUserAsync(), memory);
@@ -335,7 +333,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
 
         memory.StoreId = targetStore.StoreId;
-        memory.Store = targetStore;
+        memory.Store = null;
         await _dbContext.Memories.AddAsync(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
@@ -352,9 +350,8 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
         memory.StoreId = targetStore.StoreId;
-        memory.Store = targetStore;
+        memory.Store = null;
         await _dbContext.Memories.AddAsync(memory);
-        _dbContext.MemoryStores.Update(targetStore);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
         return true;
@@ -377,7 +374,9 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.MemoryStores.Remove(existingStore);
 
         newStore.StoreId = collectionIdentifier;
-        newStore.OwnerUser = currentUser;
+        newStore.UserId = currentUser.Id;
+        newStore.OwnerUser = null!;
+
         await _dbContext.MemoryStores.AddAsync(newStore);
 
         await _dbContext.SaveChangesAsync();
@@ -404,7 +403,8 @@ public class HybridMemoryProvider : IMemoryProvider
         _dbContext.MemoryStores.Remove(existingStore);
 
         newStore.StoreId = existingStore.StoreId;
-        newStore.OwnerUser = currentUser;
+        newStore.UserId = currentUser.Id;
+        newStore.OwnerUser = null!;
         await _dbContext.MemoryStores.AddAsync(newStore);
 
         await _dbContext.SaveChangesAsync();
@@ -431,7 +431,9 @@ public class HybridMemoryProvider : IMemoryProvider
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = existingMemory.StoreId;
+        newMemory.Store = null;
         newMemory.Owner = currentUser.Id;
+        newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.Memories.AddAsync(newMemory);
@@ -460,7 +462,9 @@ public class HybridMemoryProvider : IMemoryProvider
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = collectionIdentifier;
+        newMemory.Store = null;
         newMemory.Owner = currentUser.Id;
+        newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.Memories.AddAsync(newMemory);
@@ -497,7 +501,9 @@ public class HybridMemoryProvider : IMemoryProvider
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = targetStore.StoreId;
+        newMemory.Store = null;
         newMemory.Owner = currentUser.Id;
+        newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _dbContext.Memories.AddAsync(newMemory);
@@ -766,7 +772,6 @@ public class HybridMemoryProvider : IMemoryProvider
         foreach (var memory in store.Memories)
         {
             memory.GroupId = groupId;
-            memory.OwnerGroup = group;
         }
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(group, store);
