@@ -36,15 +36,16 @@ public class SynapticDbContext : DbContext
 
     public async Task SetCurrentUserAsync(ICurrentUserService currentUserService)
     {
-        SetCurrentUser(await currentUserService.GetCurrentUserAsync());
+        await SetCurrentUserAsync(await currentUserService.GetCurrentUserAsync());
     }
 
-    public void SetCurrentUser(User user)
+    public Task SetCurrentUserAsync(User user)
     {
         CurrentUserId = user.Id;
         CurrentGroupIds.Clear();
         CurrentGroupIds.AddRange(user.Memberships.Select(m => m.GroupId));
         Attach(user);
+        return Task.CompletedTask;
     }
 
     public async Task<User?> DbUserAsync()
@@ -52,7 +53,7 @@ public class SynapticDbContext : DbContext
         var user = await Users.Include(u => u.Memberships).FirstOrDefaultAsync(u => u.Id == CurrentUserId);
         if (user != null)
         {
-            SetCurrentUser(user);
+            await SetCurrentUserAsync(user);
         }
         return user;
     }

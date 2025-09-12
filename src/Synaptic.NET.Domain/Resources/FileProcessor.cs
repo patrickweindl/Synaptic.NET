@@ -28,10 +28,10 @@ public class FileProcessor
     {
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
         string base64String = Convert.ToBase64String(fileBytes);
-        await ExecutePdf(user, fileName, base64String);
+        await ExecutePdfAsync(user, fileName, base64String);
     }
 
-    public async Task ExecutePdf(User user, string fileName, string base64String)
+    public async Task ExecutePdfAsync(User user, string fileName, string base64String)
     {
         await using var scope = _scopeFactory.CreateFixedUserScope(_user);
         Log.Information("[File Processor] Received a new file to process with name {FileName} and length {Base64StringLength}.", fileName, base64String.Length);

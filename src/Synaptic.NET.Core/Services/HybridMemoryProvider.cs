@@ -240,20 +240,17 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<MemoryStore?> CreateCollectionAsync(MemoryStore store)
     {
-        if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == store.StoreId) is { } existingStore)
+        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == store.StoreId) is { } existingStore)
         {
             foreach (var memory in store.Memories)
             {
                 existingStore.Memories.Add(memory);
-
             }
             await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
-            _dbContext.MemoryStores.Update(existingStore);
-
             await _dbContext.SaveChangesAsync();
             return existingStore;
         }
-        _dbContext.MemoryStores.Add(store);
+        await _dbContext.MemoryStores.AddAsync(store);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
         return store;
@@ -270,7 +267,7 @@ public class HybridMemoryProvider : IMemoryProvider
             OwnerUser = currentUser,
             UserId = currentUser.Id
         };
-        _dbContext.MemoryStores.Add(newStore);
+        await _dbContext.MemoryStores.AddAsync(newStore);
         await _dbContext.SaveChangesAsync();
         return newStore;
     }
@@ -294,7 +291,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        _dbContext.Memories.Add(memory);
+        await _dbContext.Memories.AddAsync(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(await _currentUserService.GetCurrentUserAsync(), memory);
         return true;
@@ -317,7 +314,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        _dbContext.Memories.Add(memory);
+        await _dbContext.Memories.AddAsync(memory);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
         return true;
@@ -334,7 +331,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         memory.StoreId = targetStore.StoreId;
         memory.Store = targetStore;
-        _dbContext.Memories.Add(memory);
+        await _dbContext.Memories.AddAsync(memory);
         _dbContext.MemoryStores.Update(targetStore);
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
@@ -359,7 +356,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         newStore.StoreId = collectionIdentifier;
         newStore.OwnerUser = currentUser;
-        _dbContext.MemoryStores.Add(newStore);
+        await _dbContext.MemoryStores.AddAsync(newStore);
 
         await _dbContext.SaveChangesAsync();
 
@@ -386,7 +383,7 @@ public class HybridMemoryProvider : IMemoryProvider
 
         newStore.StoreId = existingStore.StoreId;
         newStore.OwnerUser = currentUser;
-        _dbContext.MemoryStores.Add(newStore);
+        await _dbContext.MemoryStores.AddAsync(newStore);
 
         await _dbContext.SaveChangesAsync();
 
@@ -415,7 +412,7 @@ public class HybridMemoryProvider : IMemoryProvider
         newMemory.Owner = currentUser.Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.Memories.Add(newMemory);
+        await _dbContext.Memories.AddAsync(newMemory);
 
         await _dbContext.SaveChangesAsync();
 
@@ -444,7 +441,7 @@ public class HybridMemoryProvider : IMemoryProvider
         newMemory.Owner = currentUser.Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.Memories.Add(newMemory);
+        await _dbContext.Memories.AddAsync(newMemory);
 
         await _dbContext.SaveChangesAsync();
 
@@ -481,7 +478,7 @@ public class HybridMemoryProvider : IMemoryProvider
         newMemory.Owner = currentUser.Id;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.Memories.Add(newMemory);
+        await _dbContext.Memories.AddAsync(newMemory);
 
         await _dbContext.SaveChangesAsync();
 
@@ -499,11 +496,14 @@ public class HybridMemoryProvider : IMemoryProvider
         {
             return false;
         }
-
+        
         existingStore.Title = newStore.Title;
         existingStore.Description = newStore.Description;
 
-        _dbContext.MemoryStores.Update(existingStore);
+        foreach (var memory in newStore.Memories.Except(existingStore.Memories))
+        {
+            existingStore.Memories.Add(memory);
+        }
         await _dbContext.SaveChangesAsync();
 
         return true;
@@ -522,7 +522,10 @@ public class HybridMemoryProvider : IMemoryProvider
         existingStore.Title = newStore.Title;
         existingStore.Description = newStore.Description;
 
-        _dbContext.MemoryStores.Update(existingStore);
+        foreach (var memory in newStore.Memories.Except(existingStore.Memories))
+        {
+            existingStore.Memories.Add(memory);
+        }
         await _dbContext.SaveChangesAsync();
 
         return true;
@@ -539,16 +542,17 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        existingMemory.Title = newMemory.Title;
-        existingMemory.Description = newMemory.Description;
-        existingMemory.Content = newMemory.Content;
-        existingMemory.Pinned = newMemory.Pinned;
-        existingMemory.Tags = existingMemory.Tags.Concat(newMemory.Tags).Distinct().ToList();
-        existingMemory.ReferenceType = newMemory.ReferenceType;
-        existingMemory.Reference = newMemory.Reference;
-        existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
-
-        _dbContext.Memories.Update(existingMemory);
+        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+            m
+            .SetProperty(p => p.Title, newMemory.Title)
+            .SetProperty(p => p.Description, newMemory.Description)
+            .SetProperty(p => p.Content, newMemory.Content)
+            .SetProperty(p => p.Pinned, newMemory.Pinned)
+            .SetProperty(p => p.Tags, existingMemory.Tags)
+            .SetProperty(p => p.ReferenceType, newMemory.ReferenceType)
+            .SetProperty(p => p.Reference, newMemory.Reference)
+            .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow)
+        );
         await _dbContext.SaveChangesAsync();
 
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
@@ -567,16 +571,15 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        existingMemory.Title = newMemory.Title;
-        existingMemory.Description = newMemory.Description;
-        existingMemory.Content = newMemory.Content;
-        existingMemory.Pinned = newMemory.Pinned;
-        existingMemory.Tags = newMemory.Tags;
-        existingMemory.ReferenceType = newMemory.ReferenceType;
-        existingMemory.Reference = newMemory.Reference;
-        existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
-
-        _dbContext.Memories.Update(existingMemory);
+        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+            m.SetProperty(p => p.Title, newMemory.Title)
+                .SetProperty(p => p.Description, newMemory.Description)
+                .SetProperty(p => p.Content, newMemory.Content)
+                .SetProperty(p => p.Pinned, newMemory.Pinned)
+                .SetProperty(p => p.Tags, existingMemory.Tags)
+                .SetProperty(p => p.ReferenceType, newMemory.ReferenceType)
+                .SetProperty(p => p.Reference, newMemory.Reference)
+                .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow));
         await _dbContext.SaveChangesAsync();
 
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
@@ -603,16 +606,17 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        existingMemory.Title = newMemory.Title;
-        existingMemory.Description = newMemory.Description;
-        existingMemory.Content = newMemory.Content;
-        existingMemory.Pinned = newMemory.Pinned;
-        existingMemory.Tags = newMemory.Tags;
-        existingMemory.ReferenceType = newMemory.ReferenceType;
-        existingMemory.Reference = newMemory.Reference;
-        existingMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        _dbContext.Memories.Update(existingMemory);
+        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+            m.SetProperty(p => p.Title, newMemory.Title)
+                .SetProperty(p => p.Description, newMemory.Description)
+                .SetProperty(p => p.Content, newMemory.Content)
+                .SetProperty(p => p.Pinned, newMemory.Pinned)
+                .SetProperty(p => p.Tags, existingMemory.Tags)
+                .SetProperty(p => p.ReferenceType, newMemory.ReferenceType)
+                .SetProperty(p => p.Reference, newMemory.Reference)
+                .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow)
+        );
         await _dbContext.SaveChangesAsync();
 
         await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
@@ -724,24 +728,23 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        if (_dbContext.MemoryStores.FirstOrDefault(s => s.StoreId == collectionIdentifier) is not { } store)
+        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier) is not { } store)
         {
             return false;
         }
 
-        if (_dbContext.Groups.FirstOrDefault(g => g.Id == groupId) is not { } group)
+        if (await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId) is not { } group)
         {
             return false;
         }
 
-        store.GroupId = groupId;
-        store.OwnerGroup = group;
-        _dbContext.MemoryStores.Update(store);
+        await _dbContext.MemoryStores.Where(s => s.StoreId == store.StoreId).ExecuteUpdateAsync(s =>
+            s.SetProperty(p => p.GroupId, groupId)
+                .SetProperty(p => p.OwnerGroup, group));
         foreach (var memory in store.Memories)
         {
             memory.GroupId = groupId;
             memory.OwnerGroup = group;
-            _dbContext.Memories.Update(memory);
         }
         await _dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(group, store);

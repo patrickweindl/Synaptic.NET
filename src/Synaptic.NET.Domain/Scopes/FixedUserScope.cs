@@ -16,7 +16,7 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
         CurrentUserService = _scope.ServiceProvider.GetRequiredService<ICurrentUserService>();
         CurrentUserService.SetCurrentUserAsync(user);
         DbContext = _scope.ServiceProvider.GetRequiredService<SynapticDbContext>();
-        DbContext.SetCurrentUser(user);
+        _ = Task.Run(async () => await DbContext.SetCurrentUserAsync(user));
         MemoryAugmentationService = _scope.ServiceProvider.GetRequiredService<IMemoryAugmentationService>();
         MemoryProvider = _scope.ServiceProvider.GetRequiredService<IMemoryProvider>();
         FileMemoryCreationService = _scope.ServiceProvider.GetRequiredService<IFileMemoryCreationService>();

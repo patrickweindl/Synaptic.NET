@@ -2413,7 +2413,7 @@
         try
         {
             await DbContext.SetCurrentUserAsync(CurrentUserService);
-            _apiKeys = DbContext.ApiKeys.ToList();
+            _apiKeys = await DbContext.ApiKeys.ToListAsync();
             _apiKeyCount = _apiKeys.Count;
         }
         catch (Exception ex)
@@ -2757,7 +2757,7 @@
                 return;
             }
 
-            bool refuse = DbContext.ApiKeys.ToList().Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase));
+            bool refuse = (await DbContext.ApiKeys.ToListAsync()).Any(k => k.Name.Equals(_createApiKeyForm.Name, StringComparison.OrdinalIgnoreCase));
             // Check for duplicate names
             if (refuse)
             {
@@ -2778,7 +2778,7 @@
                     : DateTimeOffset.UtcNow.AddDays(_createApiKeyForm.ExpirationDays)
             };
 
-            DbContext.ApiKeys.Add(apiKey);
+            await DbContext.ApiKeys.AddAsync(apiKey);
             await DbContext.SaveChangesAsync();
 
             // Show the new key in the one-time display modal
@@ -2822,7 +2822,7 @@
                 return;
             }
 
-            var keyToRemove = DbContext.ApiKeys.FirstOrDefault(k => k.Key == apiKey.Key);
+            var keyToRemove = await DbContext.ApiKeys.FirstOrDefaultAsync(k => k.Key == apiKey.Key);
             if (keyToRemove != null)
             {
                 DbContext.ApiKeys.Remove(keyToRemove);

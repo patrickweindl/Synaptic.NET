@@ -111,18 +111,18 @@ public class CurrentUserService : ICurrentUserService
                 DisplayName = identifier.Split("__").FirstOrDefault() ?? identifier,
                 Role = IdentityRole.Guest
             };
-            _dbContext.Users.Add(user);
+            await _dbContext.Users.AddAsync(user);
             await _dbContext.SaveChangesAsync();
         }
 
         if (_settings.ServerSettings.AdminIdentifiers.Contains(identifier))
         {
             user.Role = IdentityRole.Admin;
-            _dbContext.Users.Update(user);
+            await _dbContext.Users.ExecuteUpdateAsync(u => u.SetProperty(us => us.Role, IdentityRole.Admin));
             await _dbContext.SaveChangesAsync();
         }
 
-        _dbContext.SetCurrentUser(user);
+        await _dbContext.SetCurrentUserAsync(user);
         return user;
     }
 }

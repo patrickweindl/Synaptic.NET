@@ -34,7 +34,7 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
             FileProcessor fileProcessor = await scope.FileMemoryCreationService.GetFileProcessor(scopeFactory, User);
 
             Task processingTask = FileExtension.ToLowerInvariant() == ".pdf"
-                ? fileProcessor.ExecutePdf(user, FileName, FileContent)
+                ? fileProcessor.ExecutePdfAsync(user, FileName, FileContent)
                 : fileProcessor.ExecuteFile(user, FileName, FileContent);
 
             while (!fileProcessor.Completed && !cancellationToken.IsCancellationRequested)
