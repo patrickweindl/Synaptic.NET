@@ -32,15 +32,16 @@ public class MemoryAugmentationService : IMemoryAugmentationService
 
     public async Task<string> GenerateMemoryDescriptionAsync(string memoryContent)
     {
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(PromptTemplates.GetMemorySummarySystemPrompt()),
             ChatMessage.CreateUserMessage(memoryContent)
-        };
+        ];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory summary. Input: {Input} at {Start}", memoryContent, start);
         var structuredResponseSchema = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummary>();
+        structuredResponseSchema.Temperature = 0.2f;
         ClientResult<ChatCompletion> chatCompletion = await _client.CompleteChatAsync(messages, structuredResponseSchema);
 
         MemorySummary? summary = CompletionOptionsHelper.ParseModelResponse<MemorySummary>(chatCompletion);
@@ -62,19 +63,20 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         {
             memoryString = memoryString.Substring(0, MaxTokensForSummarization);
         }
-        var systemPrompt = PromptTemplates.GetStoreSummarySystemPrompt();
-        var userPrompt = PromptTemplates.GetStoreSummaryUserPrompt(storeIdentifier, memoryString);
+        string systemPrompt = PromptTemplates.GetStoreSummarySystemPrompt();
+        string userPrompt = PromptTemplates.GetStoreSummaryUserPrompt(storeIdentifier, memoryString);
 
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(systemPrompt),
             ChatMessage.CreateUserMessage(userPrompt)
-        };
+        ];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
-        var response = await _client.CompleteChatAsync(messages);
+        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
@@ -93,19 +95,20 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         {
             memoryString = memoryString.Substring(0, MaxTokensForSummarization);
         }
-        var systemPrompt = PromptTemplates.GetStoreSummarySystemPrompt();
-        var userPrompt = PromptTemplates.GetStoreSummaryUserPrompt(storeIdentifier, memoryString);
+        string systemPrompt = PromptTemplates.GetStoreSummarySystemPrompt();
+        string userPrompt = PromptTemplates.GetStoreSummaryUserPrompt(storeIdentifier, memoryString);
 
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(systemPrompt),
             ChatMessage.CreateUserMessage(userPrompt)
-        };
+        ];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
-        var response = await _client.CompleteChatAsync(messages);
+        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
@@ -123,19 +126,20 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         {
             memoryString = memoryString.Substring(0, MaxTokensForSummarization);
         }
-        var systemPrompt = PromptTemplates.GetStoreTitleSystemPrompt();
-        var userPrompt = PromptTemplates.GetStoreTitleUserPrompt(storeDescription, memoryString);
+        string systemPrompt = PromptTemplates.GetStoreTitleSystemPrompt();
+        string userPrompt = PromptTemplates.GetStoreTitleUserPrompt(storeDescription, memoryString);
 
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(systemPrompt),
             ChatMessage.CreateUserMessage(userPrompt)
-        };
+        ];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory store title. Input: {StoreDescription} at {Start}",
             storeDescription, start);
-        var response = await _client.CompleteChatAsync(messages);
+        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
@@ -167,7 +171,8 @@ public class MemoryAugmentationService : IMemoryAugmentationService
             ChatMessage.CreateSystemMessage(systemPrompt),
             ChatMessage.CreateUserMessage(userPrompt)
         };
-        var response = await _client.CompleteChatAsync(messages, cancellationToken: token);
+        var completionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _client.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Augmented Search", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
 

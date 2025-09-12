@@ -53,15 +53,16 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         string systemPrompt = PromptTemplates.GetStoreRouterSystemPrompt();
         string userPrompt = PromptTemplates.GetStoreRouterUserPrompt(query, availableStoresStringBuilder.ToString());
 
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(systemPrompt),
             ChatMessage.CreateUserMessage(userPrompt)
-        };
+        ];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to rank stores. Input query: {Query} at {Start}", query, start);
-        var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
+        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _chatClient.CompleteChatAsync(messages, options: chatCompletionOptions, cancellationToken: token);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Ranking", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start, suggestion);
@@ -115,23 +116,22 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
             availableStoresStringBuilder.AppendLine("---");
         }
 
-        var systemPrompt = PromptTemplates.GetMemoryRouterSystemPrompt();
-        var userPrompt =
+        string systemPrompt = PromptTemplates.GetMemoryRouterSystemPrompt();
+        string userPrompt =
             PromptTemplates.GetMemoryRouterUserPrompt(memory.Identifier.ToString(), memory.Content, availableStoresStringBuilder.ToString());
 
-        List<ChatMessage> messages = new()
-        {
-            ChatMessage.CreateSystemMessage(systemPrompt), ChatMessage.CreateUserMessage(userPrompt)
-        };
+        List<ChatMessage> messages = [ChatMessage.CreateSystemMessage(systemPrompt), ChatMessage.CreateUserMessage(userPrompt)];
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to route memory to stores.");
-        var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: token);
+        // TODO: Use a structured response for this.
+        var completionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _chatClient.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Routing", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start,
             suggestion);
-        var ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string[] ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (string result in ordered)
         {

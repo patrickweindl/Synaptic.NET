@@ -31,14 +31,16 @@ public class FileMemoryCreationService : IFileMemoryCreationService
 
     public async Task<MemorySummaries> CreateMemoriesFromPdfFileAsync(string fileName, string base64Pdf)
     {
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
-            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateFilePart(BinaryData.FromBytes(Convert.FromBase64String(base64Pdf)),
+            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateFilePart(
+                BinaryData.FromBytes(Convert.FromBase64String(base64Pdf)),
                 "application/pdf", fileName))
-        };
+        ];
         DateTime start = DateTime.UtcNow;
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
+        structuredResponse.Temperature = 0.2f;
         Log.Debug("[File Memory Creation Service] Acquiring model response...");
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
         _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "PDF Processing", response.Value);
@@ -60,11 +62,11 @@ public class FileMemoryCreationService : IFileMemoryCreationService
 
     public async Task<MemorySummaries> CreateMemoriesFromBase64String(string fileName, string base64String)
     {
-        List<ChatMessage> messages = new()
-        {
+        List<ChatMessage> messages =
+        [
             ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
             ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateTextPart(base64String))
-        };
+        ];
 
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
         DateTime start = DateTime.UtcNow;
