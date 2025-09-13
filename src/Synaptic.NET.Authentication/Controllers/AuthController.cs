@@ -52,13 +52,19 @@ public class AuthController : ControllerBase
     }
 
     [HttpOptions("register")]
-    [Produces("application/json")]
     [AllowAnonymous]
-    public async Task<IActionResult> RegisterOptions([FromBody] object? body)
+    public IActionResult OptionsRegistration()
     {
-        return await BuildRegistrationResponseAsync(body);
+        Response.Headers.Append("Allow", "POST");
+        return Ok();
     }
 
+    [HttpPost("register/mcp")]
+    [AllowAnonymous]
+    public IActionResult McpRegistration()
+    {
+        return LocalRedirect("/register");
+    }
 
     [HttpPost("register")]
     [Produces("application/json")]
@@ -82,12 +88,33 @@ public class AuthController : ControllerBase
 
         Log.Logger.Information($"[Authorization] New registration with {registrationId}.");
         JsonElement json = JsonSerializer.SerializeToElement(body);
-        var req = JsonNode.Parse(json.GetRawText())!.AsObject();
-        string tokenAuth = req["token_endpoint_auth_method"]?.GetValue<string>() ?? "client_secret_basic";
+        var req = JsonNode.Parse(json.GetRawText())?.AsObject();
+        string tokenAuth = req?["token_endpoint_auth_method"]?.GetValue<string>() ?? "client_secret_basic";
         var now = DateTimeOffset.UtcNow;
         string clientSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         long issuedAt = now.ToUnixTimeSeconds();
         long expiry = expiresAt.ToUnixTimeSeconds();
+
+        if (body == null)
+        {
+            var noBodyResponse = new JsonObject
+            {
+                ["client_id"] = registrationId,
+                ["client_id_issued_at"] = issuedAt,
+                ["token_endpoint_auth_method"] = tokenAuth,
+                ["client_secret"] = clientSecret,
+                ["client_secret_expires_at"] = expiry,
+                ["grant_types"] = new JsonArray { "authorization_code", "refresh_token"}
+            };
+            return new ContentResult
+            {
+                StatusCode = StatusCodes.Status201Created,
+                ContentType = "application/json",
+                Content = noBodyResponse.ToJsonString(new JsonSerializerOptions { WriteIndented = false })
+            };
+        }
+
+
 
         DynamicRegistration newRegistration = new(){ Id = Guid.NewGuid(), RegistrationId = registrationId, OriginalBody = json, ExpiresAt = expiresAt, Secret = clientSecret };
 
@@ -101,7 +128,7 @@ public class AuthController : ControllerBase
             ["client_secret"] = clientSecret,
             ["client_secret_expires_at"] = expiry
         };
-        foreach (var kv in req)
+        foreach (var kv in req ?? new())
         {
             if (kv.Key is "client_id" or "client_secret" or "client_id_issued_at" or "client_secret_expires_at")
             {

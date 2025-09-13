@@ -19,10 +19,32 @@ public class ApiMetricsCollector : IMetricsCollector
         _dbContextFactory = dbContextFactory;
         Meter = new Meter(MeterName);
         _benchmarkMeter = Meter.CreateHistogram<double>(MeterName, "ms");
+        ReadPersistentInfoFromDatabase();
+    }
+
+    private void ReadPersistentInfoFromDatabase()
+    {
+        using var dbContext = _dbContextFactory.CreateDbContext();
+        var persistentMetrics = dbContext.BenchmarkMetrics.ToList();
+        foreach (var metric in persistentMetrics)
+        {
+            _benchmarkMeter.Record(metric.Duration.TotalMilliseconds, new TagList
+            {
+                { "user.id", metric.UserId },
+                { "operation", metric.Operation },
+                { "service.name", MetricsCollectorProvider.ServiceName }
+            });
+        }
     }
 
     public string MeterName => $"{MetricsCollectorProvider.ServiceName}.BenchmarkMeter";
     public Meter Meter { get; }
+
+    public async Task<IReadOnlyList<BenchmarkMetric>> GetTokenMetricsAsync()
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.BenchmarkMetrics.ToListAsync();
+    }
 
     public async Task RecordBenchmark(TimeSpan value, string operation, User? user)
     {

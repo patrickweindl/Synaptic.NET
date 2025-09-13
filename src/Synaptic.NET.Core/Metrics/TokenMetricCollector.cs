@@ -20,6 +20,36 @@ public class TokenMetricCollector : IMetricsCollector
         Meter = new Meter(MeterName);
         _inputTokenCounter = Meter.CreateHistogram<long>($"{MeterName}.InputTokens", "tokens");
         _outputTokenCounter = Meter.CreateHistogram<long>($"{MeterName}.OutputTokens", "tokens");
+        ReadPersistentInfoFromDatabase();
+    }
+
+    private void ReadPersistentInfoFromDatabase()
+    {
+        using var dbContext = _dbContext.CreateDbContext();
+        var persistentMetrics = dbContext.TokenMetrics.ToList();
+        foreach (var metric in persistentMetrics)
+        {
+            if (metric.IsInput)
+            {
+                _inputTokenCounter.Record(metric.Count, new TagList
+                {
+                    { "user.id", metric.UserId },
+                    { "operation", metric.Operation },
+                    { "ai.model", metric.Model },
+                    { "service.name", MetricsCollectorProvider.ServiceName }
+                });
+            }
+            else
+            {
+                _outputTokenCounter.Record(metric.Count, new TagList
+                {
+                    { "user.id", metric.UserId },
+                    { "operation", metric.Operation },
+                    { "ai.model", metric.Model },
+                    { "service.name", MetricsCollectorProvider.ServiceName }
+                });
+            }
+        }
     }
 
     public string MeterName => $"{MetricsCollectorProvider.ServiceName}.TokenMeter";

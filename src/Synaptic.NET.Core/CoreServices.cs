@@ -60,6 +60,7 @@ public static class CoreServices
 
     public static WebApplication ConfigureCoreApplication(this WebApplication app)
     {
+        _ = app.Services.GetRequiredService<IMetricsCollectorProvider>();
         app.ConfigureHeaderForwarding();
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/alive", new HealthCheckOptions

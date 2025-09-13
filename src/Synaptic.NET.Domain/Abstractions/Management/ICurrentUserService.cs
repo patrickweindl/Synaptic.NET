@@ -33,6 +33,7 @@ public interface ICurrentUserService
     {
         if ((await GetCurrentUserAsync()).Role <= IdentityRole.Guest)
         {
+            Log.Logger.Warning("[Unauthorized Access] A user attempted to access a tool that requires a higher role than guest.");
             throw new UnauthorizedAccessException("Guests cannot access this tool.");
         }
     }

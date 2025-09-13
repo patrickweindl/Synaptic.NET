@@ -61,8 +61,9 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to rank stores. Input query: {Query} at {Start}", query, start);
-        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
-        var response = await _chatClient.CompleteChatAsync(messages, options: chatCompletionOptions, cancellationToken: token);
+
+        var completionOptions = new ChatCompletionOptions();//new ChatCompletionOptions { Temperature = 0.2f };
+        var response = await _chatClient.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
         await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Ranking", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start, suggestion);
@@ -125,7 +126,8 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         DateTime start = DateTime.UtcNow;
         Log.Information("[StoreRouter] Calling model to route memory to stores.");
         // TODO: Use a structured response for this.
-        var completionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+
+        var completionOptions = new ChatCompletionOptions();//new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _chatClient.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
         await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Routing", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
