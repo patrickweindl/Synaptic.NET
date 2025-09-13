@@ -11,7 +11,7 @@ using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Authentication.Services;
 
-public class CurrentUserService : ICurrentUserService
+public class CurrentUserService : ICurrentUserService, IDisposable
 {
     private readonly IHttpContextAccessor? _accessor;
     private readonly ISymLinkUserService _symlinkUserService;
@@ -149,5 +149,11 @@ public class CurrentUserService : ICurrentUserService
         user.Role = IdentityRole.Admin;
         await dbContext.SaveChangesAsync();
         return user;
+    }
+
+    public void Dispose()
+    {
+        _userCache.Clear();
+        _currentUser = null;
     }
 }

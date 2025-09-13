@@ -38,14 +38,12 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             while (!fileProcessor.Completed && !cancellationToken.IsCancellationRequested)
             {
-                // Normalize progress to 0-1 range (handle both 0-1 and 0-100 scales)
                 double normalizedProgress = fileProcessor.Progress > 1.0 ? fileProcessor.Progress / 100.0 : fileProcessor.Progress;
 
-                // Map normalized progress to our range (0.2 to 0.9)
                 double mappedProgress = 0.2 + (normalizedProgress * 0.7);
                 UpdateStatus(taskQueue, BackgroundTaskState.Processing, fileProcessor.Message, mappedProgress);
 
-                await Task.Delay(500, cancellationToken); // More frequent updates for better responsiveness
+                await Task.Delay(500, cancellationToken);
             }
 
             await processingTask;

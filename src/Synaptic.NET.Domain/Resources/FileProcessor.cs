@@ -93,6 +93,7 @@ public class FileProcessor
         Result = targetStore;
         Completed = true;
         Progress = 1;
+        pdfBytes = [];
     }
 
     public async Task ExecuteFile(User user, string fileName, string fileContent)

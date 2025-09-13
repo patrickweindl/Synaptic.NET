@@ -10,7 +10,6 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     private readonly Channel<BackgroundTaskItem> _queue;
     private readonly ConcurrentDictionary<string, BackgroundTaskStatus> _taskStatuses = new();
 
-    public event Action<BackgroundTaskStatus>? TaskStatusChanged;
     public BackgroundTaskQueue(int capacity = 100)
     {
         var options = new BoundedChannelOptions(capacity)
@@ -46,13 +45,11 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     {
         var workItem = await _queue.Reader.ReadAsync(cancellationToken);
 
-        // Update status to processing
         if (_taskStatuses.TryGetValue(workItem.TaskId, out var status))
         {
             status.Status = BackgroundTaskState.Processing;
             status.StartedAt = DateTime.UtcNow;
             status.Message = "Task is being processed";
-            TaskStatusChanged?.Invoke(status);
         }
 
         return workItem;
@@ -68,7 +65,7 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
         _taskStatuses[taskId] = status;
 
 
-        var cutoff = DateTime.UtcNow.AddHours(-24);
+        var cutoff = DateTime.UtcNow.AddHours(-2);
         var completedTasks = _taskStatuses
             .Where(kvp => kvp.Value.Status is BackgroundTaskState.Completed or BackgroundTaskState.Failed &&
                          kvp.Value.CompletedAt < cutoff)

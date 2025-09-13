@@ -2,11 +2,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.IdentityModel.Tokens;
-using Synaptic.NET.Authentication.Controllers;
 using Synaptic.NET.Authentication.Handlers;
-using Synaptic.NET.Authentication.Middlewares;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Services;
 using Synaptic.NET.Core;
@@ -98,11 +95,6 @@ public static class AuthenticationServices
 
     public static WebApplication ConfigureAuthenticationAndAuthorizationAndMiddlewares(this WebApplication app)
     {
-        app.Use(async (context, next) =>
-        {
-            var mw = new LogAuthorizedRequestsMiddleware();
-            await mw.Function.Invoke(context, next);
-        });
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAntiforgery();

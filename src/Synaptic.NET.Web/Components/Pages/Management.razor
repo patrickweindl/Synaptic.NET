@@ -2260,8 +2260,6 @@
     }
 </style>
 
-@implements IDisposable
-
 @code {
     public class FileUploadForm
     {
@@ -3035,11 +3033,5 @@
             // Notify the UI to update
             await InvokeAsync(StateHasChanged);
         }
-    }
-
-    public void Dispose()
-    {
-        // Unsubscribe from the event
-        BackgroundTaskQueue.TaskStatusChanged -= OnTaskStatusChanged;
     }
 }
