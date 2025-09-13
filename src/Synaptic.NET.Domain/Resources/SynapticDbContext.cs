@@ -31,6 +31,8 @@ public class SynapticDbContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<DynamicRegistration> DynamicRegistrations => Set<DynamicRegistration>();
+
     public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
         : base(options)
     {

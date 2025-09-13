@@ -11,7 +11,10 @@ public class LogAuthorizedRequestsMiddleware : IAppMiddleware
         Endpoint? endpoint = context.GetEndpoint();
         bool isAuthorizedEndpoint = endpoint?.Metadata.GetMetadata<IAuthorizeData>() != null &&
                                      endpoint?.Metadata.GetMetadata<AllowAnonymousAttribute>() == null;
-
+        if (Debugger.IsAttached)
+        {
+            Console.WriteLine($"Request to {context.Request.Path} with method {context.Request.Method}.");
+        }
         await next();
         if (isAuthorizedEndpoint && context.Response.StatusCode >= 400)
         {

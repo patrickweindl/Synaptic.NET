@@ -76,11 +76,6 @@ public static class AuthenticationServices
                         Log.Warning("[JWT Authorization] Unauthenticated request: {Message}", context.Exception.Message);
                         return Task.CompletedTask;
                     },
-                    OnTokenValidated = context =>
-                    {
-                        Log.Information("[JWT Authorization] User {User} authenticated successfully", context.Principal?.Identity?.Name);
-                        return Task.CompletedTask;
-                    },
                     OnChallenge = context =>
                     {
                         Log.Warning("[JWT Authorization] Authentication challenge: {Message}", context.ErrorDescription);

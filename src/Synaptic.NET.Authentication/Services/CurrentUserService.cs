@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -78,6 +79,8 @@ public class CurrentUserService : ICurrentUserService
         return Task.CompletedTask;
     }
 
+    private ConcurrentDictionary<string, User> _userCache = new();
+
     public async Task<User> GetCurrentUserAsync()
     {
         if (_currentUser != null)
@@ -89,10 +92,20 @@ public class CurrentUserService : ICurrentUserService
         ClaimsIdentity? cookieClaimsIdentity = await TryGetClaimsIdentityFromCookie();
         if (cookieClaimsIdentity != null)
         {
+            string cookieIdentifier = cookieClaimsIdentity.ToUserIdentifier();
+            if (_userCache.TryGetValue(cookieIdentifier, out var cookieUser))
+            {
+                return cookieUser;
+            }
             currentClaimsIdentity = await _symlinkUserService.GetMainIdentityAsync(cookieClaimsIdentity);
         }
         else if (TryGetClaimsIdentityFromHttpContext() is { } httpClaimsIdentity)
         {
+            string httpIdentifier = httpClaimsIdentity.ToUserIdentifier();
+            if (_userCache.TryGetValue(httpIdentifier, out var httpUser))
+            {
+                return httpUser;
+            }
             currentClaimsIdentity = await _symlinkUserService.GetMainIdentityAsync(httpClaimsIdentity);
         }
         else
@@ -107,13 +120,14 @@ public class CurrentUserService : ICurrentUserService
             throw new UnauthorizedAccessException();
         }
 
+        if (_userCache.TryGetValue(identifier, out var user))
+        {
+            return user;
+        }
+
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var user = await dbContext.Users
-            .Include(u => u.Stores)
-            .Include(u => u.Memberships)
-            .Include(u => u.ApiKeys)
-            .FirstOrDefaultAsync(u => u.Identifier == identifier);
+        user = await dbContext.Users.FirstOrDefaultAsync(u => u.Identifier == identifier);
         if (user == null)
         {
             user = new User
@@ -126,6 +140,7 @@ public class CurrentUserService : ICurrentUserService
             await dbContext.SaveChangesAsync();
         }
 
+        _userCache.TryAdd(user.Identifier, user);
         if (!_settings.ServerSettings.AdminIdentifiers.Contains(identifier) || user.Role == IdentityRole.Admin)
         {
             return user;

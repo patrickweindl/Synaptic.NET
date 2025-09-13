@@ -1,10 +1,15 @@
-using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Authentication.Resources;
 using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Configuration;
+using Synaptic.NET.Domain.Resources.Management;
 
 namespace Synaptic.NET.Authentication.Controllers;
 
@@ -15,18 +20,21 @@ public class AuthController : ControllerBase
     private readonly IRefreshTokenHandler _refreshTokenHandler;
     private readonly RedirectUriProvider _redirectUriProvider;
     private readonly CodeBasedAuthProvider _codeBasedAuthProvider;
+    private readonly IDbContextFactory<SynapticDbContext> _dbContextFactory;
     public AuthController(
         SynapticServerSettings settings,
         ISecurityTokenHandler tokenHandler,
         IRefreshTokenHandler refreshTokenHandler,
         RedirectUriProvider redirectUriProvider,
-        CodeBasedAuthProvider codeBasedAuthProvider)
+        CodeBasedAuthProvider codeBasedAuthProvider,
+        IDbContextFactory<SynapticDbContext> dbContextFactory)
     {
         _settings = settings;
         _tokenHandler = tokenHandler;
         _refreshTokenHandler = refreshTokenHandler;
         _redirectUriProvider = redirectUriProvider;
         _codeBasedAuthProvider = codeBasedAuthProvider;
+        _dbContextFactory = dbContextFactory;
     }
 
     [HttpHead("/")]
@@ -44,73 +52,111 @@ public class AuthController : ControllerBase
     }
 
     [HttpOptions("register")]
+    [Produces("application/json")]
     [AllowAnonymous]
-    public IActionResult RegisterOptions([FromBody] object? body)
+    public async Task<IActionResult> RegisterOptions([FromBody] object? body)
     {
-        var expiredKvps = _registrations.Where(kvp => kvp.Value.Item2 < DateTimeOffset.UtcNow).ToList();
-        foreach (var kvp in expiredKvps)
-        {
-            _registrations.TryRemove(kvp.Key, out _);
-        }
-        Guid registrationId = Guid.NewGuid();
-        _registrations[registrationId.ToString()] = (body, DateTimeOffset.UtcNow.AddHours(0.5));
-
-        return StatusCode(201, BuildRegistrationResponse(registrationId.ToString()));
+        return await BuildRegistrationResponseAsync(body);
     }
 
-    private static ConcurrentDictionary<string, (object?, DateTimeOffset)> _registrations = new();
-
-    private object BuildRegistrationResponse(string registrationId)
-    {
-        Log.Logger.Information($"[Authorization] New registration with {registrationId}.");
-        return new
-        {
-            client_id = registrationId,
-            redirect_uris = new[] { $"{_settings.ServerSettings.ServerUrl}/authorize" }
-        };
-    }
 
     [HttpPost("register")]
+    [Produces("application/json")]
     [AllowAnonymous]
-    public IActionResult Registration([FromBody] object? body)
+    public async Task<IActionResult> Registration([FromQuery] Dictionary<string, string>? inputQuery, [FromBody] object? body)
     {
-        var expiredKvps = _registrations.Where(kvp => kvp.Value.Item2 < DateTimeOffset.UtcNow).ToList();
-        foreach (var kvp in expiredKvps)
-        {
-            _registrations.TryRemove(kvp.Key, out _);
-        }
-        Guid registrationId = Guid.NewGuid();
-        _registrations[registrationId.ToString()] = (body, DateTimeOffset.UtcNow.AddHours(0.5));
+        return await BuildRegistrationResponseAsync(body);
+    }
 
-        return StatusCode(201, BuildRegistrationResponse(registrationId.ToString()));
+    private async Task<ContentResult> BuildRegistrationResponseAsync(object? body)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var expiredRegistrations = await dbContext.DynamicRegistrations.Where(r => r.ExpiresAt < DateTimeOffset.UtcNow).ToListAsync();
+        foreach (var expiredRegistration in expiredRegistrations)
+        {
+            dbContext.DynamicRegistrations.Remove(expiredRegistration);
+        }
+        await dbContext.SaveChangesAsync();
+        Guid registrationId = Guid.NewGuid();
+        DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddHours(0.5);
+
+        Log.Logger.Information($"[Authorization] New registration with {registrationId}.");
+        JsonElement json = JsonSerializer.SerializeToElement(body);
+        var req = JsonNode.Parse(json.GetRawText())!.AsObject();
+        string tokenAuth = req["token_endpoint_auth_method"]?.GetValue<string>() ?? "client_secret_basic";
+        var now = DateTimeOffset.UtcNow;
+        string clientSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        long issuedAt = now.ToUnixTimeSeconds();
+        long expiry = expiresAt.ToUnixTimeSeconds();
+
+        DynamicRegistration newRegistration = new(){ Id = Guid.NewGuid(), RegistrationId = registrationId, OriginalBody = json, ExpiresAt = expiresAt, Secret = clientSecret };
+
+        await dbContext.DynamicRegistrations.AddAsync(newRegistration);
+        await dbContext.SaveChangesAsync();
+        var resp = new JsonObject
+        {
+            ["client_id"] = registrationId,
+            ["client_id_issued_at"] = issuedAt,
+            ["token_endpoint_auth_method"] = tokenAuth,
+            ["client_secret"] = clientSecret,
+            ["client_secret_expires_at"] = expiry
+        };
+        foreach (var kv in req)
+        {
+            if (kv.Key is "client_id" or "client_secret" or "client_id_issued_at" or "client_secret_expires_at")
+            {
+                continue;
+            }
+            resp[kv.Key] = kv.Value?.DeepClone();
+        }
+        Log.Logger.Information($"[Dynamic Registration] New Dynamic Registration with ID {registrationId} created. It will expire at {expiresAt}.");
+        return new ContentResult
+        {
+            StatusCode = StatusCodes.Status201Created,
+            ContentType = "application/json",
+            Content = resp.ToJsonString(new JsonSerializerOptions { WriteIndented = false })
+        };
     }
 
     [HttpGet("login")]
     [AllowAnonymous]
     [ProducesResponseType(302, Description = "Redirects to a selection page for an OAuth provider.")]
-    public IActionResult Login([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
+    public async Task<IActionResult> LoginAsync([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
     {
-        return Authorize(body, inputQuery);
+        return await AuthorizeAsync(body, inputQuery);
     }
 
     [HttpGet("authorize")]
     [AllowAnonymous]
     [ProducesResponseType(302, Description = "Redirects to a selection page for an OAuth provider.")]
-    public IActionResult AuthLogin([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
+    public async Task<IActionResult> AuthLoginAsync([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
     {
-        return Authorize(body, inputQuery);
+        return await AuthorizeAsync(body, inputQuery);
     }
 
-    public IActionResult Authorize([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
+    public async Task<IActionResult> AuthorizeAsync([FromBody] object? body, [FromQuery] Dictionary<string, string>? inputQuery)
     {
         string queryString = string.Empty;
         if (inputQuery != null)
         {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            var expiredRegistrations = await dbContext.DynamicRegistrations.Where(r => r.ExpiresAt < DateTimeOffset.UtcNow).ToListAsync();
+            foreach (var expiredRegistration in expiredRegistrations)
+            {
+                dbContext.DynamicRegistrations.Remove(expiredRegistration);
+            }
+
+            await dbContext.SaveChangesAsync();
+
+            var validRegistrations = await dbContext.DynamicRegistrations.ToListAsync();
+
             queryString = string.Join("&", inputQuery.Where(k => k.Key != null && k.Value != null).Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
             Log.Information($"[Authorization] Received authorize GET with query {queryString}.");
-            if (inputQuery.TryGetValue("client_id", out string? clientId) && !string.IsNullOrEmpty(clientId) && _registrations.TryGetValue(clientId, out _))
+            if (inputQuery.TryGetValue("client_id", out string? clientId)
+                && !string.IsNullOrEmpty(clientId)
+                && validRegistrations.FirstOrDefault(r => r.RegistrationId.ToString() == clientId) is not null)
             {
-                Log.Debug("[Authorization] Registered client via PKCE, redirecting.");
+                Log.Debug($"[Authorization] A dynamic registration was found for {clientId}. Information extraction is currently not implemented.");
             }
         }
         string redirectUri = string.IsNullOrEmpty(queryString)
@@ -147,13 +193,38 @@ public class AuthController : ControllerBase
         return Redirect($"{redirectUri.Uri}?state={state}&code={code}");
     }
 
+    private async Task<DynamicRegistration?> TryGetDynamicRegistrationAsync()
+    {
+        if (!HttpContext.Request.Headers.Authorization.Contains("Basic"))
+        {
+            return null;
+        }
+
+        string secret = HttpContext.Request.Headers.Authorization.ToString().Replace("Basic ", "");
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var expiredRegistrations = await dbContext.DynamicRegistrations.Where(r => r.ExpiresAt < DateTimeOffset.UtcNow).ToListAsync();
+        foreach (var expiredRegistration in expiredRegistrations)
+        {
+            dbContext.DynamicRegistrations.Remove(expiredRegistration);
+        }
+        await dbContext.SaveChangesAsync();
+
+        if (await dbContext.DynamicRegistrations.FirstOrDefaultAsync(r => r.Secret == secret) is { } dynamicRegistration)
+        {
+            return dynamicRegistration;
+        }
+
+        return null;
+    }
+
     [HttpPost("token")]
     [AllowAnonymous]
     [Produces("application/json")]
     [ProducesResponseType(200, Type = typeof(AccessTokenResult), Description = "Returned when the authentication was successful and a JWT token was generated.")]
     [ProducesResponseType(401, Description = "Returned when the user is not authorized to access the API.")]
     [ProducesResponseType(500, Description = "Returned when the authentication failed due to missing config entries.")]
-    public async Task<IActionResult> Token([FromForm] string code,
+    public async Task<IActionResult> Token(
+        [FromForm] string code,
         [FromForm(Name = "client_id")] string clientId,
         [FromForm(Name = "client_secret")] string clientSecret,
         [FromForm(Name = "redirect_uri")] string redirectUri,
@@ -181,13 +252,14 @@ public class AuthController : ControllerBase
                 return StatusCode(401, "Invalid refresh token");
             }
 
-            if (await _refreshTokenHandler.ValidateRefreshTokenExpiryAsync(refreshToken))
+            try
             {
-                Log.Error("Expired refresh token");
-                return StatusCode(401, "The refresh token expired");
+                await _refreshTokenHandler.InvalidateRefreshTokenAsync(refreshToken);
             }
-
-            await _refreshTokenHandler.InvalidateRefreshTokenAsync(refreshToken);
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to invalidate refresh token");
+            }
             return Ok(await _tokenHandler.GenerateJwtTokenAsync(_settings.JwtKey, _settings.ServerSettings.JwtIssuer, _settings.JwtTokenLifetime, claimsIdentity));
 
         }
@@ -202,9 +274,17 @@ public class AuthController : ControllerBase
             provider = "github";
         }
 
-        if (_registrations.TryRemove(clientId, out _))
+        if (await TryGetDynamicRegistrationAsync() is { } clientRegistration)
         {
-            Log.Debug("[Authentication Token] Client registration removed.");
+            Log.Logger.Information("[Authorization Token] Received dynamic registration flow. Removing registration.");
+
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            dbContext.DynamicRegistrations.Remove(clientRegistration);
+            await dbContext.SaveChangesAsync();
+
+            clientId = clientRegistration.RegistrationId.ToString();
+            Log.Logger.Information("[Authorization Token] Retrieved client ID from dynamic registration.");
+            clientSecret = clientRegistration.Secret;
         }
 
         clientId = provider switch

@@ -53,7 +53,7 @@ Check out the samples in the `samples` folder for example partial usages or inje
   - [x] VSCode Authenticated MCP
   - [x] Claude Authenticated MCP
   - [x] Claude Code Authenticated MCP
-  - [ ] ChatGPT Desktop Authenticated MCP (not tested)
+  - [x] ChatGPT Desktop Authenticated MCP (not tested)
   - [ ] EntraID
 - [x] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users (permissions of users within groups)
