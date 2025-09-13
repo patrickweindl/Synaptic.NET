@@ -33,14 +33,14 @@ public class TokenMetricCollector : IMetricsCollector
 
     public async Task IncrementTokenCountsFromChatCompletionAsync(User? user, string operation, ChatCompletion completion)
     {
-        await IncrementInputTokenCountAsync(user, operation, completion.Model, completion.Usage.InputTokenCount);
-        await IncrementOutputTokenCountAsync(user, operation, completion.Model, completion.Usage.OutputTokenCount);
+        Guid operationId = Guid.NewGuid();
+        await IncrementInputTokenCountAsync(user, operation, completion.Model, completion.Usage.InputTokenCount, operationId);
+        await IncrementOutputTokenCountAsync(user, operation, completion.Model, completion.Usage.OutputTokenCount, operationId);
     }
 
-    public async Task IncrementInputTokenCountAsync(User? user, string operation, string model, long count)
+    public async Task IncrementInputTokenCountAsync(User? user, string operation, string model, long count, Guid? operationId = null)
     {
-        string operationString = $"Token incurrence with model |{model}|, Input: {operation}";
-        var tokenMetric = new TokenMetric { Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operationString, Id = Guid.NewGuid(), IsInput = true };
+        var tokenMetric = new TokenMetric { OperationId = operationId ?? Guid.NewGuid(), Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operation, Id = Guid.NewGuid(), IsInput = true };
         await using var dbContext = await _dbContext.CreateDbContextAsync();
         dbContext.TokenMetrics.Add(tokenMetric);
         await dbContext.SaveChangesAsync();
@@ -53,10 +53,9 @@ public class TokenMetricCollector : IMetricsCollector
         });
     }
 
-    public async Task IncrementOutputTokenCountAsync(User? user, string operation, string model, long count)
+    public async Task IncrementOutputTokenCountAsync(User? user, string operation, string model, long count, Guid? operationId = null)
     {
-        string operationString = $"Token incurrence with model |{model}|, Output: {operation}";
-        var tokenMetric = new TokenMetric { Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operationString, Id = Guid.NewGuid(), IsInput = false };
+        var tokenMetric = new TokenMetric { OperationId = operationId ?? Guid.NewGuid(), Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operation, Id = Guid.NewGuid(), IsInput = false };
         await using var dbContext = await _dbContext.CreateDbContextAsync();
         dbContext.TokenMetrics.Add(tokenMetric);
         await dbContext.SaveChangesAsync();

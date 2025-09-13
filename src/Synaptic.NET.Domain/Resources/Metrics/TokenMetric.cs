@@ -11,6 +11,8 @@ public class TokenMetric
 
     public required Guid UserId { get; set; }
 
+    public required Guid OperationId { get; set; }
+
     public required long Count { get; set; }
 
     public required DateTimeOffset Timestamp { get; set; }

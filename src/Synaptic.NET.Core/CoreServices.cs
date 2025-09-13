@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Synaptic.NET.Core.Extensions;
 using Synaptic.NET.Core.Metrics;
@@ -31,7 +32,9 @@ public static class CoreServices
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
-                metrics.AddAspNetCoreInstrumentation()
+                metrics
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService($"{MetricsCollectorProvider.ServiceName}"))
+                    .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddMeter($"{MetricsCollectorProvider.ServiceName}.TokenMeter")
@@ -65,7 +68,7 @@ public static class CoreServices
         {
             Predicate = r => r.Tags.Contains("live")
         });
-        app.UseOpenTelemetryPrometheusScrapingEndpoint();
+        app.MapPrometheusScrapingEndpoint().AllowAnonymous();
         return app;
     }
 }

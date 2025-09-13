@@ -1,4 +1,3 @@
-using Synaptic.NET.Core.Metrics;
 using Synaptic.NET.Domain.Resources.Metrics;
 using Synaptic.NET.OpenAI.Resources;
 
@@ -8,11 +7,7 @@ public static class TokenCostConverter
 {
     public static double ConvertToCostInDollar(this TokenMetric tokenEvent)
     {
-        if (!tokenEvent.Operation.Contains("Token incurrence"))
-        {
-            return 0;
-        }
-        string model = tokenEvent.Operation.Split('|')[1].ToLowerInvariant().Replace("-", "").Replace(".", "");
+        string model = tokenEvent.Model;
         double inputCostPerToken = model switch
         {
             _ when model.Contains("4o") && model.Contains("mini") => TokenCost.Gpt4oMiniInputTokenCost,
@@ -35,7 +30,7 @@ public static class TokenCostConverter
             _ when model.Contains("5") => TokenCost.Gpt5OutputTokenCost,
             _ => 5.0
         };
-        if (tokenEvent.Operation.Contains("Input"))
+        if (tokenEvent.IsInput)
         {
             return inputCostPerToken * tokenEvent.Count;
         }

@@ -1315,7 +1315,7 @@
             _tokenMetrics = events.ToList();
             _totalTokens = _tokenMetrics.Sum(m => m.Count);
             _totalCost = _tokenMetrics.Sum(m => m.ConvertToCostInDollar());
-            _totalOperations = _tokenMetrics.Count;
+            _totalOperations = _tokenMetrics.GroupBy(m => m.OperationId).Count();
 
             // Generate histogram data
             GenerateHistogramData();
