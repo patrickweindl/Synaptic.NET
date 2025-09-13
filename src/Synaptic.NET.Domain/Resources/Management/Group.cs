@@ -23,6 +23,9 @@ public class Group : IManagedIdentity
     [MaxLength(256)]
     public string DisplayName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// This is a navigational property and usually has to be retrieved by the context.
+    /// </summary>
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
 
     public ICollection<GroupMembership> Memberships { get; set; } = new List<GroupMembership>();

@@ -48,6 +48,13 @@ public class SynapticDbContext : DbContext
         await SetCurrentUserAsync(await currentUserService.GetCurrentUserAsync());
     }
 
+    public void SetCurrentUser(User user)
+    {
+        CurrentUserId = user.Id;
+        CurrentGroupIds.Clear();
+        CurrentGroupIds.AddRange(user.Memberships.Select(m => m.GroupId));
+    }
+
     public Task SetCurrentUserAsync(User user)
     {
         CurrentUserId = user.Id;
@@ -96,9 +103,6 @@ public class SynapticDbContext : DbContext
 
         modelBuilder.Entity<User>()
             .Navigation(u => u.Memberships).AutoInclude();
-
-        modelBuilder.Entity<User>()
-            .Navigation(u => u.Stores).AutoInclude();
 
         modelBuilder.Entity<Group>()
             .HasKey(g => g.Id);

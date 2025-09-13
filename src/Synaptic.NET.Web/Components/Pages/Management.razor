@@ -5,7 +5,6 @@
 @using Synaptic.NET.Domain.Abstractions.Management
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Authentication.Cookies
-@using Synaptic.NET.Domain.Abstractions.Augmentation
 @using Synaptic.NET.Domain.Resources.Management
 @using Synaptic.NET.Domain.Resources
 @using Microsoft.EntityFrameworkCore
@@ -19,7 +18,6 @@
 @inject IMemoryProvider MemoryProvider
 @inject ICurrentUserService CurrentUserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IFileMemoryCreationService FileMemoryCreationService
 @inject IDbContextFactory<SynapticDbContext> DbContextFactory
 @inject IBackgroundTaskQueue BackgroundTaskQueue
 
@@ -2359,17 +2357,17 @@
     private List<BackgroundTaskStatus> _backgroundTasks = [];
     private int _taskQueueCount = 0;
 
+    private Guid _subscriptionId;
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Subscribe to background task status changes
-            BackgroundTaskQueue.TaskStatusChanged += OnTaskStatusChanged;
-
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true)
             {
                 _userEmail = authState.User.FindFirst(ClaimTypes.Email)?.Value ?? authState.User.Identity.Name ?? "User";
+
                 await LoadData();
             }
         }
@@ -2379,6 +2377,8 @@
             _searchSuccess = false;
         }
     }
+
+
 
     private async Task LoadData()
     {

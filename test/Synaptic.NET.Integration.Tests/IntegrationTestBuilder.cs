@@ -40,7 +40,7 @@ public class IntegrationTestBuilder
         IMemoryQueryResultReranker reranker = new MemoryQueryResultReranker(factory, _testSettings);
         _qdrantMemoryClient = new QdrantMemoryClient(_testSettings, memoryAugmentationService);
 
-        _memoryProvider = new HybridMemoryProvider(_currentUserService, _dbContext, _qdrantMemoryClient, _storeRouter, memoryAugmentationService, reranker);
+        _memoryProvider = new HybridMemoryProvider(_currentUserService, new InMemorySynapticDbContextFactory(), _qdrantMemoryClient, _storeRouter, memoryAugmentationService, reranker);
     }
 
     public TestSettings TestSettings => _testSettings;

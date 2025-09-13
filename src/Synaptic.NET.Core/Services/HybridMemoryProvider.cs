@@ -16,75 +16,92 @@ namespace Synaptic.NET.Core.Services;
 /// </summary>
 public class HybridMemoryProvider : IMemoryProvider
 {
-    private readonly SynapticDbContext _dbContext;
+    private readonly IDbContextFactory<SynapticDbContext> _dbContextFactory;
     private readonly QdrantMemoryClient _qdrantMemoryClient;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMemoryStoreRouter _storeRouter;
     private readonly IMemoryAugmentationService _augmentationService;
     private readonly IMemoryQueryResultReranker _reranker;
+    private readonly User _currentUser; // This service should strictly be used scoped.
 
-    public HybridMemoryProvider(ICurrentUserService currentUserService, SynapticDbContext synapticDbContext, QdrantMemoryClient qdrantMemoryClient, IMemoryStoreRouter storeRouter, IMemoryAugmentationService augmentationService, IMemoryQueryResultReranker reranker)
+    public HybridMemoryProvider(
+        ICurrentUserService currentUserService,
+        IDbContextFactory<SynapticDbContext> synapticDbContextFactory,
+        QdrantMemoryClient qdrantMemoryClient,
+        IMemoryStoreRouter storeRouter,
+        IMemoryAugmentationService augmentationService,
+        IMemoryQueryResultReranker reranker)
     {
         _currentUserService = currentUserService;
-        _dbContext = synapticDbContext;
+        _currentUser = Task.Run(async () => await _currentUserService.GetCurrentUserAsync()).Result;
+        _dbContextFactory = synapticDbContextFactory;
         _qdrantMemoryClient = qdrantMemoryClient;
         _storeRouter = storeRouter;
         _augmentationService = augmentationService;
         _reranker = reranker;
-        _ = Task.Run(async () => await _dbContext.SetCurrentUserAsync(currentUserService));
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetStoreIdentifiersAndDescriptionsAsync()
     {
-        var result = await _dbContext.MemoryStores.ToDictionaryAsync(s => s.StoreId, s => s.Description);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var result = await dbContext.MemoryStores.ToDictionaryAsync(s => s.StoreId, s => s.Description);
         return result;
     }
 
     public async Task<List<MemoryStore>> GetStoresAsync()
     {
-        return await _dbContext.MemoryStores.ToListAsync();
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        return await dbContext.MemoryStores.ToListAsync();
     }
 
     public async Task<MemoryStore?> GetCollectionAsync(Guid collectionIdentifier)
     {
-        return await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        return await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
     }
 
     public async Task<MemoryStore?> GetCollectionAsync(string collectionTitle)
     {
-        return await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.Title == collectionTitle);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        return await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.Title == collectionTitle);
     }
 
     private async IAsyncEnumerable<MemorySearchResult> HybridSearchWithReranking(ObservableMemorySearchResult r, string query, int limit, double relevanceThreshold, MemoryQueryOptions options)
     {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
         r.Message = "Memory query received. Starting memory search...";
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
         var userVectorResults = Enumerable.Empty<MemorySearchResult>();
+
         if (options.SearchInPersonal)
         {
             if (options.StoreQueryOptions.StoreSearchMode < StoreSearchMode.All)
             {
                 var storeFilteredResults = new List<MemorySearchResult>();
-                foreach (var store in currentUser.Stores.Where(s => s.GroupId == null))
+                foreach (var store in dbContext.MemoryStores.Where(s => s.GroupId == null))
                 {
                     if (options.StoreQueryOptions.StoreShouldBeIncluded(store))
                     {
                         storeFilteredResults.AddRange(await _qdrantMemoryClient.SearchInStoreAsync(query, limit, relevanceThreshold,
-                            options.StoreQueryOptions.StoreIds.FirstOrDefault(), currentUser.Id));
+                            options.StoreQueryOptions.StoreIds.FirstOrDefault(), _currentUser.Id));
                     }
                 }
                 userVectorResults = storeFilteredResults;
             }
             else
             {
-                userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, currentUser);
+                userVectorResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, _currentUser);
             }
 
         }
 
         if (options.GroupQueryOptions.GroupSearchMode > GroupSearchMode.None)
         {
-            foreach (var group in currentUser.Memberships.Select(m => m.Group).Where(g => options.GroupQueryOptions.GroupShouldBeIncluded(g)))
+            foreach (var group in _currentUser.Memberships.Select(m => m.Group).Where(g => options.GroupQueryOptions.GroupShouldBeIncluded(g)))
             {
                 var groupResults = await _qdrantMemoryClient.SearchAsync(query, limit, relevanceThreshold, group);
                 userVectorResults = userVectorResults.Concat(groupResults);
@@ -107,7 +124,7 @@ public class HybridMemoryProvider : IMemoryProvider
             r.Message = "Reranking complete, adding missing information if required...";
 
             double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
-            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m, currentUser));
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissingAsync(m, _currentUser));
             foreach (var task in taskList)
             {
                 var result = await task;
@@ -124,7 +141,7 @@ public class HybridMemoryProvider : IMemoryProvider
             var augmentedResults = await SearchAugmented(query, options, limit, relevanceThreshold);
             var rerankedResults = _reranker.Rerank(augmentedResults);
             var reranked = await rerankedResults.ToListAsync();
-            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissing(m, currentUser));
+            var taskList = reranked.OrderBy(res => res.Relevance).Take(limit).Select(async m => await AddStoreAndUserIfMissingAsync(m, _currentUser));
             double progressPerItem = 0.15 / Math.Max(reranked.Count, 1);
             foreach (var task in taskList)
             {
@@ -143,10 +160,15 @@ public class HybridMemoryProvider : IMemoryProvider
         return Task.FromResult(searchTask);
     }
 
-    private Task<MemorySearchResult> AddStoreAndUserIfMissing(MemorySearchResult result, User requestingUser)
+    private async Task<MemorySearchResult> AddStoreAndUserIfMissingAsync(MemorySearchResult result, User requestingUser)
     {
-        var memoryStores = requestingUser.Stores;
-        var userGroups = requestingUser.Memberships.Select(m => m.Group).ToList();
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(requestingUser);
+        var memoryStores = await dbContext.MemoryStores
+            .Include(memoryStore => memoryStore.Memories)
+            .ThenInclude(mem => mem.OwnerUser)
+            .Include(memoryStore => memoryStore.Memories)
+            .ThenInclude(m => m.OwnerGroup).ToListAsync();
         if (memoryStores.FirstOrDefault(s => s.StoreId == result.Memory.StoreId) is
             { } existingStore
             && memoryStores.SelectMany(s => s.Memories).FirstOrDefault(m => m.Identifier == result.Memory.Identifier) is { } memory)
@@ -154,30 +176,21 @@ public class HybridMemoryProvider : IMemoryProvider
             result.Memory.Store = existingStore;
             result.Memory.OwnerUser = memory.OwnerUser;
             result.Memory.OwnerGroup = memory.OwnerGroup;
-            return Task.FromResult(result);
         }
-
-        if (userGroups.FirstOrDefault(g => g.Stores.Any(s => s.Memories.Any(groupMem => groupMem.Identifier == result.Memory.Identifier))) is { } owningGroup)
-        {
-            result.Memory.OwnerGroup = owningGroup;
-            result.Memory.GroupId = owningGroup.Id;
-            result.Memory.Store = owningGroup.Stores.FirstOrDefault(s => s.StoreId == result.Memory.StoreId);
-        }
-
-        return Task.FromResult(result);
+        return result;
     }
 
     private async Task<IEnumerable<MemorySearchResult>> SearchAugmented(string query, MemoryQueryOptions options, int limit = 10,
         double relevanceThreshold = 0.5)
     {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+
+        var userStores = await dbContext.MemoryStores.ToListAsync();
+        var userOwnedStores = userStores.Where(s => s.GroupId == null);
         var groupStores = options.GroupQueryOptions.GroupSearchMode == GroupSearchMode.None
             ? new List<MemoryStore>()
-            : (await _currentUserService.GetCurrentUserAsync()).Memberships
-            .Select(m => m.Group).Where(g => options.GroupQueryOptions.GroupShouldBeIncluded(g))
-            .SelectMany(g => g.Stores).ToList();
-
-        var userStores = await _dbContext.MemoryStores.ToListAsync();
-        var userOwnedStores = userStores.Where(s => s.GroupId == null);
+            : userStores.Where(s => s.GroupId != null).ToList();
         if (!options.SearchInPersonal)
         {
             userOwnedStores = Enumerable.Empty<MemoryStore>();
@@ -240,7 +253,9 @@ public class HybridMemoryProvider : IMemoryProvider
 
     public async Task<MemoryStore?> CreateCollectionAsync(MemoryStore store)
     {
-        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == store.StoreId) is { } existingStore)
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        if (await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == store.StoreId) is { } existingStore)
         {
             foreach (var memory in store.Memories)
             {
@@ -248,7 +263,7 @@ public class HybridMemoryProvider : IMemoryProvider
                 existingStore.Memories.Add(memory);
             }
             await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
             return existingStore;
         }
 
@@ -260,23 +275,23 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         store.OwnerUser = null!;
         store.OwnerGroup = null!;
-        await _dbContext.MemoryStores.AddAsync(store);
-        await _dbContext.SaveChangesAsync();
+        await dbContext.MemoryStores.AddAsync(store);
+        await dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(await _currentUserService.GetCurrentUserAsync(), store);
         return store;
     }
 
     public async Task<MemoryStore?> CreateCollectionAsync(string collectionTitle, string storeDescription)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        _dbContext.Attach(currentUser);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
         var newStore = new MemoryStore
         {
             Title = collectionTitle,
             Description = storeDescription,
             StoreId = Guid.NewGuid(),
-            OwnerUser = currentUser,
-            UserId = currentUser.Id
+            OwnerUser = _currentUser,
+            UserId = _currentUser.Id
         };
 
         foreach (var mem in newStore.Memories)
@@ -287,15 +302,17 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         newStore.OwnerUser = null!;
         newStore.OwnerGroup = null!;
-        await _dbContext.MemoryStores.AddAsync(newStore);
-        await _dbContext.SaveChangesAsync();
+        await dbContext.MemoryStores.AddAsync(newStore);
+        await dbContext.SaveChangesAsync();
         return newStore;
     }
 
     public async Task<bool> CreateMemoryEntryAsync(Memory memory)
     {
-        var targetStoreRoutingResult = await _storeRouter.RouteMemoryToStoreAsync(memory, await _dbContext.MemoryStores.ToListAsync());
-        var targetStore = await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == targetStoreRoutingResult.Identifier);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStoreRoutingResult = await _storeRouter.RouteMemoryToStoreAsync(memory, await dbContext.MemoryStores.ToListAsync());
+        var targetStore = await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == targetStoreRoutingResult.Identifier);
 
         if (targetStore == null)
         {
@@ -311,16 +328,17 @@ public class HybridMemoryProvider : IMemoryProvider
 
         memory.StoreId = targetStore.StoreId;
         memory.Store = null;
-        await _dbContext.Memories.AddAsync(memory);
-        await _dbContext.SaveChangesAsync();
+        await dbContext.Memories.AddAsync(memory);
+        await dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryAsync(await _currentUserService.GetCurrentUserAsync(), memory);
         return true;
     }
 
     public async Task<bool> CreateMemoryEntryAsync(Guid collectionIdentifier, Memory memory, string storeDescription = "")
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
         if (targetStore == null)
         {
             string title = await _augmentationService.GenerateStoreTitleAsync(storeDescription, [memory]);
@@ -334,16 +352,17 @@ public class HybridMemoryProvider : IMemoryProvider
 
         memory.StoreId = targetStore.StoreId;
         memory.Store = null;
-        await _dbContext.Memories.AddAsync(memory);
-        await _dbContext.SaveChangesAsync();
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
+        await dbContext.Memories.AddAsync(memory);
+        await dbContext.SaveChangesAsync();
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, memory);
         return true;
     }
 
     public async Task<bool> CreateMemoryEntryAsync(string collectionTitle, Memory memory, string storeDescription = "")
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.Title == collectionTitle) ?? await CreateCollectionAsync(collectionTitle, storeDescription);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.Title == collectionTitle) ?? await CreateCollectionAsync(collectionTitle, storeDescription);
 
         if (targetStore == null)
         {
@@ -351,16 +370,17 @@ public class HybridMemoryProvider : IMemoryProvider
         }
         memory.StoreId = targetStore.StoreId;
         memory.Store = null;
-        await _dbContext.Memories.AddAsync(memory);
-        await _dbContext.SaveChangesAsync();
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, memory);
+        await dbContext.Memories.AddAsync(memory);
+        await dbContext.SaveChangesAsync();
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, memory);
         return true;
     }
 
     public async Task<bool> ReplaceCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingStore = await dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
@@ -369,27 +389,27 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryStoreAsync(currentUser.Id, existingStore);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUser.Id, existingStore);
 
-        _dbContext.MemoryStores.Remove(existingStore);
+        dbContext.MemoryStores.Remove(existingStore);
 
         newStore.StoreId = collectionIdentifier;
-        newStore.UserId = currentUser.Id;
+        newStore.UserId = _currentUser.Id;
         newStore.OwnerUser = null!;
 
-        await _dbContext.MemoryStores.AddAsync(newStore);
+        await dbContext.MemoryStores.AddAsync(newStore);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryStoreAsync(currentUser, newStore);
-
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUser, newStore);
         return true;
     }
 
     public async Task<bool> ReplaceCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingStore = await dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -398,26 +418,26 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryStoreAsync(currentUser.Id, existingStore);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUser.Id, existingStore);
 
-        _dbContext.MemoryStores.Remove(existingStore);
+        dbContext.MemoryStores.Remove(existingStore);
 
         newStore.StoreId = existingStore.StoreId;
-        newStore.UserId = currentUser.Id;
+        newStore.UserId = _currentUser.Id;
         newStore.OwnerUser = null!;
-        await _dbContext.MemoryStores.AddAsync(newStore);
+        await dbContext.MemoryStores.AddAsync(newStore);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryStoreAsync(currentUser, newStore);
-
+        await _qdrantMemoryClient.UpsertMemoryStoreAsync(_currentUser, newStore);
         return true;
     }
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
         if (existingMemory == null)
@@ -425,30 +445,30 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, entryIdentifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, entryIdentifier);
 
-        _dbContext.Memories.Remove(existingMemory);
+        dbContext.Memories.Remove(existingMemory);
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = existingMemory.StoreId;
         newMemory.Store = null;
-        newMemory.Owner = currentUser.Id;
+        newMemory.Owner = _currentUser.Id;
         newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await _dbContext.Memories.AddAsync(newMemory);
+        await dbContext.Memories.AddAsync(newMemory);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, newMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, newMemory);
         return true;
     }
 
     public async Task<bool> ReplaceMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
         if (existingMemory == null)
@@ -456,30 +476,30 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, entryIdentifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, entryIdentifier);
 
-        _dbContext.Memories.Remove(existingMemory);
+        dbContext.Memories.Remove(existingMemory);
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = collectionIdentifier;
         newMemory.Store = null;
-        newMemory.Owner = currentUser.Id;
+        newMemory.Owner = _currentUser.Id;
         newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await _dbContext.Memories.AddAsync(newMemory);
+        await dbContext.Memories.AddAsync(newMemory);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, newMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, newMemory);
         return true;
     }
 
     public async Task<bool> ReplaceMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
         if (targetStore == null)
@@ -487,7 +507,7 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        var existingMemory = await _dbContext.Memories
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == targetStore.StoreId);
 
         if (existingMemory == null)
@@ -495,29 +515,30 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, entryIdentifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, entryIdentifier);
 
-        _dbContext.Memories.Remove(existingMemory);
+        dbContext.Memories.Remove(existingMemory);
 
         newMemory.Identifier = entryIdentifier;
         newMemory.StoreId = targetStore.StoreId;
         newMemory.Store = null;
-        newMemory.Owner = currentUser.Id;
+        newMemory.Owner = _currentUser.Id;
         newMemory.OwnerUser = null!;
         newMemory.UpdatedAt = DateTimeOffset.UtcNow;
 
-        await _dbContext.Memories.AddAsync(newMemory);
+        await dbContext.Memories.AddAsync(newMemory);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, newMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, newMemory);
         return true;
     }
 
     public async Task<bool> UpdateCollectionAsync(Guid collectionIdentifier, MemoryStore newStore)
     {
-        var existingStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingStore = await dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
         if (existingStore == null)
@@ -532,14 +553,15 @@ public class HybridMemoryProvider : IMemoryProvider
         {
             existingStore.Memories.Add(memory);
         }
-        await _dbContext.SaveChangesAsync();
-
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> UpdateCollectionAsync(string collectionTitle, MemoryStore newStore)
     {
-        var existingStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingStore = await dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
         if (existingStore == null)
@@ -554,15 +576,15 @@ public class HybridMemoryProvider : IMemoryProvider
         {
             existingStore.Memories.Add(memory);
         }
-        await _dbContext.SaveChangesAsync();
-
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
         if (existingMemory == null)
@@ -570,7 +592,7 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+        await dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
             m
             .SetProperty(p => p.Title, newMemory.Title)
             .SetProperty(p => p.Description, newMemory.Description)
@@ -581,17 +603,17 @@ public class HybridMemoryProvider : IMemoryProvider
             .SetProperty(p => p.Reference, newMemory.Reference)
             .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow)
         );
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, existingMemory);
         return true;
     }
 
     public async Task<bool> UpdateMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var existingMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
         if (existingMemory == null)
@@ -599,7 +621,7 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+        await dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
             m.SetProperty(p => p.Title, newMemory.Title)
                 .SetProperty(p => p.Description, newMemory.Description)
                 .SetProperty(p => p.Content, newMemory.Content)
@@ -608,17 +630,17 @@ public class HybridMemoryProvider : IMemoryProvider
                 .SetProperty(p => p.ReferenceType, newMemory.ReferenceType)
                 .SetProperty(p => p.Reference, newMemory.Reference)
                 .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow));
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, existingMemory);
         return true;
     }
 
     public async Task<bool> UpdateMemoryEntryAsync(string collectionTitle, Guid entryIdentifier, Memory newMemory)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
         if (targetStore == null)
@@ -626,7 +648,7 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        var existingMemory = await _dbContext.Memories
+        var existingMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == targetStore.StoreId);
 
         if (existingMemory == null)
@@ -635,7 +657,7 @@ public class HybridMemoryProvider : IMemoryProvider
         }
 
 
-        await _dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
+        await dbContext.Memories.Where(m => m.Identifier == existingMemory.Identifier).ExecuteUpdateAsync(m =>
             m.SetProperty(p => p.Title, newMemory.Title)
                 .SetProperty(p => p.Description, newMemory.Description)
                 .SetProperty(p => p.Content, newMemory.Content)
@@ -645,17 +667,17 @@ public class HybridMemoryProvider : IMemoryProvider
                 .SetProperty(p => p.Reference, newMemory.Reference)
                 .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow)
         );
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
 
-        await _qdrantMemoryClient.UpsertMemoryAsync(currentUser, existingMemory);
-
+        await _qdrantMemoryClient.UpsertMemoryAsync(_currentUser, existingMemory);
         return true;
     }
 
     public async Task<bool> DeleteCollectionAsync(Guid collectionIdentifier)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores
             .FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier);
 
         if (targetStore == null)
@@ -663,18 +685,18 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryStoreAsync(currentUser.Id, targetStore);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUser.Id, targetStore);
 
-        _dbContext.MemoryStores.Remove(targetStore);
-        await _dbContext.SaveChangesAsync();
-
+        dbContext.MemoryStores.Remove(targetStore);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteCollectionAsync(string collectionTitle)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetStore = await _dbContext.MemoryStores
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetStore = await dbContext.MemoryStores
             .Include(s => s.Memories)
             .FirstOrDefaultAsync(s => s.Title == collectionTitle);
 
@@ -683,18 +705,18 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryStoreAsync(currentUser.Id, targetStore);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUser.Id, targetStore);
 
-        _dbContext.MemoryStores.Remove(targetStore);
-        await _dbContext.SaveChangesAsync();
-
+        dbContext.MemoryStores.Remove(targetStore);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, Guid entryIdentifier)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier && m.StoreId == collectionIdentifier);
 
         if (targetMemory == null)
@@ -702,18 +724,18 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, entryIdentifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, entryIdentifier);
 
-        _dbContext.Memories.Remove(targetMemory);
-        await _dbContext.SaveChangesAsync();
-
+        dbContext.Memories.Remove(targetMemory);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid entryIdentifier)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Identifier == entryIdentifier);
 
         if (targetMemory == null)
@@ -721,18 +743,18 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, entryIdentifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, entryIdentifier);
 
-        _dbContext.Memories.Remove(targetMemory);
-        await _dbContext.SaveChangesAsync();
-
+        dbContext.Memories.Remove(targetMemory);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteMemoryEntryAsync(Guid collectionIdentifier, string entryTitle)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        var targetMemory = await _dbContext.Memories
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        var targetMemory = await dbContext.Memories
             .FirstOrDefaultAsync(m => m.Title == entryTitle && m.StoreId == collectionIdentifier);
 
         if (targetMemory == null)
@@ -740,42 +762,42 @@ public class HybridMemoryProvider : IMemoryProvider
             return false;
         }
 
-        await _qdrantMemoryClient.DeleteMemoryAsync(currentUser.Id, targetMemory.Identifier);
+        await _qdrantMemoryClient.DeleteMemoryAsync(_currentUser.Id, targetMemory.Identifier);
 
-        _dbContext.Memories.Remove(targetMemory);
-        await _dbContext.SaveChangesAsync();
-
+        dbContext.Memories.Remove(targetMemory);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> PublishMemoryStoreToGroup(Guid collectionIdentifier, Guid groupId)
     {
-        var currentUser = await _currentUserService.GetCurrentUserAsync();
-        if (currentUser.Memberships.All(m => m.Group.Id != groupId))
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(_currentUser);
+        if (_currentUser.Memberships.All(m => m.Group.Id != groupId))
         {
             return false;
         }
 
-        if (await _dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier) is not { } store)
+        if (await dbContext.MemoryStores.FirstOrDefaultAsync(s => s.StoreId == collectionIdentifier) is not { } store)
         {
             return false;
         }
 
-        if (await _dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId) is not { } group)
+        if (await dbContext.Groups.FirstOrDefaultAsync(g => g.Id == groupId) is not { } group)
         {
             return false;
         }
 
-        await _dbContext.MemoryStores.Where(s => s.StoreId == store.StoreId).ExecuteUpdateAsync(s =>
+        await dbContext.MemoryStores.Where(s => s.StoreId == store.StoreId).ExecuteUpdateAsync(s =>
             s.SetProperty(p => p.GroupId, groupId)
                 .SetProperty(p => p.OwnerGroup, group));
         foreach (var memory in store.Memories)
         {
             memory.GroupId = groupId;
         }
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         await _qdrantMemoryClient.UpsertMemoryStoreAsync(group, store);
-        await _qdrantMemoryClient.DeleteMemoryStoreAsync(currentUser.Id, store);
+        await _qdrantMemoryClient.DeleteMemoryStoreAsync(_currentUser.Id, store);
         return true;
 
     }

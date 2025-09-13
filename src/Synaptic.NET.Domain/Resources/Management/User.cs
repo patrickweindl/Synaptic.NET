@@ -33,6 +33,9 @@ public class User : IComparable<User>, IEquatable<User>, IManagedIdentity
 
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 
+    /// <summary>
+    /// This is a non-auto included navigational property, so it must be manually added to the context.
+    /// </summary>
     public ICollection<MemoryStore> Stores { get; set; } = new List<MemoryStore>();
 
     public ICollection<GroupMembership> Memberships { get; set; } = new List<GroupMembership>();
