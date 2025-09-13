@@ -3,6 +3,7 @@ using Synaptic.NET.Core;
 using Synaptic.NET.Core.Providers;
 using Synaptic.NET.Core.Tests;
 using Synaptic.NET.Core.Tests.Mocks;
+using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Storage;
@@ -21,7 +22,7 @@ public class WhenUsingQdrantClient
     {
         _testSettings = TestSettings.FromFile();
         OpenAiClientFactory factory = new(_testSettings.OpenAiSettings.ApiKey);
-        _testMetricsCollectorProvider = new MetricsCollectorProvider();
+        _testMetricsCollectorProvider = new MetricsCollectorProvider(new InMemorySynapticDbContextFactory());
         _memoryAugmentationService =
             new MemoryAugmentationService(_testSettings, factory, _currentUserService, _testMetricsCollectorProvider);
     }

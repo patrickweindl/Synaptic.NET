@@ -1,42 +1,35 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Microsoft.EntityFrameworkCore;
 using Synaptic.NET.Core.Providers;
+using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Metrics;
 
 namespace Synaptic.NET.Core.Metrics;
 
-public class ApiMetricsCollector : IMetricsCollector<TimeSpan>
+public class ApiMetricsCollector : IMetricsCollector
 {
     private readonly Histogram<double> _benchmarkMeter;
-    private readonly InMemoryMetricsStore _metricsStore;
+    private readonly IDbContextFactory<SynapticDbContext> _dbContextFactory;
 
-    public ApiMetricsCollector(InMemoryMetricsStore metricsStore)
+
+    public ApiMetricsCollector(IDbContextFactory<SynapticDbContext> dbContextFactory)
     {
-        _metricsStore = metricsStore;
+        _dbContextFactory = dbContextFactory;
         Meter = new Meter(MeterName);
-        _benchmarkMeter = Meter.CreateHistogram<double>("BenchmarkCounter", "ms");
+        _benchmarkMeter = Meter.CreateHistogram<double>(MeterName, "ms");
     }
 
-    public string MeterName => "Synaptic.Api.BenchmarkMeter";
+    public string MeterName => $"{MetricsCollectorProvider.ServiceName}.BenchmarkMeter";
     public Meter Meter { get; }
 
-    public InMemoryMeter<TimeSpan> InMemoryMeter
+    public async Task RecordBenchmark(TimeSpan value, string operation, User? user)
     {
-        get
-        {
-            if (_metricsStore.Benchmarks.TryGetValue(MeterName, out var meter))
-            {
-                return meter;
-            }
-            var newMeter = new InMemoryMeter<TimeSpan>(MeterName);
-            _metricsStore.Benchmarks.TryAdd(MeterName, newMeter);
-            return newMeter;
-        }
-    }
-
-    public void RecordBenchmark(TimeSpan value, string operation, User? user)
-    {
-        InMemoryMeter.Record(new MetricsEvent<TimeSpan>(value, operation, user));
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var benchmarkMetric = new BenchmarkMetric { TimeStamp = DateTimeOffset.UtcNow, Id = Guid.NewGuid(), Operation = operation, UserId = user?.Id ?? Guid.Empty, Duration = value };
+        dbContext.BenchmarkMetrics.Add(benchmarkMetric);
+        await dbContext.SaveChangesAsync();
         _benchmarkMeter.Record(value.TotalMilliseconds, new TagList
         {
             { "user.id", user },

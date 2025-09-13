@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Metrics;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Domain.Resources;
@@ -32,6 +33,10 @@ public class SynapticDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public DbSet<DynamicRegistration> DynamicRegistrations => Set<DynamicRegistration>();
+
+    public DbSet<TokenMetric> TokenMetrics => Set<TokenMetric>();
+
+    public DbSet<BenchmarkMetric> BenchmarkMetrics => Set<BenchmarkMetric>();
 
     public SynapticDbContext(DbContextOptions<SynapticDbContext> options)
         : base(options)

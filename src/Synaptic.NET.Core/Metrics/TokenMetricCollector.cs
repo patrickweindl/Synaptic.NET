@@ -1,51 +1,49 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
 using Synaptic.NET.Core.Providers;
+using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Metrics;
 
 namespace Synaptic.NET.Core.Metrics;
 
-public class TokenMetricCollector : IMetricsCollector<long>
+public class TokenMetricCollector : IMetricsCollector
 {
     private readonly Histogram<long> _inputTokenCounter;
     private readonly Histogram<long> _outputTokenCounter;
-    private readonly InMemoryMetricsStore _metricsStore;
-
-    public TokenMetricCollector(InMemoryMetricsStore metricsStore)
+    private readonly IDbContextFactory<SynapticDbContext> _dbContext;
+    public TokenMetricCollector(IDbContextFactory<SynapticDbContext> dbContext)
     {
-        _metricsStore = metricsStore;
+        _dbContext = dbContext;
         Meter = new Meter(MeterName);
-        _inputTokenCounter = Meter.CreateHistogram<long>("InputTokenHistogram", "tokens");
-        _outputTokenCounter = Meter.CreateHistogram<long>("OutputTokenHistogram", "tokens");
+        _inputTokenCounter = Meter.CreateHistogram<long>($"{MeterName}.InputTokens", "tokens");
+        _outputTokenCounter = Meter.CreateHistogram<long>($"{MeterName}.OutputTokens", "tokens");
     }
 
-    public string MeterName => "Synaptic.Api.TokenMeter";
+    public string MeterName => $"{MetricsCollectorProvider.ServiceName}.TokenMeter";
     public Meter Meter { get; }
 
-    public InMemoryMeter<long> InMemoryMeter
+    public async Task<IReadOnlyList<TokenMetric>> GetTokenMetricsAsync()
     {
-        get
-        {
-            if (_metricsStore.Counters.TryGetValue(MeterName, out var meter))
-            {
-                return meter;
-            }
-            var newMeter = new InMemoryMeter<long>(MeterName);
-            _metricsStore.Counters.TryAdd(MeterName, newMeter);
-            return newMeter;
-        }
+        await using var dbContext = await _dbContext.CreateDbContextAsync();
+        return await dbContext.TokenMetrics.ToListAsync();
     }
 
-    public void IncrementTokenCountsFromChatCompletion(User? user, string operation, ChatCompletion completion)
+    public async Task IncrementTokenCountsFromChatCompletionAsync(User? user, string operation, ChatCompletion completion)
     {
-        IncrementInputTokenCount(user, operation, completion.Model, completion.Usage.InputTokenCount);
-        IncrementOutputTokenCount(user, operation, completion.Model, completion.Usage.OutputTokenCount);
+        await IncrementInputTokenCountAsync(user, operation, completion.Model, completion.Usage.InputTokenCount);
+        await IncrementOutputTokenCountAsync(user, operation, completion.Model, completion.Usage.OutputTokenCount);
     }
 
-    public void IncrementInputTokenCount(User? user, string operation, string model, long count)
+    public async Task IncrementInputTokenCountAsync(User? user, string operation, string model, long count)
     {
-        InMemoryMeter.Record(new MetricsEvent<long>(count, $"Token incurrence by |{model}|, Input: {operation}", user));
+        string operationString = $"Token incurrence with model |{model}|, Input: {operation}";
+        var tokenMetric = new TokenMetric { Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operationString, Id = Guid.NewGuid(), IsInput = true };
+        await using var dbContext = await _dbContext.CreateDbContextAsync();
+        dbContext.TokenMetrics.Add(tokenMetric);
+        await dbContext.SaveChangesAsync();
         _inputTokenCounter.Record(count, new TagList
         {
             { "user.id", user },
@@ -55,9 +53,13 @@ public class TokenMetricCollector : IMetricsCollector<long>
         });
     }
 
-    public void IncrementOutputTokenCount(User? user, string operation, string model, long count)
+    public async Task IncrementOutputTokenCountAsync(User? user, string operation, string model, long count)
     {
-        InMemoryMeter.Record(new MetricsEvent<long>(count, $"Token incurrence by |{model}|, Output: {operation}", user));
+        string operationString = $"Token incurrence with model |{model}|, Output: {operation}";
+        var tokenMetric = new TokenMetric { Timestamp = DateTimeOffset.UtcNow, UserId = user?.Id ?? Guid.Empty, Model = model, Count = count, Operation = operationString, Id = Guid.NewGuid(), IsInput = false };
+        await using var dbContext = await _dbContext.CreateDbContextAsync();
+        dbContext.TokenMetrics.Add(tokenMetric);
+        await dbContext.SaveChangesAsync();
         _outputTokenCounter.Record(count, new TagList
         {
             { "user.id", user },

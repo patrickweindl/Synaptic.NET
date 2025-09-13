@@ -43,7 +43,7 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         structuredResponse.Temperature = 0.2f;
         Log.Debug("[File Memory Creation Service] Acquiring model response...");
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "PDF Processing", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "PDF Processing", response.Value);
         DateTime responseAcquisition = DateTime.Now;
 
         Log.Debug($"[File Memory Creation Service] LLM Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
@@ -71,7 +71,7 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
         DateTime start = DateTime.UtcNow;
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "File Processing", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "File Processing", response.Value);
         DateTime responseAcquisition = DateTime.Now;
         Log.Information($"Processing complete after {(responseAcquisition - start).TotalSeconds} seconds.");
 

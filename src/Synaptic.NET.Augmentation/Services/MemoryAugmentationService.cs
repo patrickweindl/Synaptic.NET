@@ -45,7 +45,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         ClientResult<ChatCompletion> chatCompletion = await _client.CompleteChatAsync(messages, structuredResponseSchema);
 
         MemorySummary? summary = CompletionOptionsHelper.ParseModelResponse<MemorySummary>(chatCompletion);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Memory Summarization",
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Memory Summarization",
             chatCompletion.Value);
         string output = summary?.Summary ?? string.Empty;
         Log.Information(
@@ -76,7 +76,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         Log.Information("[Augmentation] Calling model for memory store summary.");
         var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}.",
@@ -108,7 +108,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
             storeIdentifier, start);
         var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
@@ -139,7 +139,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
             storeDescription, start);
         var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
         Log.Information(
             "[Augmentation] Model call finished after {Duration:c}. Output: {Output}",
@@ -172,7 +172,7 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         };
         var completionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _client.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Augmented Search", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Augmented Search", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
 
         if (string.IsNullOrEmpty(suggestion))

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Synaptic.NET.Core.Extensions;
+using Synaptic.NET.Core.Metrics;
 using Synaptic.NET.Core.Providers;
 using Synaptic.NET.Core.Services;
 using Synaptic.NET.Domain.Abstractions.Management;
@@ -33,8 +34,8 @@ public static class CoreServices
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddMeter("Synaptic.Api.TokenMeter")
-                    .AddMeter("Synaptic.Api.BenchmarkMeter")
+                    .AddMeter($"{MetricsCollectorProvider.ServiceName}.TokenMeter")
+                    .AddMeter($"{MetricsCollectorProvider.ServiceName}.BenchmarkMeter")
                     .AddPrometheusExporter();
             })
             .WithTracing(tracing =>

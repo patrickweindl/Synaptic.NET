@@ -4,6 +4,7 @@ using Synaptic.NET.Core.Providers;
 using Synaptic.NET.Core.Services;
 using Synaptic.NET.Core.Tests;
 using Synaptic.NET.Core.Tests.Mocks;
+using Synaptic.NET.Domain;
 using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
@@ -33,7 +34,7 @@ public class IntegrationTestBuilder
         _dbContext.Database.EnsureCreated();
         _ = Task.Run(async () => await _dbContext.SetCurrentUserAsync(_currentUserService));
         OpenAiClientFactory factory = new(_testSettings.OpenAiSettings.ApiKey);
-        IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider();
+        IMetricsCollectorProvider testMetricsCollectorProvider = new MetricsCollectorProvider(new InMemorySynapticDbContextFactory());
         IMemoryAugmentationService memoryAugmentationService = new MemoryAugmentationService(_testSettings, factory, _currentUserService, testMetricsCollectorProvider);
         _storeRouter = new WeightedMemoryStoreRouter(_currentUserService, testMetricsCollectorProvider, factory, _testSettings);
         IMemoryQueryResultReranker reranker = new MemoryQueryResultReranker(factory, _testSettings);

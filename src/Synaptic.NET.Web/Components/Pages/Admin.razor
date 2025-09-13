@@ -8,6 +8,7 @@
 @using Synaptic.NET.Domain.Abstractions.Management
 @using Synaptic.NET.Domain.Enums
 @using Synaptic.NET.Domain.Resources.Management
+@using Synaptic.NET.Domain.Resources.Metrics
 @using Synaptic.NET.OpenAI.Converters
 @inject IUserManager UserManager
 @inject ICurrentUserService CurrentUserService
@@ -435,13 +436,13 @@
                                         {
                                             <div class="table-row">
                                                 <div class="table-cell">
-                                                    <span class="user-name">@GetDisplayNameForUser(metric.UserIdentifier)</span>
+                                                    <span class="user-name">@GetDisplayNameForUser(metric.UserId)</span>
                                                 </div>
                                                 <div class="table-cell">
                                                     <span class="operation-name">@metric.Operation</span>
                                                 </div>
                                                 <div class="table-cell">
-                                                    <span class="token-count">@metric.Value.ToString("N0")</span>
+                                                    <span class="token-count">@metric.Count.ToString("N0")</span>
                                                 </div>
                                                 <div class="table-cell">
                                                     <span class="cost-amount">$@metric.ConvertToCostInDollar().ToString("F4")</span>
@@ -1266,7 +1267,7 @@
     private List<Group> _groups = new();
     private List<User> _adminUsers = new();
     private List<User> _activeUsers = new();
-    private List<MetricsEvent<long>> _tokenMetrics = new();
+    private List<TokenMetric> _tokenMetrics = new();
     private long _totalTokens;
     private double _totalCost;
     private int _totalOperations;
@@ -1309,11 +1310,12 @@
             _adminUsers = _users.Where(u => u.Role == IdentityRole.Admin).ToList();
 
             // Load token metrics
-            var tokenMeter = MetricsProvider.TokenMetrics.InMemoryMeter;
-            _tokenMetrics = tokenMeter.Events.ToList();
-            _totalTokens = _tokenMetrics.Sum(m => m.Value);
+            var tokenMeter = MetricsProvider.TokenMetrics;
+            var events = await tokenMeter.GetTokenMetricsAsync();
+            _tokenMetrics = events.ToList();
+            _totalTokens = _tokenMetrics.Sum(m => m.Count);
             _totalCost = _tokenMetrics.Sum(m => m.ConvertToCostInDollar());
-            _totalOperations = _tokenMetrics.GroupBy(m => m.Operation).Count();
+            _totalOperations = _tokenMetrics.Count;
 
             // Generate histogram data
             GenerateHistogramData();
@@ -1427,10 +1429,24 @@
 
     private string GetDisplayNameForUser(string? userIdentifier)
     {
-        if (string.IsNullOrEmpty(userIdentifier)) return "Unknown User";
+        if (userIdentifier == null)
+        {
+            return "Unknown User";
+        }
 
         var user = _users.FirstOrDefault(u => u.Identifier == userIdentifier);
-        return user?.DisplayName ?? userIdentifier.Split("__").FirstOrDefault() ?? userIdentifier;
+        return user?.DisplayName ?? user?.Identifier ?? "Unknown User";
+    }
+
+    private string GetDisplayNameForUser(Guid? userId)
+    {
+        if (userId == null)
+        {
+            return "Unknown User";
+        }
+
+        var user = _users.FirstOrDefault(u => u.Id == userId);
+        return user?.DisplayName ?? user?.Identifier ?? "Unknown User";
     }
 
     private void SetTimePeriod(string period)
@@ -1446,18 +1462,17 @@
         _costHistogramData.Clear();
 
         var groupedMetrics = _tokenMetrics
-            .Where(m => !string.IsNullOrEmpty(m.UserIdentifier))
-            .GroupBy(m => GetPeriodKey(m.Timestamp, _selectedPeriod))
+            .GroupBy(m => GetPeriodKey(m.Timestamp.ToLocalTime().Date, _selectedPeriod))
             .ToDictionary(g => g.Key, g => g.ToList());
 
         foreach (var period in groupedMetrics)
         {
             var tokensByUser = period.Value
-                .GroupBy(m => m.UserIdentifier)
-                .ToDictionary(g => g.Key, g => g.Sum(m => m.Value));
+                .GroupBy(m => GetDisplayNameForUser(m.Id))
+                .ToDictionary(g => g.Key, g => g.Sum(m => m.Count));
 
             var costsByUser = period.Value
-                .GroupBy(m => m.UserIdentifier)
+                .GroupBy(m => GetDisplayNameForUser(m.Id))
                 .ToDictionary(g => g.Key, g => g.Sum(m => m.ConvertToCostInDollar()));
 
             _tokenHistogramData[period.Key] = tokensByUser;

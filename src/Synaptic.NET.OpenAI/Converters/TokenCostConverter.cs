@@ -1,13 +1,14 @@
 using Synaptic.NET.Core.Metrics;
+using Synaptic.NET.Domain.Resources.Metrics;
 using Synaptic.NET.OpenAI.Resources;
 
 namespace Synaptic.NET.OpenAI.Converters;
 
 public static class TokenCostConverter
 {
-    public static double ConvertToCostInDollar(this MetricsEvent<long> tokenEvent)
+    public static double ConvertToCostInDollar(this TokenMetric tokenEvent)
     {
-        if (tokenEvent.Operation == null || !tokenEvent.Operation.Contains("Token incurrence"))
+        if (!tokenEvent.Operation.Contains("Token incurrence"))
         {
             return 0;
         }
@@ -36,8 +37,8 @@ public static class TokenCostConverter
         };
         if (tokenEvent.Operation.Contains("Input"))
         {
-            return inputCostPerToken * tokenEvent.Value;
+            return inputCostPerToken * tokenEvent.Count;
         }
-        return outputCostPerToken * tokenEvent.Value;
+        return outputCostPerToken * tokenEvent.Count;
     }
 }

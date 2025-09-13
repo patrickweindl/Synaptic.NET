@@ -1,34 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Metrics;
 using Synaptic.NET.Core.Metrics;
-using Synaptic.NET.Domain.Helpers;
+using Synaptic.NET.Domain.Resources;
 
 namespace Synaptic.NET.Core.Providers;
 
-public sealed class MetricsCollectorProvider : IMetricsCollectorProvider, IDisposable
+public sealed class MetricsCollectorProvider : IMetricsCollectorProvider
 {
-    public const string ServiceName = "synaptic-api";
+    public const string ServiceName = "Synaptic.NET";
 
-    private readonly CancellationTokenSource _tokenSource = new();
-    public MetricsCollectorProvider()
+    public MetricsCollectorProvider(IDbContextFactory<SynapticDbContext> dbContextFactory)
     {
-        MetricsStore = new();
-        try
-        {
-            MetricsStore.InitFromFile();
-        }
-        catch {/**/}
-        TokenMetrics = new TokenMetricCollector(MetricsStore);
-        ApiMetrics = new ApiMetricsCollector(MetricsStore);
-        RecurringTask.Create(MetricsStore.ExportToFile, TimeSpan.FromMinutes(1), _tokenSource.Token);
+        TokenMetrics = new TokenMetricCollector(dbContextFactory);
+        ApiMetrics = new ApiMetricsCollector(dbContextFactory);
     }
-
-    public InMemoryMetricsStore MetricsStore { get; }
 
     public TokenMetricCollector TokenMetrics { get; }
 
     public ApiMetricsCollector ApiMetrics { get; }
-
-    public void Dispose()
-    {
-        _tokenSource.Cancel();
-    }
 }

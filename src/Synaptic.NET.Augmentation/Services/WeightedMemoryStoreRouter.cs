@@ -63,7 +63,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         Log.Information("[StoreRouter] Calling model to rank stores. Input query: {Query} at {Start}", query, start);
         var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _chatClient.CompleteChatAsync(messages, options: chatCompletionOptions, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Ranking", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Ranking", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start, suggestion);
         string[] ordered = suggestion.Split('%', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -127,7 +127,7 @@ public class WeightedMemoryStoreRouter : IMemoryStoreRouter
         // TODO: Use a structured response for this.
         var completionOptions = new ChatCompletionOptions { Temperature = 0.2f };
         var response = await _chatClient.CompleteChatAsync(messages, options: completionOptions, cancellationToken: token);
-        _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletion(await _currentUserService.GetCurrentUserAsync(), "Store Routing", response.Value);
+        await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Routing", response.Value);
         string suggestion = response.Value.Content[0].Text ?? string.Empty;
         Log.Information("[StoreRouter] Model call finished after {Duration:c}. Output: {Output}", DateTime.UtcNow - start,
             suggestion);
