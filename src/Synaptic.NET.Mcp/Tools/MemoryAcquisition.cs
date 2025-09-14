@@ -1,10 +1,13 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.Constants;
+using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Storage;
 
 namespace Synaptic.NET.Mcp.Tools;
@@ -68,5 +71,47 @@ public static class MemoryAcquisition
         Log.Logger.Information("[MCP Tool Call] Get memory store identifiers and descriptions");
         Log.Logger.Information("[MCP Tool Call] Current user: {CurrentUser}", currentUserService.GetUserIdentifierAsync());
         return JsonSerializer.Serialize(await memoryProvider.GetStoreIdentifiersAndDescriptionsAsync());
+    }
+
+    [McpServerTool(
+        Name = "DeepResearchForReferences",
+        Title = "Deep research for reference on memory",
+        Destructive = false,
+        ReadOnly = true)]
+    [Description("Performs a deep search on references of memory identifiers to find original texts of reference carrying memories.")]
+    public static async Task<string> GetOriginalTextForReference(
+        List<Guid> memoryIdentifiers,
+        ICurrentUserService currentUserService,
+        IDbContextFactory<SynapticDbContext> dbContextFactory)
+    {
+        await currentUserService.LockoutUserIfGuestAsync();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        await dbContext.SetCurrentUserAsync(currentUserService);
+        var memories = await dbContext.Memories.Where(m => memoryIdentifiers.Contains(m.Identifier)).ToListAsync();
+
+        var returnList = new List<IngestionReferenceSearchResult>();
+
+        foreach (var memory in memories)
+        {
+            if (Guid.TryParse(memory.Reference, out var referenceGuid))
+            {
+                var reference = await dbContext.IngestionReferences.FirstOrDefaultAsync(r => r.Id == referenceGuid);
+                if (reference != null)
+                {
+                    returnList.Add(new IngestionReferenceSearchResult{ MemoryIdentifier = memory.Identifier, Reference = reference});
+                }
+            }
+        }
+
+        return JsonSerializer.Serialize(returnList);
+    }
+
+    public class IngestionReferenceSearchResult
+    {
+        [JsonPropertyName("memory_identifier")]
+        public Guid MemoryIdentifier { get; set; }
+
+        [JsonPropertyName("reference")]
+        public IngestionReference Reference { get; set; }
     }
 }

@@ -5,6 +5,7 @@ using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Configuration;
 using Synaptic.NET.Domain.Resources.Management;
+using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Domain.Scopes;
 using Synaptic.NET.Domain.StructuredResponses;
 using Synaptic.NET.OpenAI;
@@ -29,18 +30,27 @@ public class FileMemoryCreationService : IFileMemoryCreationService
         return Task.FromResult(new FileProcessor(scopeFactory, user));
     }
 
-    public async Task<MemorySummaries> CreateMemoriesFromPdfFileAsync(string fileName, string base64Pdf)
+    public async Task<MemorySummaries> CreateMemoriesFromPdfIngestionResult(string fileName, IngestionReference reference)
     {
         List<ChatMessage> messages =
         [
             ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
             ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateFilePart(
-                BinaryData.FromBytes(Convert.FromBase64String(base64Pdf)),
+                BinaryData.FromBytes(Convert.FromBase64String(reference.OriginalText)),
                 "application/pdf", fileName))
         ];
         DateTime start = DateTime.UtcNow;
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();
-        structuredResponse.Temperature = 0.2f;
+        if (_gptClient.SupportsTemperatureSetting())
+        {
+            structuredResponse.Temperature = 0.2f;
+        }
+
+        if (_gptClient.SupportsReasoningEffort())
+        {
+            structuredResponse.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+        }
+
         Log.Debug("[File Memory Creation Service] Acquiring model response...");
         var response = await _gptClient.CompleteChatAsync(messages, options: structuredResponse);
         await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "PDF Processing", response.Value);

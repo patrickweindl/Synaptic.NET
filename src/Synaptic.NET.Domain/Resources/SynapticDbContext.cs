@@ -30,6 +30,8 @@ public class SynapticDbContext : DbContext
     /// </summary>
     public DbSet<Memory> Memories => Set<Memory>();
 
+    public DbSet<IngestionReference> IngestionReferences => Set<IngestionReference>();
+
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public DbSet<DynamicRegistration> DynamicRegistrations => Set<DynamicRegistration>();

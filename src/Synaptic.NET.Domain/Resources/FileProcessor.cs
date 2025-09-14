@@ -5,7 +5,6 @@ using Synaptic.NET.Domain.Resources.Storage;
 using Synaptic.NET.Domain.Scopes;
 using Synaptic.NET.Domain.StructuredResponses;
 using UglyToad.PdfPig;
-using UglyToad.PdfPig.Writer;
 
 namespace Synaptic.NET.Domain.Resources;
 
@@ -31,6 +30,12 @@ public class FileProcessor
         await ExecutePdfAsync(user, fileName, base64String);
     }
 
+    public class PdfChunkResult
+    {
+        public required IngestionReference OriginalChunk { get; set; }
+        public List<(MemorySummary Summary, string Description)> Summaries { get; set; } = new();
+    }
+
     public async Task ExecutePdfAsync(User user, string fileName, string base64String)
     {
         await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
@@ -44,34 +49,52 @@ public class FileProcessor
         using var ms = new MemoryStream(pdfBytes);
         using var doc = PdfDocument.Open(ms);
 
-        List<string> base64EncodedChunks = new();
-        int chunkPageSize = 5;
-        int chunkOverlap = 1;
-        var chunkIndices = FileProcessingHelper.CreateChunks(doc.NumberOfPages, chunkPageSize, chunkOverlap);
-        foreach (var chunkIndex in chunkIndices)
-        {
-            var destStream = new MemoryStream();
-            using var destDoc = new PdfDocumentBuilder(destStream, disposeStream: false);
+        var chunks = SemanticPdfChunker.ChunkPdf(base64String, fileName);
 
-            doc.CopyPagesTo(chunkIndex.start + 1, (chunkIndex.end + 1) > doc.NumberOfPages ? doc.NumberOfPages : chunkIndex.end + 1, destDoc);
-            var output = destDoc.Build();
-            base64EncodedChunks.Add(Convert.ToBase64String(output));
-            Progress += 0.1 / chunkIndices.Count;
-        }
-        _chunksCount = base64EncodedChunks.Count;
+        _chunksCount = chunks.Count;
 
         Progress = 0.1;
-        Message = "Finished file preparation. Starting model processing...";
-        Log.Information("[File Processor] Finished file chunking, created {Count} chunks!", base64EncodedChunks.Count);
+        Message = $"Finished file preparation after {(DateTime.Now - start).TotalSeconds:F1} seconds. Starting model processing...";
+        Log.Information("[File Processor] Finished file chunking, created {Count} chunks! Required {Duration} seconds.", chunks.Count, (DateTime.Now - start).TotalSeconds);
 
-        var chunkTasks = base64EncodedChunks.Select(async chunk => await CreateMemorySummaryFromBase64EncodedString(fileName, chunk));
-        var chunkResults = (await Task.WhenAll(chunkTasks)).SelectMany(s => s).ToList();
+        var chunkTasks = chunks.Select(async chunk =>
+        {
+            try
+            {
+                return await CreateMemorySummariesFromPdfChunk(fileName, chunk);
+            }
+            catch (Exception e)
+            {
+                Log.Logger.Error(e, "Error during memory creation from chunks!");
+                return (chunk.Id, new List<MemorySummary>());
+            }
+        });
+        var chunkResults = (await Task.WhenAll(chunkTasks)).Select(s => s).ToList();
 
-        var descriptions = await CreateMemoryDescriptionsFromSummaries(chunkResults);
+        ConcurrentDictionary<string, string> summaryDescriptions = new();
 
-        string description = await scope.MemoryAugmentationService.GenerateStoreDescriptionAsync(storeId, descriptions.Values.ToList());
+        var resultTasks = chunkResults.Select(async result =>
+        {
+            await using var taskScope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
+            var descriptions = await CreateMemoryDescriptionsFromSummaries(result.Summaries);
+            var pdfChunkResult = new PdfChunkResult { OriginalChunk = chunks.First(c => c.Id == result.ReferenceId) };
+            foreach (var summary in result.Summaries)
+            {
+                string summaryDescription = descriptions.TryGetValue(summary.Identifier, out string? value)
+                    ? value
+                    : await taskScope.MemoryAugmentationService.GenerateMemoryDescriptionAsync(summary.Summary);
+                summaryDescriptions.TryAdd(summary.Identifier, summaryDescription);
+                pdfChunkResult.Summaries.Add((summary, summaryDescription));
+            }
+
+            return pdfChunkResult;
+        });
+        var enhancedResults = await Task.WhenAll(resultTasks);
+        List<PdfChunkResult> pdfChunkResults = enhancedResults.ToList();
+
+        string description = await scope.MemoryAugmentationService.GenerateStoreDescriptionAsync(storeId, summaryDescriptions.Values.ToList());
         StoreDescription = description;
-        var targetStore = new MemoryStore()
+        var targetStore = new MemoryStore
         {
             StoreId = Guid.NewGuid(),
             Title = FileProcessingHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(fileName)),
@@ -80,20 +103,40 @@ public class FileProcessor
             UserId = user.Id
         };
 
-        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.Count, base64String.Length, chunkResults.Sum(s => s.Summary.Length));
-        Message = $"Finished chunking! Starting to create memories... Chunking and compression reduced the pure length of the file from {chunkResults.Sum(s => s.Summary.Length)} characters to {base64String.Length} characters.";
+        Log.Information("[File Processor] The model generated {ContentsCount} individual memory chunks out of the file. The pure length shrunk from {Base64StringLength} characters to {Length} characters.", chunkResults.SelectMany(s => s.Summaries).Count(), base64String.Length, chunkResults.SelectMany(s => s.Summaries).Sum(s => s.Summary.Length));
+        Message = "Finished chunking! Starting to create memories...";
 
-        var returnMemoryTasks = chunkResults.Select(async summary => await CreateReturnMemory(targetStore, descriptions, fileName, summary));
-        var returnMemories = (await Task.WhenAll(returnMemoryTasks)).ToList();
-
-        Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds!", (DateTime.Now - start).TotalSeconds);
+        List<Memory> returnMemories = new();
+        foreach (var finalResult in pdfChunkResults)
+        {
+            foreach (var summary in finalResult.Summaries)
+            {
+                var memoryToStore = new Memory()
+                {
+                    StoreId = targetStore.StoreId,
+                    Identifier = Guid.NewGuid(),
+                    Title = summary.Summary.Identifier,
+                    Description = summary.Description,
+                    Content = summary.Summary.Summary,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Owner = _user.Id,
+                    OwnerUser = _user,
+                    ReferenceType = (int)ReferenceType.Document,
+                    Reference = finalResult.OriginalChunk.Id.ToString(),
+                    Tags = new List<string>()
+                };
+                returnMemories.Add(memoryToStore);
+            }
+        }
+        Log.Information("[File Processor] Finished preprocessing the contents after {TotalSeconds} seconds! Created one store with {Memories} memories.", (DateTime.Now - start).TotalSeconds, returnMemories.Count);
 
         targetStore.Memories = returnMemories;
 
         Result = targetStore;
+        References = pdfChunkResults.Select(pdfChunkResult => pdfChunkResult.OriginalChunk);
         Completed = true;
         Progress = 1;
-        pdfBytes = [];
     }
 
     public async Task ExecuteFile(User user, string fileName, string fileContent)
@@ -152,15 +195,14 @@ public class FileProcessor
         Progress = 1;
     }
 
-    private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromBase64EncodedString(string fileName, string base64EncodedChunk)
+    private async Task<(Guid ReferenceId, IEnumerable<MemorySummary> Summaries)> CreateMemorySummariesFromPdfChunk(string fileName, IngestionReference chunk)
     {
         await using var scope = await _scopeFactory.CreateFixedUserScopeAsync(_user);
         var returnSummaries = new List<MemorySummary>();
         DateTime chunkStart = DateTime.Now;
         Log.Information("[File Processor] Processing chunk {ChunkIndex} / {TotalChunks}.", _chunksFinished + 1,
             _chunksCount);
-        var response =
-            await scope.FileMemoryCreationService.CreateMemoriesFromPdfFileAsync(fileName, base64EncodedChunk);
+        var response = await scope.FileMemoryCreationService.CreateMemoriesFromPdfIngestionResult(fileName, chunk);
         Log.Information("[File Processor] Chunk {ChunkIndex} processed after {TotalSeconds} seconds.", _chunksFinished + 1,
             (DateTime.Now - chunkStart).TotalSeconds);
         foreach (var summary in response.Summaries)
@@ -171,7 +213,7 @@ public class FileProcessor
         Message =
             $"Finished chunk {_chunksFinished + 1} of {_chunksCount} after {(DateTime.Now - chunkStart).TotalSeconds:F1} seconds.";
         _chunksFinished++;
-        return returnSummaries;
+        return (chunk.Id, returnSummaries);
     }
 
     private async Task<IEnumerable<MemorySummary>> CreateMemorySummaryFromRawString(string fileName, string rawString)
@@ -198,7 +240,7 @@ public class FileProcessor
         return returnSummaries;
     }
 
-    private async Task<Dictionary<string, string>> CreateMemoryDescriptionsFromSummaries(List<MemorySummary> summaries)
+    private async Task<Dictionary<string, string>> CreateMemoryDescriptionsFromSummaries(IEnumerable<MemorySummary> summaries)
     {
         ConcurrentDictionary<string, string> descriptions = new();
 
@@ -236,5 +278,6 @@ public class FileProcessor
     public bool Completed { get; private set; }
     public double Progress { get; private set; }
     public MemoryStore? Result { get; private set; }
+    public IEnumerable<IngestionReference>? References { get; private set; }
     public string StoreDescription { get; private set; } = string.Empty;
 }

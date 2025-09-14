@@ -1,6 +1,4 @@
-using Synaptic.NET.Domain.Abstractions.Augmentation;
 using Synaptic.NET.Domain.Abstractions.Services;
-using Synaptic.NET.Domain.Abstractions.Storage;
 using Synaptic.NET.Domain.BackgroundTasks;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Scopes;
@@ -92,6 +90,13 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
             else
             {
                 throw new InvalidOperationException("File processing completed but no result was returned");
+            }
+
+            if (fileProcessor.References != null)
+            {
+                await using var dbContext = scope.DbContextInstance;
+                await dbContext.IngestionReferences.AddRangeAsync(fileProcessor.References, cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
             }
         }
         catch (Exception ex)

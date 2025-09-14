@@ -41,7 +41,15 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory summary. Input: {Input} at {Start}", memoryContent, start);
         var structuredResponseSchema = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummary>();
-        structuredResponseSchema.Temperature = 0.2f;
+        if (_client.SupportsTemperatureSetting())
+        {
+            structuredResponseSchema.Temperature = 0.2f;
+        }
+
+        if (_client.SupportsReasoningEffort())
+        {
+            structuredResponseSchema.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+        }
         ClientResult<ChatCompletion> chatCompletion = await _client.CompleteChatAsync(messages, structuredResponseSchema);
 
         MemorySummary? summary = CompletionOptionsHelper.ParseModelResponse<MemorySummary>(chatCompletion);
@@ -74,7 +82,16 @@ public class MemoryAugmentationService : IMemoryAugmentationService
 
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory store summary.");
-        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var chatCompletionOptions = new ChatCompletionOptions();
+        if (_client.SupportsTemperatureSetting())
+        {
+            chatCompletionOptions.Temperature = 0.2f;
+        }
+
+        if (_client.SupportsReasoningEffort())
+        {
+            chatCompletionOptions.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+        }
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();
@@ -106,7 +123,16 @@ public class MemoryAugmentationService : IMemoryAugmentationService
         DateTime start = DateTime.UtcNow;
         Log.Information("[Augmentation] Calling model for memory store summary. Input: {StoreIdentifier} at {Start}",
             storeIdentifier, start);
-        var chatCompletionOptions = new ChatCompletionOptions { Temperature = 0.2f };
+        var chatCompletionOptions = new ChatCompletionOptions();
+        if (_client.SupportsTemperatureSetting())
+        {
+            chatCompletionOptions.Temperature = 0.2f;
+        }
+
+        if (_client.SupportsReasoningEffort())
+        {
+            chatCompletionOptions.ReasoningEffortLevel = ChatReasoningEffortLevel.Low;
+        }
         var response = await _client.CompleteChatAsync(messages, options: chatCompletionOptions);
         await _metricsCollectorProvider.TokenMetrics.IncrementTokenCountsFromChatCompletionAsync(await _currentUserService.GetCurrentUserAsync(), "Store Summary", response.Value);
         string output = response.Value.Content[0].Text.Trim();

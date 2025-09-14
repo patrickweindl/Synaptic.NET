@@ -21,9 +21,9 @@ public interface IFileMemoryCreationService
     /// Generate memories from a PDF file, as base 64 string.
     /// </summary>
     /// <param name="fileName">The PDF file name.</param>
-    /// <param name="base64Pdf">The contents of the PDF as base64 string.</param>
+    /// <param name="reference">The reference to create memories for.</param>
     /// <returns>A collection of created memories as <see cref="MemorySummaries"/>.</returns>
-    Task<MemorySummaries> CreateMemoriesFromPdfFileAsync(string fileName, string base64Pdf);
+    Task<MemorySummaries> CreateMemoriesFromPdfIngestionResult(string fileName, IngestionReference reference);
 
     /// <summary>
     /// Generate memories from a base64 string.

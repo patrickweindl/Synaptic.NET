@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OpenTelemetry.Metrics;
 using Synaptic.NET.Core.Metrics;
 using Synaptic.NET.Domain.Resources;
 

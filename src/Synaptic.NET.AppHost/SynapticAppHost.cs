@@ -5,7 +5,6 @@ using Serilog.Events;
 using Synaptic.NET.Augmentation;
 using Synaptic.NET.Authentication;
 using Synaptic.NET.Authentication.Controllers;
-using Synaptic.NET.Authentication.Providers;
 using Synaptic.NET.Core;
 using Synaptic.NET.Domain;
 using Synaptic.NET.Mcp;

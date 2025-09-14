@@ -1,5 +1,4 @@
 using System.Diagnostics.Metrics;
-using Synaptic.NET.Core.Metrics;
 
 namespace Synaptic.NET.Core;
 

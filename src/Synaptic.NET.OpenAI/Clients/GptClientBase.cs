@@ -1,4 +1,5 @@
 using System.ClientModel;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using Tiktoken;
 
@@ -29,6 +30,16 @@ public abstract class GptClientBase : ChatClient, IDecoratedGptClient
         }
     }
 
+    public bool SupportsTemperatureSetting()
+    {
+        return !ModelIdentifier.Contains("gpt-5");
+    }
+
+    public bool SupportsReasoningEffort()
+    {
+        return ModelIdentifier.Contains("gpt-5");
+    }
+
     public override async Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages,
         ChatCompletionOptions? options = null,
         CancellationToken cancellationToken = new CancellationToken())
@@ -36,10 +47,12 @@ public abstract class GptClientBase : ChatClient, IDecoratedGptClient
         var messageList = messages.ToList();
         try
         {
-            return await base.CompleteChatAsync(messageList, options, cancellationToken);
+            var result = await base.CompleteChatAsync(messageList, options, cancellationToken);
+            return result;
         }
-        catch (ClientResultException)
+        catch (ClientResultException ex)
         {
+            Log.Logger.Error(ex, $"[GPT Client] Error during chat completion with model {ModelIdentifier}");
             for (int i = 0; i < 5; i++)
             {
                 try
@@ -48,11 +61,10 @@ public abstract class GptClientBase : ChatClient, IDecoratedGptClient
                 }
                 catch (ClientResultException)
                 {
-                    await Task.Delay(i * 200);
+                    await Task.Delay(i * 200, cancellationToken);
                 }
             }
+            throw;
         }
-
-        return await base.CompleteChatAsync(messageList, options, cancellationToken);
     }
 }

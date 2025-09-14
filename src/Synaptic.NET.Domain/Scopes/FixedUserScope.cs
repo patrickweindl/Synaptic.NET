@@ -28,13 +28,13 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
     {
         var userScope = new FixedUserScope(serviceProvider, user);
         await userScope.CurrentUserService.SetCurrentUserAsync(user);
-        await userScope.DbContext.SetCurrentUserAsync(userScope.CurrentUserService);
+        await userScope.DbContextInstance.SetCurrentUserAsync(userScope.CurrentUserService);
         return userScope;
     }
 
     public ICurrentUserService CurrentUserService { get; }
 
-    public SynapticDbContext DbContext => Task.Run(async () =>
+    public SynapticDbContext DbContextInstance => Task.Run(async () =>
     {
         var context = await _dbContextFactory.CreateDbContextAsync();
         await context.SetCurrentUserAsync(_user);
@@ -47,7 +47,7 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
     public void Dispose()
     {
         _scope.Dispose();
-        DbContext.Dispose();
+        DbContextInstance.Dispose();
     }
 
     public async ValueTask DisposeAsync()
@@ -61,6 +61,6 @@ public class FixedUserScope : IDisposable, IAsyncDisposable
             _scope.Dispose();
         }
 
-        await DbContext.DisposeAsync();
+        await DbContextInstance.DisposeAsync();
     }
 }

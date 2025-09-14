@@ -4,7 +4,7 @@ Each unit must preserve the full logical context, e.g. problem + solution/decisi
 The aim is that each chunk makes sense on its own and doesn't leave the future reader with open questions.
 Split topics if any part of the triad would otherwise be lost.
 
-Expected output size: If your supplied source content is formatted as a human-readable document in pages (~1800 characters per page), you should aim at creating 3-4 of these chunks per page.
+Expected output size: If your supplied source content were formatted as a human-readable document in pages (~1800 characters per page), you should aim at creating 3-4 of these chunks per page.
 
 For every unit generate:
 • Identifier (5–10 words, clear topic handle)

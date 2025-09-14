@@ -3,7 +3,6 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Synaptic.NET.Domain.Abstractions.Management;
 using Synaptic.NET.Domain.Resources;
 using Synaptic.NET.Domain.Resources.Management;
 

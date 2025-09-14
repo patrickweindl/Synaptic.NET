@@ -3,7 +3,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
-    <NoWarn>SKEXP0050;SKEXP0001;SKEXP0010</NoWarn>
+    <NoWarn>SKEXP0050;SKEXP0001;SKEXP0010;OPENAI001</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
