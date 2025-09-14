@@ -1,5 +1,6 @@
 using System.Text;
 using Synaptic.NET.Domain.Constants;
+using Synaptic.NET.Domain.Helpers;
 using Synaptic.NET.Domain.Resources.Storage;
 using Tiktoken;
 using UglyToad.PdfPig;
@@ -10,7 +11,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.ReadingOrderDetector;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 using UglyToad.PdfPig.Writer;
 
-namespace Synaptic.NET.Domain.Helpers;
+namespace Synaptic.NET.Domain.Chunkers;
 
 /// <summary>
 /// A utility class for processing and chunking PDF documents into manageable segments
@@ -81,7 +82,7 @@ public static class SemanticPdfChunker
 
             if (isInTargetRange)
             {
-                var overlap = GetOverlap(overlapTokens, chunkStartPage, lastPage, pages);
+                var overlap = GetPdfOverlap(overlapTokens, chunkStartPage, lastPage, pages);
 
                 string base64EncodedChunkPortion;
                 var destStream = new MemoryStream();
@@ -172,7 +173,7 @@ public static class SemanticPdfChunker
         return (text.ToString(), base64Images);
     }
 
-    private static (Overlap NegativeOverlap, Overlap PositiveOverlap) GetOverlap(int overlapTokens, int firstPage, int lastPage, List<(Page Page, int PageIndex, List<TextBlock> TextBlocks)> source)
+    private static (Overlap NegativeOverlap, Overlap PositiveOverlap) GetPdfOverlap(int overlapTokens, int firstPage, int lastPage, List<(Page Page, int PageIndex, List<TextBlock> TextBlocks)> source)
     {
         (string NegativeOverlapText, List<string> NegativeOverlapImages) negativeOverlap = (string.Empty, new());
         int negativePageIndex = firstPage - 1;

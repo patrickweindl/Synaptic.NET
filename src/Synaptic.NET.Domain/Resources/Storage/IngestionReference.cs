@@ -15,7 +15,6 @@ public class IngestionReference
     /// <summary>
     /// The original text of the chunk that was ingested. In case of PDF files usually the base64 encoded string of the ingested portion of the document of which memories were created.
     /// </summary>
-    [MaxLength(262144)]
     [JsonPropertyName("original_reference_text")]
     public required string OriginalText { get; set; }
 

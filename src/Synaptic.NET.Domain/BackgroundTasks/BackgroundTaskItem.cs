@@ -4,7 +4,7 @@ using Synaptic.NET.Domain.Scopes;
 
 namespace Synaptic.NET.Domain.BackgroundTasks;
 
-public abstract class BackgroundTaskItem
+public abstract class BackgroundTaskItem : IDisposable
 {
     public string TaskId { get; } = Guid.NewGuid().ToString();
     public string UserId { get; set; } = string.Empty;
@@ -12,4 +12,5 @@ public abstract class BackgroundTaskItem
     public DateTime CreatedAt { get; } = DateTime.UtcNow;
 
     public abstract Task ExecuteAsync(ScopeFactory scopeFactory, IBackgroundTaskQueue taskQueue, CancellationToken cancellationToken);
+    public abstract void Dispose();
 }

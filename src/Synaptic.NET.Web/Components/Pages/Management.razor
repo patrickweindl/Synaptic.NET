@@ -2281,13 +2281,13 @@
     public class UploadProgress
     {
         public string Message { get; set; } = string.Empty;
-        public double Progress { get; set; } = 0.0;
+        public double Progress { get; set; }
     }
 
     public class SearchProgress
     {
         public string Message { get; set; } = string.Empty;
-        public double Progress { get; set; } = 0.0;
+        public double Progress { get; set; }
     }
 
     public class CreateApiKeyForm
@@ -2317,45 +2317,43 @@
     private bool _isDeletingMemory;
 
     // Memory stores modal variables
-    private bool _showMemoryStoresModal = false;
-    private bool _isDeletingStore = false;
+    private bool _showMemoryStoresModal;
+    private bool _isDeletingStore;
     private Guid _deletingStoreId = Guid.Empty;
     private string _storeActionMessage = string.Empty;
-    private bool _storeActionSuccess = false;
+    private bool _storeActionSuccess;
 
     private string _userEmail = string.Empty;
 
     // API Keys modal variables
     private List<ApiKey> _apiKeys = [];
-    private int _apiKeyCount = 0;
-    private bool _showApiKeysModal = false;
-    private bool _isCreatingApiKey = false;
-    private bool _isDeletingApiKey = false;
-    private ApiKey? _deletingApiKey = null;
+    private int _apiKeyCount;
+    private bool _showApiKeysModal;
+    private bool _isCreatingApiKey;
+    private bool _isDeletingApiKey;
+    private ApiKey? _deletingApiKey;
     private string _apiKeyActionMessage = string.Empty;
-    private bool _apiKeyActionSuccess = false;
+    private bool _apiKeyActionSuccess;
     private CreateApiKeyForm _createApiKeyForm = new();
 
     // New API key display modal
-    private ApiKey? _newApiKey = null;
-    private bool _keyCopied = false;
+    private ApiKey? _newApiKey;
+    private bool _keyCopied;
 
     // Publish modal variables
-    private bool _showPublishModal = false;
-    private MemoryStore? _selectedStore = null;
+    private bool _showPublishModal;
+    private MemoryStore? _selectedStore;
     private List<Group> _userGroups = [];
     private Guid _selectedGroupId = Guid.Empty;
-    private bool _isPublishing = false;
+    private bool _isPublishing;
     private Guid _publishingStoreId = Guid.Empty;
     private string _publishMessage = string.Empty;
-    private bool _publishSuccess = false;
+    private bool _publishSuccess;
 
     // Background task queue variables
-    private bool _showTaskQueueModal = false;
+    private bool _showTaskQueueModal;
     private List<BackgroundTaskStatus> _backgroundTasks = [];
-    private int _taskQueueCount = 0;
-
-    private Guid _subscriptionId;
+    private int _taskQueueCount;
 
     protected override async Task OnInitializedAsync()
     {

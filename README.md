@@ -6,8 +6,10 @@ This repository acts as a starting point to dive into setting up MCP + RESTful R
 
 <img width="1327" height="1026" alt="image" src="https://github.com/user-attachments/assets/e87ab863-6f6e-4c1e-82c0-57ba28ae5025" />
 
+# Disclaimer
+This project is in an early stage of development and is not ready for production use. It's recommended to create your own fork, especially around migrations, since data types might still change fairly often and break compatibility with an instance you're using.
 
-## Getting Started
+# Getting Started
 To explore functionality with a default setup:
 1) Have .NET SDK 10 installed (https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 2) Clone the repository
@@ -23,12 +25,12 @@ To explore functionality with a default setup:
 
 *Option B: run the server in HTTPS with a self-signed certificate (`dotnet dev-certs https --trust`) and make sure you are not connected to any SSH tunnels.*
 
-### Remarks
+## Remarks
 It's possible to only use individual portions of this project (e.g. only the RESTful API or only the Blazor web UI). You can also use the backend with your own frontend or MCP implementation as long as interfaces are satisfied. This repository should only give you a head start on how to set up a MCP/REST based RAG system with a web UI and authentication.
 
 Check out the samples in the `samples` folder for example partial usages or injections.
 
-## Features
+# Features
 
 ### Blazor Web UI
 - [x] Login/Logout
@@ -53,7 +55,7 @@ Check out the samples in the `samples` folder for example partial usages or inje
   - [x] VSCode Authenticated MCP
   - [x] Claude Authenticated MCP
   - [x] Claude Code Authenticated MCP
-  - [x] ChatGPT Desktop Authenticated MCP (not tested)
+  - [x] ChatGPT Desktop Authenticated MCP
   - [ ] EntraID
 - [x] Observable results for memory creation and search for frontend
 - [ ] Group permissions for users (permissions of users within groups)

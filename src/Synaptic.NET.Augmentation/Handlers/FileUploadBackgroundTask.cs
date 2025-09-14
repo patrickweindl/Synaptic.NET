@@ -16,6 +16,7 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
         // Use the stored user instead of trying to get current user (which won't work in background context)
         var user = User ?? throw new InvalidOperationException("User context is required but was not provided to the background task");
         await using var scope = await scopeFactory.CreateFixedUserScopeAsync(user);
+        FileProcessor? fileProcessor = null;
         try
         {
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Starting file processing...", 0.1);
@@ -28,15 +29,16 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "File archived, starting processing...", 0.2);
 
-            FileProcessor fileProcessor = await scope.FileMemoryCreationService.GetFileProcessor(scopeFactory, User);
+            fileProcessor = await scope.FileMemoryCreationService.GetFileProcessor(scopeFactory, User);
 
             Task processingTask = FileExtension.ToLowerInvariant() == ".pdf"
-                ? fileProcessor.ExecutePdfAsync(user, FileName, FileContent)
-                : fileProcessor.ExecuteFile(user, FileName, FileContent);
+                ? fileProcessor.ExecutePdfAsync(FileName, FileContent)
+                : fileProcessor.ExecuteFile(FileName, FileContent);
 
             while (!fileProcessor.Completed && !cancellationToken.IsCancellationRequested)
             {
-                double normalizedProgress = fileProcessor.Progress > 1.0 ? fileProcessor.Progress / 100.0 : fileProcessor.Progress;
+                double normalizedProgress =
+                    fileProcessor.Progress > 1.0 ? fileProcessor.Progress / 100.0 : fileProcessor.Progress;
 
                 double mappedProgress = 0.2 + (normalizedProgress * 0.7);
                 UpdateStatus(taskQueue, BackgroundTaskState.Processing, fileProcessor.Message, mappedProgress);
@@ -50,54 +52,49 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
 
             UpdateStatus(taskQueue, BackgroundTaskState.Processing, "Saving memories to store...", 0.9);
 
-            if (fileProcessor.Result != null)
-            {
-                var resultStore = fileProcessor.Result;
-
-                if (resultStore.Memories.Count > 0)
-                {
-                    resultStore.UserId = user.Id;
-                    await scope.MemoryProvider.CreateCollectionAsync(resultStore);
-
-                    var result = new FileUploadResult
-                    {
-                        FileName = FileName,
-                        MemoryCount = resultStore.Memories.Count,
-                        StoreIdentifier = resultStore.Title,
-                        StoreDescription = fileProcessor.StoreDescription
-                    };
-
-                    var finalStatus = new BackgroundTaskStatus
-                    {
-                        TaskId = TaskId,
-                        UserId = UserId,
-                        TaskType = GetType().Name,
-                        Status = BackgroundTaskState.Completed,
-                        Progress = 1.0,
-                        Message = $"Successfully processed {FileName} and created {result.MemoryCount} memories",
-                        CreatedAt = CreatedAt,
-                        CompletedAt = DateTime.UtcNow,
-                        Result = result
-                    };
-
-                    taskQueue.UpdateTaskStatus(TaskId, finalStatus);
-                }
-                else
-                {
-                    throw new InvalidOperationException("File was processed but no memories were created");
-                }
-            }
-            else
+            if (fileProcessor.Result == null)
             {
                 throw new InvalidOperationException("File processing completed but no result was returned");
             }
+            var resultStore = fileProcessor.Result;
 
-            if (fileProcessor.References != null)
+            if (resultStore.Memories.Count <= 0)
             {
-                await using var dbContext = scope.DbContextInstance;
-                await dbContext.IngestionReferences.AddRangeAsync(fileProcessor.References, cancellationToken);
-                await dbContext.SaveChangesAsync(cancellationToken);
+                throw new InvalidOperationException("File was processed but no memories were created");
             }
+            resultStore.UserId = user.Id;
+            await scope.MemoryProvider.CreateCollectionAsync(resultStore);
+
+            var result = new FileUploadResult
+            {
+                FileName = FileName,
+                MemoryCount = resultStore.Memories.Count,
+                StoreIdentifier = resultStore.Title,
+                StoreDescription = fileProcessor.StoreDescription
+            };
+
+            var finalStatus = new BackgroundTaskStatus
+            {
+                TaskId = TaskId,
+                UserId = UserId,
+                TaskType = GetType().Name,
+                Status = BackgroundTaskState.Completed,
+                Progress = 1.0,
+                Message = $"Successfully processed {FileName} and created {result.MemoryCount} memories",
+                CreatedAt = CreatedAt,
+                CompletedAt = DateTime.UtcNow,
+                Result = result
+            };
+
+            taskQueue.UpdateTaskStatus(TaskId, finalStatus);
+
+            if (fileProcessor.References == null)
+            {
+                return;
+            }
+            await using var dbContext = scope.DbContextInstance;
+            await dbContext.IngestionReferences.AddRangeAsync(fileProcessor.References, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -116,6 +113,15 @@ public class FileUploadBackgroundTask : BackgroundTaskItem
             taskQueue.UpdateTaskStatus(TaskId, errorStatus);
             throw;
         }
+        finally
+        {
+            fileProcessor?.Dispose();
+        }
+    }
+
+    public override void Dispose()
+    {
+        FileContent = string.Empty;
     }
 
     private void UpdateStatus(IBackgroundTaskQueue taskQueue, BackgroundTaskState status, string message, double progress)

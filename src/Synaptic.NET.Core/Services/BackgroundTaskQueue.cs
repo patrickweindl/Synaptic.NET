@@ -64,8 +64,7 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     {
         _taskStatuses[taskId] = status;
 
-
-        var cutoff = DateTime.UtcNow.AddHours(-2);
+        var cutoff = DateTime.UtcNow.AddHours(-0.5);
         var completedTasks = _taskStatuses
             .Where(kvp => kvp.Value.Status is BackgroundTaskState.Completed or BackgroundTaskState.Failed &&
                          kvp.Value.CompletedAt < cutoff)

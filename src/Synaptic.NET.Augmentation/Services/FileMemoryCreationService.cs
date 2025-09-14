@@ -70,12 +70,12 @@ public class FileMemoryCreationService : IFileMemoryCreationService
     }
 
 
-    public async Task<MemorySummaries> CreateMemoriesFromBase64String(string fileName, string base64String)
+    public async Task<MemorySummaries> CreateMemoriesFromRawString(string fileName, string rawString)
     {
         List<ChatMessage> messages =
         [
             ChatMessage.CreateSystemMessage(PromptTemplates.GetFileProcessingSystemPrompt()),
-            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateTextPart(base64String))
+            ChatMessage.CreateUserMessage(ChatMessageContentPart.CreateTextPart(rawString))
         ];
 
         var structuredResponse = CompletionOptionsHelper.CreateStructuredResponseOptions<MemorySummaries>();

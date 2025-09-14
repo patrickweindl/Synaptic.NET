@@ -112,6 +112,6 @@ public static class MemoryAcquisition
         public Guid MemoryIdentifier { get; set; }
 
         [JsonPropertyName("reference")]
-        public IngestionReference Reference { get; set; }
+        public IngestionReference? Reference { get; set; }
     }
 }

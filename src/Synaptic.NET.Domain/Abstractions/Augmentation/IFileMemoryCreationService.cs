@@ -29,7 +29,7 @@ public interface IFileMemoryCreationService
     /// Generate memories from a base64 string.
     /// </summary>
     /// <param name="fileName">The file name that was uploaded.</param>
-    /// <param name="base64String">The contents of the uploaded file as a base64 string.</param>
+    /// <param name="rawString">The contents of the uploaded file as a base64 string.</param>
     /// <returns>A collection of created memories as <see cref="MemorySummaries"/>.</returns>
-    Task<MemorySummaries> CreateMemoriesFromBase64String(string fileName, string base64String);
+    Task<MemorySummaries> CreateMemoriesFromRawString(string fileName, string rawString);
 }
